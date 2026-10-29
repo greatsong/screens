@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "publishedAt": "2026-10-30T09:00:00+09:00",
+  "version": 2,
+  "publishedAt": "2026-10-30T08:34:24+09:00",
   "appVersion": "0.1.0",
   "mode": "normal",
   "notice": "",
@@ -15,9 +15,21 @@
     "returnMinutes": 5,
     "now": null,
     "apps": [
-      { "title": "터치 그림판", "by": "시험용 샘플 · 동시 터치 확인", "url": "demo/touch.html" },
-      { "title": "Commit Galaxy", "by": "선생님 작품 예시 · 3D 그래픽 성능 확인", "url": "https://greatsong.github.io/commit-galaxy/" },
-      { "title": "Neural Explorer", "by": "선생님 작품 예시 · 일반 웹앱", "url": "https://neural-explorer.vercel.app/" }
+      {
+        "title": "터치 그림판",
+        "by": "시험용 샘플 · 동시 터치 확인",
+        "url": "demo/touch.html"
+      },
+      {
+        "title": "Commit Galaxy",
+        "by": "선생님 작품 예시 · 3D 그래픽 성능 확인",
+        "url": "https://greatsong.github.io/commit-galaxy/"
+      },
+      {
+        "title": "Neural Explorer",
+        "by": "선생님 작품 예시 · 일반 웹앱",
+        "url": "https://neural-explorer.vercel.app/"
+      }
     ]
   },
   "items": [
@@ -74,7 +86,13 @@
       "a": {
         "tag": "오늘의 급식",
         "title": "점심",
-        "lines": ["잡곡밥", "쇠고기미역국", "닭갈비", "깍두기", "요구르트"],
+        "lines": [
+          "잡곡밥",
+          "쇠고기미역국",
+          "닭갈비",
+          "깍두기",
+          "요구르트"
+        ],
         "source": "시험용 예시이며 실제 급식이 아닙니다. 운영 때는 NEIS에서 자동으로 받습니다."
       },
       "b": {
