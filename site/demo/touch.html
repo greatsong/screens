@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>터치 그림판</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #fdfbf6; overflow: hidden; touch-action: none;
+      -webkit-user-select: none; user-select: none;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .hud { position: fixed; top: 2vmin; left: 2vmin; right: 2vmin; display: flex; justify-content: space-between;
+      align-items: center; pointer-events: none; font-size: 2.6vmin; color: #333; }
+    .hud b { font-size: 3.4vmin; margin-right: 1vmin; }
+    button { pointer-events: auto; font: inherit; font-size: 2.4vmin; padding: 1.2vmin 2.4vmin;
+      border-radius: 1.2vmin; border: 0; background: #222; color: #fff; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div><b>터치 그림판</b>시험용 샘플 · 지금 <span id="n">0</span>개 / 최대 <span id="m">0</span>개 동시 터치</div>
+    <button id="clear">지우기</button>
+  </div>
+  <script>
+    // 손가락마다 다른 색으로 그려서 동시 터치가 몇 개까지 인식되는지 확인한다
+    const cv = document.getElementById('c');
+    const ctx = cv.getContext('2d');
+    const COLORS = ['#e4572e', '#29335c', '#f3a712', '#669bbc', '#7b2cbf', '#2a9d8f', '#d62828', '#3a86ff', '#8338ec', '#06d6a0'];
+    const pts = new Map();
+    let max = 0;
+    let ci = 0;
+    function fit() {
+      const r = window.devicePixelRatio || 1;
+      cv.width = innerWidth * r;
+      cv.height = innerHeight * r;
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+    function count() {
+      document.getElementById('n').textContent = pts.size;
+      if (pts.size > max) { max = pts.size; document.getElementById('m').textContent = max; }
+    }
+    fit();
+    addEventListener('resize', fit);
+    cv.addEventListener('pointerdown', (e) => {
+      cv.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, c: COLORS[ci++ % COLORS.length] });
+      count();
+    });
+    cv.addEventListener('pointermove', (e) => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = e.pointerType === 'touch' ? 10 : 6;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(e.clientX, e.clientY);
+      ctx.stroke();
+      p.x = e.clientX;
+      p.y = e.clientY;
+    });
+    const up = (e) => { pts.delete(e.pointerId); count(); };
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+    document.getElementById('clear').addEventListener('click', () => ctx.clearRect(0, 0, innerWidth, innerHeight));
+  </script>
+</body>
+</html>

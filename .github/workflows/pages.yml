@@ -1,0 +1,71 @@
+name: 화면 배포
+
+# main에 올리면 site/ 를 GitHub Pages로 배포한다.
+# 휴대폰에서 수동 실행(Run workflow)하면 content.json을 바꾼 뒤 배포해서 반영 지연·긴급 정지·원격 시연을 시험한다.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '화면 상태 (normal 평소 / stop 긴급 정지)'
+        type: choice
+        options: [normal, stop]
+        default: normal
+      notice:
+        description: '공지 문구 (비워 두면 공지 없음)'
+        required: false
+        default: ''
+      showcase_url:
+        description: '원격 시연할 작품 주소 (비워 두면 원격 시연 끔)'
+        required: false
+        default: ''
+      showcase_title:
+        description: '원격 시연 작품 이름'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 콘텐츠 갱신 (수동 실행일 때만)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          MODE: ${{ inputs.mode }}
+          NOTICE: ${{ inputs.notice }}
+          SC_URL: ${{ inputs.showcase_url }}
+          SC_TITLE: ${{ inputs.showcase_title }}
+        run: |
+          python3 scripts/bump.py --mode="$MODE" --notice="$NOTICE" --showcase-url="$SC_URL" --showcase-title="$SC_TITLE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/content.json
+          git commit -m "화면 시험: 콘텐츠 갱신 ($MODE)"
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

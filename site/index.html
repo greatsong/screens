@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>당곡고 화면 시험</title>
+  <!-- 글꼴 CDN이 막혀도 화면이 멈추지 않도록 비동기로 불러온다 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
+          onload="window.__qrReady && window.__qrReady()" onerror="window.__qrFailed = true"></script>
+  <script src="app.js"></script>
+</body>
+</html>
