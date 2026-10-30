@@ -92,8 +92,9 @@
 
   const state = {
     content: null, netOk: false, lastOk: 0, lastErr: 0, errors: 0, errMsg: '',
-    slot: -1, idx: -1, minKey: -1, fadeTimer: null,
+    slot: -1, idx: -1, minKey: -1, fadeTimer: null, pollAt: Date.now(), loopId: 0,
     touch: false, startedAt: Date.now(), lastInteract: Date.now(),
+    cont: { start: Date.now(), last: Date.now(), breaks: 0, longest: 0 },
     delay: store.get('delay', null), events: store.get('events', []),
     prevSession: null, session: null,
     font: '확인 중', qr: '불러오는 중', wake: '확인 전',
@@ -126,12 +127,33 @@
     if (!found) list.push(state.session);
     store.set('sessions', list.slice(-30));
   }
+  // 연속 표시: 15초 박동이 90초 넘게 끊기거나(대기 모드로 스크립트가 멈춤) 화면이 가려지면 처음부터 다시 잰다.
+  // 브라우저가 돌아가는 동안 패널만 꺼진 경우는 스크립트로 알 수 없으므로 사람이 확인한다.
+  function contBeat() {
+    const t = Date.now();
+    const gap = t - state.cont.last;
+    if (gap > 90000) {
+      state.cont.breaks++;
+      state.cont.start = t;
+      logEvent('화면 멈춤 감지: ' + dur(gap) + ' 동안 이 페이지가 동작하지 않음');
+    } else if (document.hidden) {
+      state.cont.start = t;
+    }
+    state.cont.last = t;
+    state.cont.longest = Math.max(state.cont.longest, t - state.cont.start);
+  }
+  function contBreak() {
+    state.cont.breaks++;
+    state.cont.start = Date.now();
+  }
+
   function clearLogs() {
     ['sessions', 'events', 'delay'].forEach((k) => store.del(k));
     state.events = [];
     state.delay = null;
     state.prevSession = null;
     state.startedAt = Date.now();
+    state.cont = { start: Date.now(), last: Date.now(), breaks: 0, longest: 0 };
     if (state.session) {
       state.session = { id: Date.now(), start: Date.now(), last: Date.now(), role: role };
       store.set('sessions', [state.session]);
@@ -187,6 +209,8 @@
     checkFont();
     probeClock(7);
     pollLoop();
+    watchPoll();
+    setInterval(contBeat, 15000);
     setInterval(tick, 200);
     setInterval(renderStatus, 15000);
     setTimeout(() => { if (window.__qrFailed && state.qr !== '불러옴') state.qr = '실패'; }, 10000);
@@ -245,25 +269,43 @@
   }
 
   // ---------- 콘텐츠 ----------
+  // 응답이 오지 않는 요청 하나 때문에 갱신 전체가 멈추지 않도록 본문까지 받는 시간을 제한한다
+  const FETCH_TIMEOUT = 15000;
+  function fetchWithin(url, opts, read) {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const o = Object.assign({ cache: 'no-store' }, opts, ctrl ? { signal: ctrl.signal } : {});
+    let timer = null;
+    const timeout = new Promise((resolve, reject) => {
+      timer = setTimeout(() => {
+        if (ctrl) ctrl.abort();
+        reject(new Error('응답 시간 초과 ' + FETCH_TIMEOUT / 1000 + '초'));
+      }, FETCH_TIMEOUT);
+    });
+    const t0 = Date.now();
+    const work = fetch(url, o).then((res) => {
+      addClockSample(res, t0, Date.now());
+      return read ? read(res) : res;
+    });
+    return Promise.race([work, timeout]).then(
+      (v) => { clearTimeout(timer); return v; },
+      (e) => { clearTimeout(timer); throw e; });
+  }
+
   function probeClock(times) {
     let n = 0;
     (function one() {
-      const t0 = Date.now();
-      fetch('content.json?probe=' + t0, { method: 'HEAD', cache: 'no-store' })
-        .then((res) => { addClockSample(res, t0, Date.now()); })
+      fetchWithin('content.json?probe=' + Date.now(), { method: 'HEAD' })
         .catch(() => {})
         .then(() => { if (++n < times) setTimeout(one, 330); });
     })();
   }
 
   function pollContent() {
-    const t0 = Date.now();
-    return fetch('content.json?t=' + t0, { cache: 'no-store' })
-      .then((res) => {
-        addClockSample(res, t0, Date.now());
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
+    state.pollAt = Date.now();
+    return fetchWithin('content.json?t=' + Date.now(), {}, (res) => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
       .then((data) => {
         applyContent(data, true);
         state.lastOk = Date.now();
@@ -279,11 +321,22 @@
       .then(renderStatus);
   }
 
+  function pollMs() {
+    const sec = state.content && state.content.pollSeconds;
+    return Math.max(20, sec || 60) * 1000;
+  }
   function pollLoop() {
-    pollContent().then(() => {
-      const sec = state.content && state.content.pollSeconds;
-      setTimeout(pollLoop, Math.max(20, sec || 60) * 1000);
-    });
+    const id = ++state.loopId; // 감시가 새 고리를 시작하면 예전 고리는 스스로 멈춘다
+    const next = () => { if (id === state.loopId) setTimeout(pollLoop, pollMs()); };
+    try { pollContent().then(next, next); } catch (e) { next(); }
+  }
+  function watchPoll() {
+    setInterval(() => {
+      if (Date.now() - state.pollAt > Math.max(120000, pollMs() * 3)) {
+        logEvent('콘텐츠 확인이 멈춰 다시 시작');
+        pollLoop();
+      }
+    }, 30000);
   }
 
   function applyContent(data, fromNet) {
@@ -307,12 +360,20 @@
     badge.textContent = data.badge || '';
     $('stopMsg').textContent = data.stopMessage || '화면 점검 중입니다';
     const stopped = data.mode === 'stop';
-    if (stopped !== $('screen').classList.contains('is-stopped')) {
+    if (stopped !== isStopped()) {
+      document.body.classList.toggle('is-stopped', stopped);
       $('screen').classList.toggle('is-stopped', stopped);
       logEvent(stopped ? '긴급 정지 화면으로 전환' : '평소 화면으로 전환');
     }
     renderNotice();
-    syncShowcase();
+    // 긴급 정지는 작품 시연보다 항상 우선한다
+    if (stopped) {
+      closePlayer('긴급 정지');
+      $('gallery').hidden = true;
+      $('showBtn').hidden = true;
+    } else {
+      syncShowcase();
+    }
     if (fromNet && data.appVersion && data.appVersion !== APP_VERSION) reloadForApp(data.appVersion);
   }
 
@@ -446,7 +507,10 @@
     else if (!remote && state.show.remote) closePlayer('원격 시연 끝');
   }
 
+  function isStopped() { return document.body.classList.contains('is-stopped'); }
+
   function openGallery() {
+    if (isStopped()) return;
     const sc = state.content.showcase || {};
     const apps = sc.apps || [];
     $('gallery').innerHTML = `
@@ -470,6 +534,7 @@
   }
 
   function openPlayer(info, remote) {
+    if (isStopped()) return;
     const sc = state.content.showcase || {};
     state.show = { app: info, remote: !!remote, until: remote ? 0 : now() + (sc.returnMinutes || 5) * 60000 };
     $('playerTitle').textContent = (info.title || info.url) + (info.by ? ' · ' + info.by : '');
@@ -514,6 +579,8 @@
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
     document.addEventListener('visibilitychange', () => {
+      if (document.hidden) contBreak();
+      else state.cont.start = state.cont.last = Date.now();
       logEvent(document.hidden ? '화면이 가려짐 (다른 앱이나 입력으로 전환)' : '화면이 다시 보임');
       if (!document.hidden) requestWake();
     });
@@ -638,8 +705,11 @@
       ? row(d.ms < 15 * 60000 ? 'ok' : 'bad', '반영 지연', 'v' + esc(d.version) + ' 게시 후 ' + dur(d.ms) + ' 만에 표시 (' + mdhm(d.at) + ' 측정)')
       : row('wait', '반영 지연', 'GitHub Actions에서 「화면 배포」를 실행하면 측정합니다'));
 
-    checks.push(row(up >= 4 * 3600000 ? 'ok' : 'wait', '연속 실행',
-      dur(up) + (up >= 4 * 3600000 ? ' · 4시간 넘게 꺼지지 않았습니다' : ' · 4시간을 넘기면 자동 꺼짐 점검 통과')));
+    const cont = document.hidden ? 0 : Date.now() - state.cont.start;
+    const H4 = 4 * 3600000;
+    checks.push(row(state.cont.longest >= H4 ? 'ok' : 'wait', '연속 표시',
+      '지금 ' + dur(cont) + ' · 가장 길게 ' + dur(state.cont.longest) + ' · 끊김 ' + state.cont.breaks + '회 (켠 지 ' + dur(up) + ')' +
+      (state.cont.longest >= H4 ? ' · 브라우저 기준 4시간 통과. 화면이 실제로 켜져 있었는지는 사람이 확인합니다' : ' · 끊김 없이 4시간을 넘기면 통과')));
 
     if (embed) checks.push(row('info', '이전 실행', '미리보기에서는 기록하지 않습니다'));
     else if (!prev) checks.push(row('wait', '이전 실행', '기록 없음 (처음 연 화면)'));
@@ -725,6 +795,7 @@
       'tp=' + (navigator.maxTouchPoints || 0), 'touch=' + (state.touch ? 1 : 0),
       'off=' + (clock.err === null ? '?' : clock.offset + '+-' + clock.err),
       'up=' + Math.round((Date.now() - state.startedAt) / 60000) + 'm',
+      'cont=' + Math.round(state.cont.longest / 60000) + 'm/br' + state.cont.breaks,
       'prev=' + (prev ? Math.round((prev.last - prev.start) / 60000) + 'm/gap' + Math.round((state.startedAt - prev.last) / 60000) + 'm' : '-'),
       'sess=' + (sess.join(',') || '-'),
       'delay=' + (state.delay ? Math.round(state.delay.ms / 1000) + 's' : '-'),

@@ -124,6 +124,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .is-stopped .stop { display: flex; }
 .is-stopped .stage, .is-stopped .dots, .is-stopped .progress, .is-stopped .show-btn { display: none; }
 .is-stopped .when { visibility: hidden; }
+/* 시연 화면이 정지 화면을 가리지 않도록 한 번 더 막는다 */
+body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
 .stop-clock { font-size: 24vmin; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1; }
 .stop-date { font-size: 4vmin; color: var(--muted); margin-top: 2vmin; }
 .stop-msg { margin-top: 5vmin; font-size: 3.4vmin; color: var(--soft); }
