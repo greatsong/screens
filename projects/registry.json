@@ -37,8 +37,8 @@
       "target": "wide",
       "howTo": "",
       "demoSteps": [],
-      "makerConfirmed": false,
-      "teacher": "pending",
+      "makerConfirmed": true,
+      "teacher": "approved",
       "makerType": "teacher"
     },
     {
