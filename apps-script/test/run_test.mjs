@@ -133,7 +133,7 @@ function submit(id, email, a) {
     getItemResponses: () => Object.entries(a).map(([t, v]) => ({ getItem: () => ({ getTitle: () => t }), getResponse: () => v })),
   });
 }
-const answers = (title, url, extra = {}) => ({ '작품명': title, '실행 주소': url, '한 줄 소개': title + ' 소개입니다.', '제작자 표시명': '2학년 시험팀',
+const answers = (title, url, extra = {}) => ({ '작품명': title, '실행 주소': url, '한 줄 소개': title + ' 소개입니다.', '제작자 표시명': '2학년 시험팀', '제작자 구분': '2학년',
   '어느 화면에 맞나요?': '큰 화면용', '체험 방법': '첫 화면의 버튼을 누릅니다.', '공개 동의': ['동의'], ...extra });
 const manualIds = () => json('projects/registry.json').projects.filter((p) => p.source !== 'form').map((p) => p.id).join(',');
 const MANUAL = manualIds();
@@ -154,6 +154,7 @@ let reg = json('projects/registry.json');
 check('등록부에 A·B만 올라가고 C는 빠짐', reg.projects.filter((p) => p.source === 'form').map((p) => p.title).join() === '시험 작품 A,시험 작품 B');
 check('사람이 등록한 작품은 그대로', manualIds() === MANUAL);
 check('등록부에 이메일·토큰이 없음', !JSON.stringify(reg).includes('@school.kr') && !JSON.stringify(reg).includes(row(A.id)['토큰']));
+check('배지용 제작자 구분이 등록부에 들어감 (2학년 → g2)', reg.projects.filter((p) => p.source === 'form').every((p) => p.makerType === 'g2'));
 check('A·B 검사 대기, 등록 요청 처리 중', row(A.id)['상태'] === '검사 대기' && reqs(A.id)[0]['상태'] === '처리 중');
 
 console.log('3. GitHub 검사·편성 뒤 결과 확인');
@@ -184,6 +185,7 @@ check('등록부에 승인·제작자 확인·승인 시각', regA.teacher === '
 github();
 poll();
 const content = json('site/content.json');
+check('편성된 화면 내용에도 배지 값이 들어감', content.projects.find((p) => p.id === A.id).makerType === 'g2');
 check('A가 화면 편성에 들어감', content.projects.some((p) => p.id === A.id));
 check('A 게시 중, 게시 메일에 짧은 주소', row(A.id)['상태'] === '게시 중' && mails('a@school.kr', '게시 시작')[0].htmlBody.includes('/p/' + row(A.id)['번호']));
 check('짧은 주소 이동 페이지 생성', fs.existsSync(path.join(TMP, 'site/p', String(row(A.id)['번호']), 'index.html')));

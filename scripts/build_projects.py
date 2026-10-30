@@ -92,6 +92,7 @@ def main():
 
         entry = {
             "id": p["id"], "no": a["no"], "title": p["title"], "summary": p["summary"], "maker": p["maker"],
+            "makerType": p.get("makerType", ""),  # 배지: teacher | g1 | g2 | g3
             "target": p.get("target", "wide"), "howTo": p.get("howTo", ""), "run": run_url(p),
             "embed": bool(chk and chk["frame"]["allowed"]) and p.get("target") != "mobile",
             "short": f"{BASE.split('://', 1)[1]}/p/{a['no']}", "shortUrl": f"{BASE}/p/{a['no']}/",

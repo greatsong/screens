@@ -30,6 +30,10 @@
     .state { font-size: 14px; }
     .state b { display: inline-block; min-width: 92px; }
     .pending { color: var(--warn); font-weight: 700; }
+    .mbadge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; padding: 2px 10px 2px 6px; border-radius: 99px; border: 1px solid currentColor; }
+    .mbadge svg { width: 16px; height: 16px; margin-right: 4px; }
+    .mb-teacher { color: #6d4ed8; background: #efeaff; } .mb-g1 { color: #127a3e; background: #e6f6ec; }
+    .mb-g2 { color: #0b6aa8; background: #e5f2fb; } .mb-g3 { color: #a65400; background: #fdf0de; }
     @media (max-width: 520px) { .proj { grid-template-columns: 1fr; } .proj img { width: 100%; } }
   </style>
 </head>
@@ -44,6 +48,14 @@
 <div class="toast" id="toast"></div>
 <script>
   var DATA = null;
+  // 제작자 배지 (화면의 배지와 같은 아이콘)
+  var MAKER_BADGE = {
+    teacher: ['선생님 작품', '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15 6 21M15 15l3 6M12 15v5"/><rect x="4" y="3" width="16" height="12" rx="1.5" fill="currentColor" fill-opacity="0.18"/><path d="M8 7h8M8 10.5h5M3 15h18"/></svg>'],
+    g1: ['1학년', '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-5"/><path d="M12 16c-4 0-6.5-2.3-6.5-5.5C9.3 10.5 12 12.8 12 16ZM12 16c4 0 6.5-2.3 6.5-5.5C14.7 10.5 12 12.8 12 16Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>'],
+    g2: ['2학년', '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c-3.5 0-5.5-2.2-5.5-5.5C9.8 6.5 12 8.8 12 12ZM12 12c3.5 0 5.5-2.2 5.5-5.5C14.2 6.5 12 8.8 12 12ZM12 17c-4 0-6.5-1.7-6.5-5C9.3 12 12 13.8 12 17ZM12 17c4 0 6.5-1.7 6.5-5C14.7 12 12 13.8 12 17Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>'],
+    g3: ['3학년', '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-5"/><path d="M8 15.5c-2.5 0-4-1.7-4-4 0-2 1.4-3.6 3.2-4C7.4 4.9 9.3 3 12 3s4.6 1.9 4.8 4.5c1.8.4 3.2 2 3.2 4 0 2.3-1.5 4-4 4-2 1-6 1-8 0Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>'],
+  };
+  function badge(t) { var b = MAKER_BADGE[t]; return b ? '<span class="mbadge mb-' + t + '">' + b[1] + b[0] + '</span>' : ''; }
   var ORDER = ['교사 검토 대기', '보완 필요', '수정 요청', '게시 대기', '게시 중', '제작자 확인 대기', '검사 대기', '접수', '숨김'];
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(function () { t.style.display = 'none'; }, 5000); }
@@ -105,7 +117,7 @@
     btns.push('<button class="btn" onclick="call(\'adminHold\',[\'' + p.id + '\',' + (!p.held) + '])">' + (p.held ? '보류 해제' : '보류') + '</button>');
     if (p.status === '게시 중') btns.push('<button class="btn" onclick="call(\'adminShowcase\',[\'' + p.id + '\'])">B에서 실행</button>');
     return '<div class="card proj">' + (p.thumb ? '<img src="' + esc(p.thumb) + '" alt="">' : '<div></div>') +
-      '<div><div class="row"><h3>' + esc((p.no ? p.no + '. ' : '') + p.title) + '</h3><span class="chip ' + cls + '">' + esc(p.status) + '</span>' +
+      '<div><div class="row">' + badge(p.makerType) + '<h3>' + esc((p.no ? p.no + '. ' : '') + p.title) + '</h3><span class="chip ' + cls + '">' + esc(p.status) + '</span>' +
       (p.changed ? '<span class="chip s-보완필요">승인 뒤 바뀜</span>' : '') + (p.held ? '<span class="chip">보류</span>' : '') +
       (p.pinUntil ? '<span class="chip">' + esc(p.pinUntil) + '까지 추천</span>' : '') + '</div>' +
       '<div class="muted">' + esc(p.maker) + ' · ' + esc(p.email) + ' · 제작자 확인 ' + (p.makerConfirmed ? '완료' : '전') + '</div>' +

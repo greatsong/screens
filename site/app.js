@@ -8,8 +8,19 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.3.0';
+  const APP_VERSION = '0.4.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
+  // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
+  const MAKER_BADGE = {
+    teacher: { label: '선생님 작품', icon: '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15 6 21M15 15l3 6M12 15v5"/><rect x="4" y="3" width="16" height="12" rx="1.5" fill="currentColor" fill-opacity="0.18"/><path d="M8 7h8M8 10.5h5M3 15h18"/></svg>' },
+    g1: { label: '1학년', icon: '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-5"/><path d="M12 16c-4 0-6.5-2.3-6.5-5.5C9.3 10.5 12 12.8 12 16ZM12 16c4 0 6.5-2.3 6.5-5.5C14.7 10.5 12 12.8 12 16Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>' },
+    g2: { label: '2학년', icon: '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c-3.5 0-5.5-2.2-5.5-5.5C9.8 6.5 12 8.8 12 12ZM12 12c3.5 0 5.5-2.2 5.5-5.5C14.2 6.5 12 8.8 12 12ZM12 17c-4 0-6.5-1.7-6.5-5C9.3 12 12 13.8 12 17ZM12 17c4 0 6.5-1.7 6.5-5C14.7 12 12 13.8 12 17Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>' },
+    g3: { label: '3학년', icon: '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-5"/><path d="M8 15.5c-2.5 0-4-1.7-4-4 0-2 1.4-3.6 3.2-4C7.4 4.9 9.3 3 12 3s4.6 1.9 4.8 4.5c1.8.4 3.2 2 3.2 4 0 2.3-1.5 4-4 4-2 1-6 1-8 0Z" fill="currentColor" fill-opacity="0.18"/><path d="M5 21h14"/></svg>' },
+  };
+  function badgeHTML(type) {
+    const b = MAKER_BADGE[type];
+    return b ? `<span class="mbadge mb-${type}"><span class="mb-icon">${b.icon}</span>${b.label}</span>` : '';
+  }
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
   const app = document.getElementById('app');
@@ -473,7 +484,7 @@
     const text = `
       <div class="tag">${role === 'a' ? '작품 소개' : '직접 체험'}${p.pinned ? ' · 추천' : ''}</div>
       <h1 class="title">${esc(p.title)}</h1>
-      <div class="maker">만든 사람 · ${esc(p.maker)}</div>
+      <div class="maker">${badgeHTML(p.makerType)}<span>만든 사람 · ${esc(p.maker)}</span></div>
       <p class="body">${esc(p.summary)}</p>`;
     const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}${p.howTo ? ' ' + esc(p.howTo) : ''}</div>`;
     if (role === 'a') {
@@ -612,6 +623,7 @@
     const cards = projs.map((p) => `
         <button class="app-card" data-try="${esc(p.id)}">
           ${p.images && p.images.wide ? `<img class="app-shot" src="${esc(p.images.wide)}" alt="">` : ''}
+          ${badgeHTML(p.makerType)}
           <span class="app-title">${esc(p.title)}</span>
           <span class="app-by">${esc(p.maker)}</span>
           <span class="app-host">${p.embed ? '이 화면에서 체험' : '휴대폰으로 체험 (QR)'}</span>
@@ -1052,7 +1064,7 @@
     return `
       <article class="rv">
         <header class="rv-head">
-          <div><h2>${p.no}. ${esc(p.title)}</h2><p class="rv-maker">${esc(p.maker)} · ${esc(p.summary)}</p></div>
+          <div><h2>${p.no}. ${esc(p.title)}</h2><p class="rv-maker">${badgeHTML(p.makerType)}${esc(p.maker)} · ${esc(p.summary)}</p></div>
           <div class="rv-chips">
             ${chip(p.published ? 'ok' : 'wait', p.published ? '게시 중' : '게시 안 함')}
             ${chip(st[0], st[1])}

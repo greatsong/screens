@@ -31,6 +31,7 @@ const Q = {
   url: '실행 주소',
   summary: '한 줄 소개',
   maker: '제작자 표시명',
+  role: '제작자 구분',
   target: '어느 화면에 맞나요?',
   howTo: '체험 방법',
   tryUrl: '체험 전용 주소',
@@ -39,8 +40,10 @@ const Q = {
   consent: '공개 동의',
 };
 const TARGETS = { '큰 화면용': 'wide', '휴대폰용': 'mobile', '둘 다': 'both' };
+// 작품 카드의 배지 (선생님 / 1·2·3학년)
+const ROLES = { '선생님': 'teacher', '1학년': 'g1', '2학년': 'g2', '3학년': 'g3' };
 
-const P_COLS = ['id', '상태', '작품명', '실행 주소', '한 줄 소개', '제작자 표시명', '화면', '체험 방법', '체험 전용 주소',
+const P_COLS = ['id', '상태', '작품명', '실행 주소', '한 줄 소개', '제작자 표시명', '제작자 구분', '화면', '체험 방법', '체험 전용 주소',
   '자동 시연 동작', '제작자 이메일', '제작자 확인', '교사', '보류', '기간 고정', '승인 시각', '번호', '짧은 주소', '검사',
   '문제', '동기화 ID', '알림 기록', '토큰', '수정 링크', '응답 ID', '접수 시각', '갱신 시각'];
 const R_COLS = ['요청 ID', '시각', '종류', '작품 id', '내용', '상태', '처리 시각', '반영 확인 값', '비고'];
@@ -66,6 +69,7 @@ function setup() {
     form.setDestination(FormApp.DestinationType.SPREADSHEET, prop_('SHEET_ID'));
     setProp_('FORM_ID', form.getId());
   }
+  ensureFormItems_();
   installTriggers_();
   const form = FormApp.openById(prop_('FORM_ID'));
   Logger.log('설문(학생용) 주소: ' + form.getPublishedUrl());
@@ -123,6 +127,23 @@ function createForm_() {
   return form;
 }
 
+// 설치한 뒤에 늘어난 문항과 시트 열을 채운다. 10분마다 결과를 확인할 때와 관리 화면을 열 때 불리므로
+// setup을 다시 실행하지 않아도 된다. 다 채운 뒤에는 FORM_VERSION으로 건너뛴다.
+const FORM_VERSION = '2';
+function ensureFormItems_() {
+  if (!prop_('FORM_ID') || prop_('FORM_VERSION') === FORM_VERSION) return;
+  initSheets_();
+  const form = FormApp.openById(prop_('FORM_ID'));
+  const items = form.getItems();
+  if (!items.some((it) => it.getTitle() === Q.role)) {
+    form.addMultipleChoiceItem().setTitle(Q.role).setHelpText('작품 카드에 배지로 표시됩니다.')
+      .setChoiceValues(Object.keys(ROLES)).setRequired(true);
+    const maker = items.filter((it) => it.getTitle() === Q.maker)[0];
+    if (maker) form.moveItem(form.getItems().length - 1, maker.getIndex() + 1); // 제작자 표시명 바로 아래로
+  }
+  setProp_('FORM_VERSION', FORM_VERSION);
+}
+
 function installTriggers_() {
   ScriptApp.getProjectTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('onFormSubmitTrigger').forForm(prop_('FORM_ID')).onFormSubmit().create();
@@ -152,7 +173,8 @@ function handleSubmission_(resp) {
   const email = (resp.getRespondentEmail && resp.getRespondentEmail()) || String(a[Q.email] || '');
   Object.assign(p, {
     '작품명': clean_(a[Q.title], 40), '실행 주소': clean_(a[Q.url], 300), '한 줄 소개': clean_(a[Q.summary], 80),
-    '제작자 표시명': clean_(a[Q.maker], 30), '화면': TARGETS[a[Q.target]] || 'wide', '체험 방법': clean_(a[Q.howTo], 120),
+    '제작자 표시명': clean_(a[Q.maker], 30), '제작자 구분': ROLES[a[Q.role]] || '',
+    '화면': TARGETS[a[Q.target]] || 'wide', '체험 방법': clean_(a[Q.howTo], 120),
     '체험 전용 주소': clean_(a[Q.tryUrl], 300), '자동 시연 동작': clean_(a[Q.demo], 300, true),
     '제작자 이메일': email.trim(), '제작자 확인': false, '수정 링크': resp.getEditResponseUrl(), '갱신 시각': now_(),
   });
@@ -201,7 +223,7 @@ function runUrl_(r) { return r['체험 전용 주소'] || r['실행 주소']; }
 function toRegistry_(r) {
   const e = {
     id: r.id, title: r['작품명'], url: r['실행 주소'], summary: r['한 줄 소개'], maker: r['제작자 표시명'],
-    target: r['화면'] || 'wide', howTo: r['체험 방법'] || '',
+    makerType: r['제작자 구분'] || '', target: r['화면'] || 'wide', howTo: r['체험 방법'] || '',
     demoSteps: String(r['자동 시연 동작'] || '').split('\n').map((x) => x.trim()).filter(Boolean),
     makerConfirmed: r['제작자 확인'] === true, teacher: r['교사'] || 'pending',
     approvedAt: r['승인 시각'] ? iso_(r['승인 시각']) : '', source: 'form',
@@ -273,6 +295,7 @@ function setControl_(patch, why) {
 // 결과 확인 (10분마다)
 // ======================================================================
 function pollResults() {
+  try { ensureFormItems_(); } catch (e) { Logger.log('설문 문항 갱신 실패: ' + e); }
   const h = Number(fmt_(now_(), 'H'));
   if (h < CONFIG.POLL_HOURS[0] || h >= CONFIG.POLL_HOURS[1]) return;
   withLock_(() => applyResults_(site_('projects/index.json'), site_('content.json')));
@@ -426,6 +449,7 @@ function requireAdmin_() { if (!isAdmin_()) throw new Error('관리 권한이 �
 
 function adminData() {
   requireAdmin_();
+  try { ensureFormItems_(); } catch (e) { Logger.log('설문 문항 갱신 실패: ' + e); }
   const idx = site_('projects/index.json') || { projects: [] };
   const live = site_('content.json') || {};
   const map = {};
@@ -445,7 +469,8 @@ function adminData() {
     projects: t.rows.filter((r) => r.id).map((r) => {
       const e = map[r.id] || {};
       return {
-        id: r.id, no: r['번호'], status: r['상태'], title: r['작품명'], maker: r['제작자 표시명'], email: r['제작자 이메일'],
+        id: r.id, no: r['번호'], status: r['상태'], title: r['작품명'], maker: r['제작자 표시명'], makerType: r['제작자 구분'] || '',
+        email: r['제작자 이메일'],
         url: r['실행 주소'], short: r['짧은 주소'], teacher: r['교사'], makerConfirmed: r['제작자 확인'] === true,
         held: r['보류'] === true, pinUntil: r['기간 고정'] ? toRegistry_(r).pinUntil : '', check: r['검사'],
         problems: String(r['문제'] || '').split('\n').filter(Boolean), changed: !!e.changedAfterApproval,

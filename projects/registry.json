@@ -1,5 +1,5 @@
 {
-  "_설명": "작품 등록부. 관리 시트(Apps Script)가 source=form 항목을 쓰고, 사람이 직접 쓴 항목(source 없음)은 그대로 둔다. 필수: id, title, url, summary, maker, target(wide|mobile|both). 선택: tryUrl, pinnedUrl, howTo, demoSteps. 승인: makerConfirmed, teacher(pending|approved|hidden), approvedAt, pinUntil.",
+  "_설명": "작품 등록부. 관리 시트(Apps Script)가 source=form 항목을 쓰고, 사람이 직접 쓴 항목(source 없음)은 그대로 둔다. 필수: id, title, url, summary, maker, target(wide|mobile|both). 배지: makerType(teacher|g1|g2|g3). 선택: tryUrl, pinnedUrl, howTo, demoSteps. 승인: makerConfirmed, teacher(pending|approved|hidden), approvedAt, pinUntil.",
   "projects": [
     {
       "id": "touch-board",
@@ -24,7 +24,8 @@
       "demoSteps": [],
       "makerConfirmed": true,
       "teacher": "approved",
-      "pinUntil": "2026-11-06"
+      "pinUntil": "2026-11-06",
+      "makerType": "teacher"
     },
     {
       "id": "neural-explorer",
@@ -36,7 +37,8 @@
       "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",
       "demoSteps": [],
       "makerConfirmed": true,
-      "teacher": "approved"
+      "teacher": "approved",
+      "makerType": "teacher"
     },
     {
       "id": "activation-lab",
@@ -48,7 +50,8 @@
       "howTo": "",
       "demoSteps": [],
       "makerConfirmed": false,
-      "teacher": "pending"
+      "teacher": "pending",
+      "makerType": "teacher"
     },
     {
       "id": "f4b085fc",
