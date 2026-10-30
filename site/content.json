@@ -1,7 +1,7 @@
 {
-  "version": 6,
-  "publishedAt": "2026-10-30T09:35:37+09:00",
-  "appVersion": "0.2.0",
+  "version": 7,
+  "publishedAt": "2026-10-30T09:51:00+09:00",
+  "appVersion": "0.3.0",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -193,5 +193,7 @@
     "holdMinutes": 4,
     "maxMinutes": 15
   },
-  "noticeUntil": ""
+  "noticeUntil": "",
+  "controlRequestId": "",
+  "requestedAt": ""
 }

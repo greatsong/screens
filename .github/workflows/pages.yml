@@ -1,16 +1,13 @@
 name: 화면 배포
 
-# 세 가지 경로가 한 워크플로를 같이 사용한다.
-# - push(등록부·코드 수정): 바뀐 작품을 검사·편성하고 배포한다
-# - 정기 실행(평일 하루 세 번): 오래된 검사 결과를 다시 검사하고 편성한다
-# - 수동 실행(휴대폰): 긴급 정지·공지·원격 시연. 빠르게 반영되도록 작품 검사는 건너뛴다(필요하면 check_projects를 켠다)
+# 빠른 경로. 등록부·화면 제어가 바뀌거나(push) 휴대폰에서 수동 실행하면 바로 편성·배포한다.
+# 시간이 오래 걸리는 작품 검사는 「작품 검사」 워크플로가 따로 하고, 끝나면 redeploy로 이 워크플로를 다시 부른다.
+# 상태는 실행 입력이 아니라 커밋된 파일에 있으므로, 대기 중인 실행이 취소돼도 다음 실행이 최신 main을 배포한다.
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '40 22 * * 0-4'   # 평일 07:40 (한국 시간)
-    - cron: '10 3 * * 1-5'    # 평일 12:10
-    - cron: '40 6 * * 1-5'    # 평일 15:40
+  repository_dispatch:
+    types: [redeploy]
   workflow_dispatch:
     inputs:
       mode:
@@ -30,10 +27,6 @@ on:
         description: '원격 시연 이름 (주소를 넣었을 때만)'
         required: false
         default: ''
-      check_projects:
-        description: '작품 검사도 함께 실행 (긴급 정지 때는 끄기)'
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -48,7 +41,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 대기하던 실행도 앞선 실행의 커밋을 포함한 최신 main에서 시작한다 (트리거 시점 커밋에서 시작하면 push가 거절된다)
+      # 대기하던 실행도 앞선 실행의 커밋을 포함한 최신 main에서 시작한다
       - uses: actions/checkout@v4
         with:
           ref: main
@@ -58,9 +51,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # 입력값은 '바꿀 내용'이 아니라 '원하는 최종 상태'다. 그래서 push가 거절되면 최신 main 위에서 다시 적용하면 된다.
-      # 같은 그룹에서 대기 중인 실행은 새 실행이 들어오면 취소되는데, 마지막 요청이 최종 상태이므로 결과는 같다.
-      - name: 콘텐츠 갱신 (수동 실행일 때만)
+      # 휴대폰 수동 실행: 입력값은 '원하는 최종 상태'라서 push가 거절되면 최신 main 위에서 다시 적용하면 된다
+      - name: 화면 제어 갱신 (휴대폰 수동 실행일 때만)
         if: github.event_name == 'workflow_dispatch'
         env:
           MODE: ${{ inputs.mode }}
@@ -71,53 +63,29 @@ jobs:
           for i in 1 2 3; do
             git fetch -q origin main && git reset -q --hard origin/main
             python3 scripts/bump.py --mode="$MODE" --notice="$NOTICE" --showcase-url="$SC_URL" --showcase-title="$SC_TITLE"
-            git add site/content.json
-            git commit -q -m "화면 시험: 콘텐츠 갱신 ($MODE)"
+            git add projects/control.json
+            git commit -q -m "화면 제어: 휴대폰 수동 실행 ($MODE)"
             if git push -q origin HEAD:main; then exit 0; fi
             echo "push 거절, ${i}번째 재시도"
             sleep $((i * 5))
           done
           exit 1
 
-      # 수동 실행에서 작품 검사를 켜면 모든 작품을 다시 검사한다
-      - name: 작품 검사 계획
-        id: plan
-        if: github.event_name != 'workflow_dispatch' || inputs.check_projects
-        run: |
-          ARGS=""
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then ARGS="--all"; fi
-          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
-          echo "count=$(python3 scripts/check_projects.py --plan $ARGS)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/setup-python@v5
-        if: steps.plan.outputs.count && steps.plan.outputs.count != '0'
-        with:
-          python-version: '3.12'
-
-      - name: Playwright와 한글 글꼴 준비 (검사할 작품이 있을 때만)
-        if: steps.plan.outputs.count && steps.plan.outputs.count != '0'
-        run: |
-          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk
-          python -m pip install -q playwright==1.62.0
-          python -m playwright install --with-deps chromium
-
-      - name: 작품 검사
-        if: steps.plan.outputs.count && steps.plan.outputs.count != '0'
-        run: python scripts/check_projects.py ${{ steps.plan.outputs.args }}
-
-      - name: 작품 편성
+      - name: 편성
         run: python3 scripts/build_projects.py
 
-      - name: 검사·편성 결과 커밋
+      # 편성 결과 파일은 이 워크플로만 쓰므로, 거절되면 최신 main을 받아 편성을 다시 하면 된다
+      - name: 편성 결과 커밋
         run: |
-          git add -A site/projects site/p site/content.json projects/registry.json
-          if git diff --cached --quiet; then echo "바뀐 결과 없음"; exit 0; fi
-          git commit -q -m "작품 검사·편성 갱신"
           for i in 1 2 3; do
+            git add -A site/content.json site/projects/index.json site/p projects/assigned.json
+            if git diff --cached --quiet; then echo "바뀐 결과 없음"; exit 0; fi
+            git commit -q -m "편성 갱신"
             if git push -q origin HEAD:main; then exit 0; fi
             echo "push 거절, ${i}번째 재시도"
-            git pull -q --rebase origin main || { git rebase --abort; exit 1; }
             sleep $((i * 5))
+            git fetch -q origin main && git reset -q --hard origin/main
+            python3 scripts/build_projects.py
           done
           exit 1
 

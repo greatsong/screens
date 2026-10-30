@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.2.0';
+  const APP_VERSION = '0.3.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -349,9 +349,11 @@
     if (fromNet && !embed) store.set('content', data);
     // 이 화면이 이미 한 번 받아 둔 뒤에 버전이 바뀐 경우에만 반영 지연을 잰다
     if (fromNet && state.netOk && prev && prev.version !== data.version) {
-      const pub = Date.parse(data.publishedAt || '');
+      // 화면 제어 요청(긴급 정지·공지·원격 시연)이면 요청한 시각부터, 그 밖의 변경이면 편성한 시각부터 잰다
+      const fromReq = !!(data.controlRequestId && data.controlRequestId !== prev.controlRequestId && data.requestedAt);
+      const pub = Date.parse(fromReq ? data.requestedAt : (data.publishedAt || ''));
       if (!isNaN(pub)) {
-        state.delay = { version: data.version, ms: now() - pub, at: now() };
+        state.delay = { version: data.version, ms: now() - pub, at: now(), from: fromReq ? '요청' : '편성' };
         if (!embed) store.set('delay', state.delay);
       }
       logEvent('콘텐츠 v' + prev.version + ' → v' + data.version);
@@ -858,7 +860,7 @@
 
     const d = state.delay;
     checks.push(d
-      ? row(d.ms < 15 * 60000 ? 'ok' : 'bad', '반영 지연', 'v' + esc(d.version) + ' 게시 후 ' + dur(d.ms) + ' 만에 표시 (' + mdhm(d.at) + ' 측정)')
+      ? row(d.ms < 15 * 60000 ? 'ok' : 'bad', '반영 지연', 'v' + esc(d.version) + ' ' + (d.from || '편성') + ' 후 ' + dur(d.ms) + ' 만에 표시 (' + mdhm(d.at) + ' 측정)')
       : row('wait', '반영 지연', 'GitHub Actions에서 「화면 배포」를 실행하면 측정합니다'));
 
     const cont = document.hidden ? 0 : Date.now() - state.cont.start;

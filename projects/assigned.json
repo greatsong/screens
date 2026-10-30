@@ -1,0 +1,23 @@
+{
+  "_설명": "짧은 주소 번호와 승인 시점 화면 지문. 편성 스크립트(build_projects.py)만 쓴다.",
+  "projects": {
+    "touch-board": {
+      "no": 1,
+      "fingerprint": "c6a7b60d8bca919d",
+      "approvedAt": ""
+    },
+    "commit-galaxy": {
+      "no": 2,
+      "fingerprint": "1c44702b74bb3548",
+      "approvedAt": ""
+    },
+    "neural-explorer": {
+      "no": 3,
+      "fingerprint": "dbe97b7d5e14a260",
+      "approvedAt": ""
+    },
+    "activation-lab": {
+      "no": 4
+    }
+  }
+}

@@ -1,5 +1,7 @@
 {
-  "generatedAt": "2026-10-30T09:35:37+09:00",
+  "generatedAt": "2026-10-30T09:51:52+09:00",
+  "registrySyncId": "",
+  "controlRequestId": "",
   "projects": [
     {
       "id": "touch-board",
@@ -17,9 +19,11 @@
         "wide": "projects/touch-board/wide.jpg?v=2026-10-30T093426"
       },
       "pinned": false,
+      "source": "manual",
       "status": "ok",
       "problems": [],
       "checkedAt": "2026-10-30T09:34:26+09:00",
+      "fingerprint": "c6a7b60d8bca919d",
       "teacher": "approved",
       "makerConfirmed": true,
       "published": true,
@@ -43,9 +47,11 @@
         "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-30T093430"
       },
       "pinned": true,
+      "source": "manual",
       "status": "ok",
       "problems": [],
       "checkedAt": "2026-10-30T09:34:30+09:00",
+      "fingerprint": "1c44702b74bb3548",
       "teacher": "approved",
       "makerConfirmed": true,
       "published": true,
@@ -70,9 +76,11 @@
         "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-30T093436"
       },
       "pinned": false,
+      "source": "manual",
       "status": "ok",
       "problems": [],
       "checkedAt": "2026-10-30T09:34:36+09:00",
+      "fingerprint": "dbe97b7d5e14a260",
       "teacher": "approved",
       "makerConfirmed": true,
       "published": true,
@@ -96,9 +104,11 @@
         "wide": "projects/activation-lab/wide.jpg?v=2026-10-30T093440"
       },
       "pinned": false,
+      "source": "manual",
       "status": "ok",
       "problems": [],
       "checkedAt": "2026-10-30T09:34:40+09:00",
+      "fingerprint": "f779780f0659e550",
       "teacher": "pending",
       "makerConfirmed": false,
       "published": false,

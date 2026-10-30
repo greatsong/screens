@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --bg: #f6f7fb; --card: #fff; --text: #1b2333; --muted: #667085; --line: #e4e7ec; --accent: #1d4ed8; --warn: #b54708; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; word-break: keep-all; }
+    main { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .maker { color: var(--muted); margin: 0 0 12px; }
+    .chip { display: inline-block; font-weight: 700; font-size: 14px; padding: 3px 12px; border-radius: 99px; background: #e0eaff; color: var(--accent); }
+    .explain { margin: 12px 0 0; }
+    ul.problems { margin: 8px 0 0; padding-left: 20px; color: var(--warn); }
+    img { display: block; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; }
+    .shots { display: flex; gap: 10px; align-items: flex-start; }
+    .shots .phone { width: 34%; }
+    .btn { display: inline-block; border: 0; border-radius: 10px; padding: 12px 18px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; margin: 6px 6px 0 0; }
+    .primary { background: var(--accent); color: #fff; }
+    .ghost { background: #eef2f6; color: var(--text); }
+    .note { color: var(--muted); font-size: 14px; }
+    .short { font-size: 20px; font-weight: 800; }
+  </style>
+</head>
+<body>
+<main id="app" data-token="<?= token ?>"><div class="card">불러오는 중입니다.</div></main>
+<script>
+  // 토큰은 HTML 속성으로 넘긴다 (스크립트 안에 직접 넣으면 템플릿의 문맥별 이스케이프가 따옴표를 바꿀 수 있다)
+  var TOKEN = document.getElementById('app').getAttribute('data-token');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function render(d) {
+    var app = document.getElementById('app');
+    if (!d) { app.innerHTML = '<div class="card">작품을 찾지 못했습니다. 메일의 링크로 다시 열어 주세요.</div>'; return; }
+    var h = '<div class="card"><h1>' + esc(d.title) + '</h1><p class="maker">' + esc(d.maker) + '</p>' +
+      '<span class="chip">' + esc(d.status) + '</span><p class="explain">' + esc(d.explain) + '</p>';
+    if (d.problems.length) h += '<ul class="problems">' + d.problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+    if (d.status === '접수' || d.status === '검사 대기') h += '<p class="note">다음 정기 처리: ' + esc(d.nextSync) + '</p>';
+    h += '</div>';
+    if (d.short) h += '<div class="card">휴대폰 체험 주소<div class="short">' + esc(d.short) + '</div></div>';
+    if (d.wide || d.mobile) {
+      h += '<div class="card"><b>자동 검사에서 캡처한 화면</b><div class="shots">' +
+        (d.wide ? '<img src="' + esc(d.wide) + '" alt="큰 화면 캡처">' : '') +
+        (d.mobile ? '<img class="phone" src="' + esc(d.mobile) + '" alt="휴대폰 화면 캡처">' : '') + '</div>';
+      if (d.previewA) h += '<p class="note">학교 화면에 나올 모습입니다.</p><a class="btn ghost" href="' + esc(d.previewA) + '" target="_blank">A 화면(소개) 미리보기</a>' +
+        '<a class="btn ghost" href="' + esc(d.previewB) + '" target="_blank">B 화면(체험) 미리보기</a>';
+      h += '</div>';
+    }
+    h += '<div class="card">';
+    if (d.canConfirm) h += '<button class="btn primary" id="confirm">확인했습니다</button>';
+    if (d.editUrl) h += '<a class="btn ghost" href="' + esc(d.editUrl) + '" target="_blank">작품 정보 고치기</a>';
+    h += '<p class="note">작품 정보를 고쳐 다시 제출하면 검사와 확인, 승인을 다시 거칩니다.</p></div>';
+    app.innerHTML = h;
+    var b = document.getElementById('confirm');
+    if (b) b.onclick = function () {
+      b.disabled = true; b.textContent = '보내는 중';
+      google.script.run.withSuccessHandler(render).withFailureHandler(fail).makerConfirm(TOKEN);
+    };
+  }
+  function fail(e) { document.getElementById('app').insertAdjacentHTML('afterbegin', '<div class="card">오류: ' + esc(e.message || e) + '</div>'); }
+  google.script.run.withSuccessHandler(render).withFailureHandler(fail).statusData(TOKEN);
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+name: 작품 검사
+
+# 느린 경로. 등록부가 바뀌거나 평일 정기 시각이 되면 작품을 검사·캡처하고, 결과가 바뀌면 화면 배포를 다시 부른다.
+# 화면 배포(긴급 정지 등)를 기다리게 하지 않도록 워크플로를 나눴다.
+on:
+  push:
+    branches: [main]
+    paths: ['projects/registry.json']
+  schedule:
+    - cron: '40 22 * * 0-4'   # 평일 07:40 (한국 시간)
+    - cron: '10 3 * * 1-5'    # 평일 12:10
+    - cron: '40 6 * * 1-5'    # 평일 15:40
+  workflow_dispatch:
+    inputs:
+      all:
+        description: '모든 작품을 다시 검사'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Git 사용자 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 검사 계획
+        id: plan
+        run: |
+          ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.all }}" = "true" ]; then ARGS="--all"; fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "count=$(python3 scripts/check_projects.py --plan $ARGS)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        if: steps.plan.outputs.count != '0'
+        with:
+          python-version: '3.12'
+
+      - name: Playwright와 한글 글꼴 준비
+        if: steps.plan.outputs.count != '0'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk
+          python -m pip install -q playwright==1.62.0
+          python -m playwright install --with-deps chromium
+
+      - name: 작품 검사
+        if: steps.plan.outputs.count != '0'
+        run: python scripts/check_projects.py ${{ steps.plan.outputs.args }}
+
+      # 검사 결과(site/projects/<id>/)는 이 워크플로만 쓰므로 rebase가 충돌하지 않는다
+      - name: 검사 결과 커밋
+        id: commit
+        if: steps.plan.outputs.count != '0'
+        run: |
+          git add -A site/projects
+          git reset -q site/projects/index.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "바뀐 결과 없음"; exit 0; fi
+          git commit -q -m "작품 검사 결과"
+          for i in 1 2 3; do
+            if git push -q origin HEAD:main; then echo "committed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            echo "push 거절, ${i}번째 재시도"
+            git pull -q --rebase origin main || { git rebase --abort; exit 1; }
+            sleep $((i * 5))
+          done
+          exit 1
+
+      - name: 화면 다시 배포
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/${{ github.repository }}/dispatches" -f event_type=redeploy

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --bg: #f6f7fb; --card: #fff; --text: #1b2333; --muted: #667085; --line: #e4e7ec; --accent: #1d4ed8; --red: #d92d20; --ok: #067647; --warn: #b54708; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; word-break: keep-all; }
+    main { max-width: 860px; margin: 0 auto; padding: 16px 14px 60px; }
+    h1 { font-size: 20px; margin: 4px 0 12px; }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .btn { border: 0; border-radius: 9px; padding: 9px 14px; font: inherit; font-weight: 700; cursor: pointer; background: #eef2f6; color: var(--text); text-decoration: none; display: inline-block; }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.red { background: var(--red); color: #fff; }
+    .btn:disabled { opacity: .5; }
+    input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+    .chip { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; border: 1px solid currentColor; }
+    .s-게시중 { color: var(--ok); } .s-보완필요, .s-수정요청 { color: var(--warn); } .s-교사검토대기 { color: var(--accent); } .s-숨김 { color: var(--muted); }
+    .proj { display: grid; grid-template-columns: 140px 1fr; gap: 12px; }
+    .proj img { width: 140px; border-radius: 8px; border: 1px solid var(--line); }
+    .proj h3 { margin: 0; font-size: 16px; }
+    .problems { color: var(--warn); margin: 6px 0; padding-left: 18px; font-size: 14px; }
+    .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 10px; max-width: 90vw; display: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    td { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; }
+    .state { font-size: 14px; }
+    .state b { display: inline-block; min-width: 92px; }
+    .pending { color: var(--warn); font-weight: 700; }
+    @media (max-width: 520px) { .proj { grid-template-columns: 1fr; } .proj img { width: 100%; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>스탠바이미 관리</h1>
+  <div id="screen" class="card">불러오는 중입니다.</div>
+  <div id="sync" class="card"></div>
+  <div id="projects"></div>
+  <div id="requests" class="card"></div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+  var DATA = null;
+  var ORDER = ['교사 검토 대기', '보완 필요', '수정 요청', '게시 대기', '게시 중', '제작자 확인 대기', '검사 대기', '접수', '숨김'];
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(function () { t.style.display = 'none'; }, 5000); }
+  function load() { google.script.run.withSuccessHandler(render).withFailureHandler(fail).adminData(); }
+  function fail(e) { toast('오류: ' + (e.message || e)); }
+  function call(fn, args, confirmText) {
+    if (confirmText && !confirm(confirmText)) return;
+    var r = google.script.run.withSuccessHandler(function (msg) { toast(msg); load(); }).withFailureHandler(fail);
+    r[fn].apply(r, args);
+  }
+  function showcaseText(s) { return !s ? '없음' : (s.project ? '작품 ' + s.project : (s.title || s.url)); }
+
+  function render(d) {
+    DATA = d;
+    var c = d.control, req = c.requested || {}, live = c.live || {};
+    var waiting = req.requestId && req.requestId !== live.requestId;
+    var options = d.published.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.no + '. ' + p.title) + '</option>'; }).join('');
+    document.getElementById('screen').innerHTML =
+      '<h2>화면 상태</h2>' +
+      '<div class="state"><b>화면에 반영됨</b>' + (live.mode === 'stop' ? '<span class="pending">긴급 정지 중</span>' : '평소') +
+      ' · 공지 ' + esc(live.notice || '없음') + ' · B 시연 ' + esc(showcaseText(live.showcase)) + ' · 콘텐츠 v' + esc(live.version) + '</div>' +
+      (waiting ? '<div class="state pending">요청을 반영하는 중입니다 (보통 1~2분). 새로 고치면 다시 확인합니다.</div>' : '') +
+      '<div class="row" style="margin-top:10px">' +
+      (live.mode === 'stop' && !waiting
+        ? '<button class="btn primary" onclick="call(\'adminStop\',[false])">정지 해제</button>'
+        : '<button class="btn red" onclick="call(\'adminStop\',[true],\'두 화면을 긴급 정지합니다. 작품 체험도 닫힙니다.\')">긴급 정지</button>') +
+      '<button class="btn" onclick="load()">새로 고침</button></div>' +
+      '<div class="row" style="margin-top:10px"><input id="notice" placeholder="공지 문구 (비우면 공지 내림)" style="flex:1;min-width:200px" value="' + esc(req.notice || '') + '">' +
+      '<input id="noticeUntil" type="datetime-local" title="이 시각이 지나면 공지를 내립니다">' +
+      '<button class="btn" onclick="call(\'adminNotice\',[document.getElementById(\'notice\').value, document.getElementById(\'noticeUntil\').value])">공지 적용</button></div>' +
+      '<div class="row" style="margin-top:10px"><select id="sc"><option value="">B 화면에서 실행할 작품</option>' + options + '</select>' +
+      '<button class="btn" onclick="var v=document.getElementById(\'sc\').value; if(v) call(\'adminShowcase\',[v])">B에서 실행</button>' +
+      '<button class="btn" onclick="call(\'adminShowcase\',[\'\'])">B 기본 화면으로</button></div>';
+
+    document.getElementById('sync').innerHTML =
+      '<div class="row"><div style="flex:1"><b>정기 처리</b> <span class="muted">승인·고정·새 작품은 ' + esc(d.nextSync) +
+      '에 반영합니다. 긴급 정지·숨김·공지·B 실행은 바로 반영합니다.</span></div>' +
+      '<button class="btn primary" onclick="call(\'adminSyncNow\',[])">지금 반영</button></div>' +
+      '<div class="muted" style="margin-top:6px"><a href="' + esc(d.sheetUrl) + '" target="_blank">관리 시트</a> · ' +
+      '<a href="' + esc(d.formUrl) + '" target="_blank">등록 설문</a> · <a href="' + esc(d.site) + '/?review" target="_blank">검토 화면</a></div>';
+
+    var list = d.projects.slice().sort(function (a, b) { return ORDER.indexOf(a.status) - ORDER.indexOf(b.status); });
+    document.getElementById('projects').innerHTML = '<div class="card"><h2>작품 ' + list.length + '개</h2>' +
+      (list.length ? '' : '<p class="muted">아직 등록된 작품이 없습니다.</p>') + '</div>' + list.map(projectHTML).join('');
+
+    document.getElementById('requests').innerHTML = '<h2>최근 요청</h2><table>' + d.requests.map(function (q) {
+      return '<tr><td>' + esc(q.at) + '</td><td>' + esc(q.type) + (q.project ? '<br><span class="muted">' + esc(q.project) + '</span>' : '') +
+        '</td><td>' + esc(q.text) + '</td><td><b>' + esc(q.status) + '</b><br><span class="muted">' + esc(q.note) + '</span></td></tr>';
+    }).join('') + '</table>';
+  }
+
+  function projectHTML(p) {
+    var cls = 's-' + String(p.status).replace(/\s/g, '');
+    var btns = [];
+    if (p.status === '교사 검토 대기' || p.changed || (p.status === '숨김')) btns.push('<button class="btn primary" onclick="call(\'adminApprove\',[\'' + p.id + '\'])">' + (p.status === '숨김' ? '다시 게시' : (p.changed ? '바뀐 내용 승인' : '게시 승인')) + '</button>');
+    if (p.status !== '숨김') btns.push('<button class="btn red" onclick="call(\'adminHide\',[\'' + p.id + '\'],\'이 작품을 바로 숨깁니다.\')">숨김</button>');
+    btns.push('<button class="btn" onclick="var m=prompt(\'제작자에게 보낼 수정 요청\'); if(m) call(\'adminRequestChanges\',[\'' + p.id + '\', m])">수정 요청</button>');
+    btns.push('<button class="btn" onclick="var d=prompt(\'추천으로 고정할 마지막 날 (예: 2026-11-06). 비우면 해제\', \'' + esc(p.pinUntil) + '\'); if(d!==null) call(\'adminPin\',[\'' + p.id + '\', d])">기간 고정</button>');
+    btns.push('<button class="btn" onclick="call(\'adminHold\',[\'' + p.id + '\',' + (!p.held) + '])">' + (p.held ? '보류 해제' : '보류') + '</button>');
+    if (p.status === '게시 중') btns.push('<button class="btn" onclick="call(\'adminShowcase\',[\'' + p.id + '\'])">B에서 실행</button>');
+    return '<div class="card proj">' + (p.thumb ? '<img src="' + esc(p.thumb) + '" alt="">' : '<div></div>') +
+      '<div><div class="row"><h3>' + esc((p.no ? p.no + '. ' : '') + p.title) + '</h3><span class="chip ' + cls + '">' + esc(p.status) + '</span>' +
+      (p.changed ? '<span class="chip s-보완필요">승인 뒤 바뀜</span>' : '') + (p.held ? '<span class="chip">보류</span>' : '') +
+      (p.pinUntil ? '<span class="chip">' + esc(p.pinUntil) + '까지 추천</span>' : '') + '</div>' +
+      '<div class="muted">' + esc(p.maker) + ' · ' + esc(p.email) + ' · 제작자 확인 ' + (p.makerConfirmed ? '완료' : '전') + '</div>' +
+      '<div class="muted"><a href="' + esc(p.url) + '" target="_blank">' + esc(p.url) + '</a>' + (p.short ? ' · ' + esc(p.short) : '') + '</div>' +
+      (p.problems.length ? '<ul class="problems">' + p.problems.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+      '<div class="row" style="margin:6px 0"><a class="btn" href="' + esc(p.previewA) + '" target="_blank">A 미리보기</a><a class="btn" href="' + esc(p.previewB) + '" target="_blank">B 미리보기</a></div>' +
+      '<div class="row">' + btns.join('') + '</div></div></div>';
+  }
+  load();
+</script>
+</body>
+</html>

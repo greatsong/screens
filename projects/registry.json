@@ -1,5 +1,5 @@
 {
-  "_설명": "작품 등록부. 필수: id, title, url, summary, maker, target(wide|mobile|both). 선택: tryUrl, pinnedUrl, howTo, demoSteps. 승인: makerConfirmed, teacher(pending|approved|hidden), pinUntil. no·approvedFingerprint는 편성 스크립트가 채운다.",
+  "_설명": "작품 등록부. 관리 시트(Apps Script)가 source=form 항목을 쓰고, 사람이 직접 쓴 항목(source 없음)은 그대로 둔다. 필수: id, title, url, summary, maker, target(wide|mobile|both). 선택: tryUrl, pinnedUrl, howTo, demoSteps. 승인: makerConfirmed, teacher(pending|approved|hidden), approvedAt, pinUntil.",
   "projects": [
     {
       "id": "touch-board",
@@ -11,9 +11,7 @@
       "howTo": "화면에 손가락 여러 개를 대고 그립니다.",
       "demoSteps": [],
       "makerConfirmed": true,
-      "teacher": "approved",
-      "no": 1,
-      "approvedFingerprint": "c6a7b60d8bca919d"
+      "teacher": "approved"
     },
     {
       "id": "commit-galaxy",
@@ -26,9 +24,7 @@
       "demoSteps": [],
       "makerConfirmed": true,
       "teacher": "approved",
-      "pinUntil": "2026-11-06",
-      "no": 2,
-      "approvedFingerprint": "1c44702b74bb3548"
+      "pinUntil": "2026-11-06"
     },
     {
       "id": "neural-explorer",
@@ -40,9 +36,7 @@
       "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",
       "demoSteps": [],
       "makerConfirmed": true,
-      "teacher": "approved",
-      "no": 3,
-      "approvedFingerprint": "dbe97b7d5e14a260"
+      "teacher": "approved"
     },
     {
       "id": "activation-lab",
@@ -54,8 +48,8 @@
       "howTo": "",
       "demoSteps": [],
       "makerConfirmed": false,
-      "teacher": "pending",
-      "no": 4
+      "teacher": "pending"
     }
-  ]
+  ],
+  "syncId": ""
 }
