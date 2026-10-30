@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.0';
+  const APP_VERSION = '0.5.1';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -20,6 +20,12 @@
   function badgeHTML(type) {
     const b = MAKER_BADGE[type];
     return b ? `<span class="mbadge mb-${type}"><span class="mb-icon">${b.icon}</span>${b.label}</span>` : '';
+  }
+  // 배지가 붙으면 표시명 앞의 같은 말("선생님 작품 · ")은 뺀다
+  function makerText(p) {
+    const b = MAKER_BADGE[p.makerType];
+    const name = String(p.maker || '');
+    return b && name.indexOf(b.label) === 0 ? name.slice(b.label.length).replace(/^[\s·]+/, '') || name : name;
   }
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -506,7 +512,7 @@
     const text = `
       <div class="tag">${role === 'a' ? '작품 소개' : '직접 체험'}${p.pinned ? ' · 추천' : ''}</div>
       <h1 class="title">${esc(p.title)}</h1>
-      <div class="maker">${badgeHTML(p.makerType)}<span>${esc(p.maker)}</span></div>
+      <div class="maker">${badgeHTML(p.makerType)}<span>${esc(makerText(p))}</span></div>
       <p class="body">${esc(p.summary)}</p>`;
     const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}</div>`;
     if (role === 'a') {
@@ -516,7 +522,7 @@
     }
     const tryBtn = p.embed ? `<button class="try-btn" data-try="${esc(p.id)}">▶ 체험 시작</button>` : '';
     const side = qr
-      ? `<div class="qr big"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 체험<br><b>${esc(p.short)}</b></div></div>`
+      ? `<div class="qr big"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 체험<br><b>${esc(p.short).replace(/\//g, '/<wbr>')}</b></div></div>`
       : shot;
     return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}${tryBtn}</div>${side}</div>`;
   }
@@ -687,7 +693,7 @@
           ${p.images && p.images.wide ? `<img class="app-shot" src="${esc(p.images.wide)}" alt="">` : ''}
           ${badgeHTML(p.makerType)}
           <span class="app-title">${esc(p.title)}</span>
-          <span class="app-by">${esc(p.maker)}</span>
+          <span class="app-by">${esc(makerText(p))}</span>
           <span class="app-host">${p.embed ? '이 화면에서 체험' : '휴대폰으로 체험 (QR)'}</span>
         </button>`).concat(apps.map((a, i) => `
         <button class="app-card" data-app="${i}">
@@ -1126,7 +1132,7 @@
     return `
       <article class="rv">
         <header class="rv-head">
-          <div><h2>${p.no}. ${esc(p.title)}</h2><p class="rv-maker">${badgeHTML(p.makerType)}${esc(p.maker)} · ${esc(p.summary)}</p></div>
+          <div><h2>${p.no}. ${esc(p.title)}</h2><p class="rv-maker">${badgeHTML(p.makerType)}${esc(makerText(p))} · ${esc(p.summary)}</p></div>
           <div class="rv-chips">
             ${chip(p.published ? 'ok' : 'wait', p.published ? '게시 중' : '게시 안 함')}
             ${chip(st[0], st[1])}
