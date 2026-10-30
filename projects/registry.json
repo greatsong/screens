@@ -52,12 +52,12 @@
     },
     {
       "id": "f4b085fc",
-      "title": "뇌졸중 예측 챌린지",
-      "url": "https://greatsong.github.io/stroke-challenge/",
-      "summary": "브라우저 안에서 모델을 만들고 F1 점수로 겨루는 뇌졸중 예측 챌린지입니다.",
+      "title": "당곡 AI",
+      "url": "https://danggok-ai.vercel.app/",
+      "summary": "Claude·Gemini·ChatGPT·Solar 네 가지 AI를 한 화면에서 사용하는 당곡고 AI 채팅입니다.",
       "maker": "선생님 작품 · 송석리",
-      "target": "wide",
-      "howTo": "",
+      "target": "mobile",
+      "howTo": "휴대폰으로 QR을 찍고 구글 계정으로 로그인합니다.",
       "demoSteps": [],
       "makerConfirmed": false,
       "teacher": "pending",
@@ -65,5 +65,5 @@
       "source": "form"
     }
   ],
-  "syncId": "20261030-104346-sf1ec"
+  "syncId": "20261030-104753-sb7fd"
 }
