@@ -244,6 +244,12 @@ denied = false;
 try { G.adminData(); } catch (e) { denied = true; }
 check('로그인하지 않은 사람도 막힘', denied);
 
+console.log('10. 메일 문구');
+const bodies = state.outbox.map((m) => m.htmlBody).join('\n');
+check('작품명 바로 뒤에 조사가 붙지 않음', !/시험 작품 [ABC]」(을|를|이|가|은|는)/.test(bodies));
+check('빈 문단이 없음', !bodies.includes('<p></p>'));
+check('게시 메일에 짧은 주소를 굵게 표시', /짧은 주소는 <b>[^<]+\/p\/\d+<\/b>입니다/.test(mails('a@school.kr', '게시 시작')[0].htmlBody));
+
 console.log(fails ? `\n실패 ${fails}개` : '\n모든 시험 통과');
 console.log(`보낸 메일 ${state.outbox.length}통, GitHub 커밋 ${state.commits.length}번`);
 process.exit(fails ? 1 : 0);
