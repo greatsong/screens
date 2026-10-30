@@ -1,7 +1,7 @@
-name: AI 뉴스
+name: AI 뉴스·학사일정
 
-# AI 뉴스를 받아 학생에게 보여 줄 기사를 고른다(scripts/fetch_news.py). 고른 기사가 바뀌면 커밋하고 화면 배포를 다시 부른다.
-# 편성(build_projects.py)이 projects/news.json 을 화면 내용(content.json)의 news 로 합친다.
+# AI 뉴스를 받아 학생에게 보여 줄 기사를 고르고(scripts/fetch_news.py), 나이스 학사일정을 받는다(scripts/fetch_schedule.py).
+# 바뀐 것이 있으면 커밋하고 화면 배포를 다시 부른다. 편성(build_projects.py)이 두 파일을 화면 내용(content.json)에 합친다.
 on:
   schedule:
     - cron: '30 22 * * 0-4'   # 평일 07:30 (한국 시간)
@@ -33,13 +33,16 @@ jobs:
       - name: 뉴스 고르기
         run: python3 scripts/fetch_news.py
 
-      # projects/news.json 은 이 워크플로만 쓰므로 rebase가 충돌하지 않는다
-      - name: 뉴스 커밋
+      - name: 학사일정 받기
+        run: python3 scripts/fetch_schedule.py
+
+      # projects/news.json · schedule.json 은 이 워크플로만 쓰므로 rebase가 충돌하지 않는다
+      - name: 뉴스·학사일정 커밋
         id: commit
         run: |
-          git add projects/news.json
-          if git diff --cached --quiet; then echo "바뀐 기사 없음"; exit 0; fi
-          git commit -q -m "AI 뉴스 갱신"
+          git add projects/news.json projects/schedule.json
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
+          git commit -q -m "AI 뉴스·학사일정 갱신"
           for i in 1 2 3; do
             if git push -q origin HEAD:main; then echo "committed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             echo "push 거절, ${i}번째 재시도"

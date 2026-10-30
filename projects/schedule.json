@@ -1,0 +1,82 @@
+{
+  "updatedAt": "2026-10-30T15:01:37+09:00",
+  "events": [
+    {
+      "name": "수련활동",
+      "start": "2026-10-30",
+      "end": "2026-10-30",
+      "grades": "1·2학년",
+      "holiday": false
+    },
+    {
+      "name": "재량휴업일",
+      "start": "2026-11-19",
+      "end": "2026-11-19",
+      "grades": "1·2학년",
+      "holiday": true
+    },
+    {
+      "name": "대학수학능력시험",
+      "start": "2026-11-19",
+      "end": "2026-11-19",
+      "grades": "3학년",
+      "holiday": false
+    },
+    {
+      "name": "재량휴업일",
+      "start": "2026-11-20",
+      "end": "2026-11-20",
+      "grades": "",
+      "holiday": true
+    },
+    {
+      "name": "기말고사",
+      "start": "2026-11-23",
+      "end": "2026-11-27",
+      "grades": "3학년",
+      "holiday": false
+    },
+    {
+      "name": "기말고사",
+      "start": "2026-12-11",
+      "end": "2026-12-17",
+      "grades": "1·2학년",
+      "holiday": false
+    },
+    {
+      "name": "재량휴업일",
+      "start": "2026-12-17",
+      "end": "2026-12-17",
+      "grades": "3학년",
+      "holiday": true
+    },
+    {
+      "name": "성탄절",
+      "start": "2026-12-25",
+      "end": "2026-12-25",
+      "grades": "",
+      "holiday": false
+    },
+    {
+      "name": "방학식",
+      "start": "2026-12-31",
+      "end": "2026-12-31",
+      "grades": "",
+      "holiday": false
+    },
+    {
+      "name": "겨울방학",
+      "start": "2027-01-01",
+      "end": "2027-01-01",
+      "grades": "",
+      "holiday": true
+    },
+    {
+      "name": "신정",
+      "start": "2027-01-01",
+      "end": "2027-01-01",
+      "grades": "",
+      "holiday": false
+    }
+  ]
+}

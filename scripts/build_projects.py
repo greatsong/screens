@@ -4,7 +4,8 @@
 파일마다 쓰는 주체를 하나로 정해 동시에 고쳐도 충돌하지 않게 한다.
 - projects/registry.json   등록부. 관리 시트(Apps Script)와 사람이 쓴다.
 - projects/control.json    화면 제어(긴급 정지, 공지, 원격 시연). 관리 화면과 휴대폰 수동 실행이 쓴다.
-- projects/news.json       AI 뉴스. 「AI 뉴스」 워크플로(fetch_news.py)가 쓴다.
+- projects/news.json       AI 뉴스. 「AI 뉴스·학사일정」 워크플로(fetch_news.py)가 쓴다.
+- projects/schedule.json   학사일정. 같은 워크플로(fetch_schedule.py)가 쓴다.
 - site/projects/<id>/      검사 결과와 캡처. 작품 검사(check_projects.py)가 쓴다.
 - projects/assigned.json   짧은 주소 번호와 승인 시점 지문. 이 스크립트만 쓴다.
 - site/content.json, site/projects/index.json, site/p/   이 스크립트가 만든다.
@@ -23,6 +24,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 REG = ROOT / "projects" / "registry.json"
 CONTROL = ROOT / "projects" / "control.json"
 NEWS = ROOT / "projects" / "news.json"
+SCHEDULE = ROOT / "projects" / "schedule.json"
 ASSIGNED = ROOT / "projects" / "assigned.json"
 SITE = ROOT / "site"
 CONTENT = SITE / "content.json"
@@ -148,6 +150,9 @@ def main():
     content["controlRequestId"] = control.get("requestId", "")
     content["requestedAt"] = control.get("updatedAt", "")
     content["news"] = (load(NEWS, {}) or {}).get("items", [])
+    content["schedule"] = (load(SCHEDULE, {}) or {}).get("events", [])
+    # B 화면 「작품 체험하기」 목록: 이 화면에서 바로 실행할 수 있는 게시 작품
+    content.setdefault("showcase", {})["apps"] = [{"title": e["title"], "by": e["maker"], "url": e["run"]} for e in published if e.get("embed")]
     if without(content, {"version", "publishedAt"}) != before:
         content["version"] = int(content.get("version", 0)) + 1
         content["publishedAt"] = stamp

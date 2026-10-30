@@ -1,5 +1,5 @@
 /*
- * 당곡고 스탠바이미 화면 시험 페이지
+ * 당곡고 스탠바이미 화면
  * 주소: ?screen=a (소식) · ?screen=b (깊이 보기) · ?preview (두 화면 미리보기) · 인자 없음 (역할 선택)
  * 목적: 전체 화면, 전원 복귀, 자동 꺼짐, 터치, 학생 작품 시연 같은 기기 동작과
  *       반영 지연, 두 화면 동기를 현장에서 확인한다.
@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.6';
+  const APP_VERSION = '0.5.7';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -409,7 +409,9 @@
     if (last && last.v === target && Date.now() - last.t < 15 * 60000) return;
     store.set('reloadFor', { v: target, t: Date.now() });
     logEvent('앱 ' + target + ' 버전으로 새로 고침');
-    setTimeout(() => location.reload(), 500);
+    // 캐시에 남은 옛 app.js 로 다시 열리면 두 화면이 다른 코드로 칸을 계산해 어긋난다. 새 파일을 먼저 받아 두고 새로 고친다
+    const fresh = ['./', 'app.js', 'style.css'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
+    Promise.all(fresh).then(() => setTimeout(() => location.reload(), 300));
   }
 
   // ---------- 그리기 ----------
@@ -604,7 +606,8 @@
       const side = entrySide(entry);
       card.innerHTML = entry.project ? projectHTML(entry.project)
         : side && side.auto === 'meal' ? mealHTML(side)
-        : side && side.auto === 'newsdigest' ? newsDigestHTML(side) : cardHTML(side);
+        : side && side.auto === 'newsdigest' ? newsDigestHTML(side)
+        : side && side.auto === 'schedule' ? scheduleHTML(side) : cardHTML(side);
       drawSlideQR(entry);
       fitCard();
       card.classList.remove('out');
@@ -621,8 +624,16 @@
     let box = $('promo');
     if (!box) {
       box = document.createElement('div'); box.id = 'promo'; box.hidden = true;
-      box.innerHTML = '<video muted playsinline preload="auto"></video>';
+      box.innerHTML = '<video muted playsinline preload="auto"></video><div class="promo-sound" hidden>화면을 한 번 누르면 소리가 나요</div>';
       document.body.appendChild(box);
+      // 누르면 소리를 켠다. 한 번 누른 뒤에는 이 화면을 다시 열 때까지 홍보 영상이 소리와 함께 나온다
+      box.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.sound = 'on';
+        const vv = box.querySelector('video');
+        vv.muted = false; const p = vv.play(); if (p && p.catch) p.catch(() => {});
+        box.querySelector('.promo-sound').hidden = true;
+      });
     }
     const v = box.querySelector('video');
     if (!entry || !entry.promo || role !== 'a') { if (!box.hidden) { box.hidden = true; v.pause(); } return; }
@@ -631,7 +642,42 @@
     if (v.getAttribute('src') !== src) v.setAttribute('src', src);
     box.hidden = false;
     if (Math.abs(v.currentTime - offset) > 0.6) { try { v.currentTime = offset; } catch (e) { /* 아직 불러오는 중 */ } }
-    const pl = v.play(); if (pl && pl.catch) pl.catch(() => {});
+    // 소리(promoSound, 기본 켬): 브라우저는 사람이 화면을 한 번도 누르지 않은 페이지의 소리 자동 재생을 막는다.
+    // 소리와 함께 틀어 보고, 막히면 소리 없이 틀며 '한 번 누르기' 안내를 띄운다
+    const hint = box.querySelector('.promo-sound');
+    const wantSound = state.content.promoSound !== false && state.sound !== 'blocked';
+    v.muted = !wantSound;
+    hint.hidden = !(state.content.promoSound !== false && state.sound === 'blocked');
+    const pl = v.play();
+    if (pl && pl.catch) pl.catch(() => {
+      if (v.muted) return;
+      state.sound = 'blocked';
+      v.muted = true; hint.hidden = false;
+      const p2 = v.play(); if (p2 && p2.catch) p2.catch(() => {});
+    });
+  }
+
+  // ---------- 학사일정: 「AI 뉴스·학사일정」 워크플로가 나이스에서 받은 앞으로 10주 행사(content.schedule) ----------
+  // 오늘 행사는 '오늘', 나머지는 D-day로. 학년이 정해진 행사는 학년을 붙인다. 휴업일은 따로 표시한다
+  function scheduleHTML(s) {
+    const today = ymd(now());
+    const iso = (k) => k.slice(0, 4) + '-' + k.slice(4, 6) + '-' + k.slice(6, 8);
+    const ev = ((state.content && state.content.schedule) || []).filter((e) => e.end >= iso(today)).slice(0, 6);
+    if (!ev.length) return cardHTML({ tag: s.tag || '학사일정', title: '다가오는 학사일정이 없습니다', source: '나이스 교육정보 개방 포털' });
+    const dayN = (d) => Math.round((Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) - Date.UTC(+today.slice(0, 4), +today.slice(4, 6) - 1, +today.slice(6, 8))) / 86400000);
+    const lab = (d) => ymdLabel(d.replace(/-/g, ''));
+    const rows = ev.map((e) => {
+      const n = dayN(e.start);
+      const dd = n <= 0 ? '오늘' : 'D-' + n;
+      const when = e.end !== e.start ? lab(e.start) + ' ~ ' + lab(e.end).replace(/^\d+월 /, (m) => (e.end.slice(5, 7) === e.start.slice(5, 7) ? '' : m)) : lab(e.start);
+      return `<li${n <= 0 ? ' class="today"' : ''}><span class="dd">${dd}</span><span class="ev"><b>${esc(e.name)}</b>${e.grades ? `<i>${esc(e.grades)}</i>` : ''}${e.holiday ? '<i class="off">휴업</i>' : ''}<small>${esc(when)}</small></span></li>`;
+    }).join('');
+    return `<div class="card-inner sched"><div class="card-text">
+      <div class="tag">${esc(s.tag || '학사일정')}</div>
+      <h1 class="title">다가오는 학사일정</h1>
+      <ul class="sc-list">${rows}</ul>
+      <div class="source">나이스 교육정보 개방 포털</div>
+    </div></div>`;
   }
 
   // ---------- 급식: 나이스(NEIS) 급식식단정보를 화면이 직접 받는다 ----------
@@ -797,7 +843,7 @@
     if (!state.lastOk && !state.lastErr) text = '콘텐츠 확인 중';
     else if (state.lastErr > state.lastOk) text = '<span class="warn">연결 끊김 · 이전 내용 표시 중</span>';
     else if (Date.now() - state.lastOk > 5 * 60000) text = '<span class="warn">갱신 지연 · ' + hm(state.lastOk + clock.offset) + ' 마지막 확인</span>';
-    else text = 'v' + (c ? esc(c.version) : '?') + ' · ' + hm(state.lastOk + clock.offset) + ' 확인';
+    else text = '앱 ' + APP_VERSION + ' · v' + (c ? esc(c.version) : '?') + ' · ' + hm(state.lastOk + clock.offset) + ' 확인';
     el.innerHTML = esc(hint) + text;
   }
 
@@ -956,6 +1002,7 @@
   function bindInput() {
     const touched = () => {
       state.lastInteract = Date.now();
+      if (state.sound === 'blocked') state.sound = 'on';
       if (!state.touch) { state.touch = true; logEvent('터치 입력 확인'); }
     };
     document.addEventListener('pointerdown', (e) => {
@@ -983,7 +1030,8 @@
     if (tryEl) { startExperience(tryEl.getAttribute('data-try')); return; }
     const appEl = e.target.closest('[data-app]');
     if (appEl) { openPlayer(state.content.showcase.apps[+appEl.getAttribute('data-app')], false); return; }
-    if (e.target.closest('#player, #gallery, #diag')) return;
+    if (e.target.closest('#player, #gallery, #diag, #promo')) return;
+    if (state.sound === 'blocked') state.sound = 'on';
     toggleDiag();
   }
 
@@ -1227,7 +1275,7 @@
     let timer = null;
     app.innerHTML = `
       <div class="chooser">
-        <h1>당곡고 화면 시험</h1>
+        <h1>당곡고 스탠바이미</h1>
         <p>이 스탠바이미가 맡을 화면을 선택하세요.</p>
         <div class="choices">
           <button class="choice a" data-role="a"><b>A 화면</b><span>소식</span></button>
