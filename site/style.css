@@ -303,6 +303,9 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
   .proj-b .qr.big { margin: 0 auto 4vmin; width: 50vmin; }
   .shot.phone { width: 46%; margin: 0 auto 4vmin; }
   .shot img { max-height: 36vh; }
+  /* 아래 줄: 점·버튼 옆에 상태 글자가 좁게 끼어 여러 줄로 늘어나지 않게 상태 글자를 한 줄 아래로 내린다 */
+  .bottom { flex-wrap: wrap; }
+  .status { width: 100%; margin-top: 0.6vmin; }
 }
 
 /* ---------- 역할 선택 ---------- */

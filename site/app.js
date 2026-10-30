@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.1';
+  const APP_VERSION = '0.5.2';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -566,6 +566,7 @@
   }
 
   // A 화면은 홍보 영상을 전체 화면으로 소리 없이 재생한다. 슬롯 시각으로 재생 위치를 맞춰 두 화면과 순서가 어긋나지 않게 한다.
+  // 화면을 세로로 세우면 세로판(srcTall)을 튼다. 방향을 바꾸면 resize 로 슬롯을 다시 그리며 영상도 바뀐다.
   function syncPromo(entry) {
     let box = $('promo');
     if (!box) {
@@ -577,7 +578,8 @@
     if (!entry || !entry.promo || role !== 'a') { if (!box.hidden) { box.hidden = true; v.pause(); } return; }
     const slideMs = Math.max(5, state.content.slideSeconds || 12) * 1000;
     const offset = (entry.part * slideMs + (now() % slideMs)) / 1000;
-    if (v.getAttribute('src') !== entry.promo.src) v.setAttribute('src', entry.promo.src);
+    const src = (innerHeight > innerWidth && entry.promo.srcTall) || entry.promo.src;
+    if (v.getAttribute('src') !== src) v.setAttribute('src', src);
     box.hidden = false;
     if (Math.abs(v.currentTime - offset) > 0.6) { try { v.currentTime = offset; } catch (e) { /* 아직 불러오는 중 */ } }
     const pl = v.play(); if (pl && pl.catch) pl.catch(() => {});
@@ -1102,21 +1104,25 @@
       <div class="preview">
         <div class="preview-head">
           <h1>두 화면 미리보기</h1>
+          <button class="btn" id="rotA">A 화면 세로로</button>
           <button class="btn" id="rotB">B 화면 세로로</button>
           <a class="btn" href="./">역할 선택으로</a>
         </div>
         <div class="frames" id="frames">
-          <figure class="frame land"><iframe src="?screen=a&amp;embed=1" title="A 화면"></iframe><figcaption>A · 소식</figcaption></figure>
+          <figure class="frame land" id="fa"><iframe src="?screen=a&amp;embed=1" title="A 화면"></iframe><figcaption>A · 소식</figcaption></figure>
           <figure class="frame land" id="fb"><iframe src="?screen=b&amp;embed=1" title="B 화면"></iframe><figcaption>B · 깊이 보기 · 학생 작품 시연</figcaption></figure>
         </div>
         <p class="preview-note">각 화면을 누르면 진단 정보가 표시됩니다. 미리보기에서는 실행 기록을 남기지 않습니다.</p>
       </div>`;
-    $('rotB').addEventListener('click', () => {
-      const fb = $('fb');
-      const port = fb.classList.toggle('port');
-      fb.classList.toggle('land', !port);
-      $('frames').classList.toggle('mixed', port);
-      $('rotB').textContent = port ? 'B 화면 가로로' : 'B 화면 세로로';
+    // 스탠바이미는 두 대 모두 세로로 세울 수 있다. 화면마다 따로 돌려 본다
+    ['A', 'B'].forEach((k) => {
+      $('rot' + k).addEventListener('click', () => {
+        const f = $('f' + k.toLowerCase());
+        const port = f.classList.toggle('port');
+        f.classList.toggle('land', !port);
+        $('frames').classList.toggle('mixed', !!document.querySelector('#frames .frame.port'));
+        $('rot' + k).textContent = k + ' 화면 ' + (port ? '가로로' : '세로로');
+      });
     });
   }
 

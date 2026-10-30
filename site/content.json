@@ -1,7 +1,7 @@
 {
-  "version": 13,
-  "publishedAt": "2026-10-30T13:17:21+09:00",
-  "appVersion": "0.5.1",
+  "version": 14,
+  "publishedAt": "2026-10-30T13:49:27+09:00",
+  "appVersion": "0.5.2",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -206,7 +206,8 @@
       "caption": "인문사회·과학·수학·정보·AI·동아리·창체 — 다양한 프로그램이 2027년에 여러분을 기다립니다!",
       "src": "promo/2027-wide.mp4",
       "seconds": 15,
-      "every": 8
+      "every": 8,
+      "srcTall": "promo/2027-tall.mp4"
     }
   ]
 }
