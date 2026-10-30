@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T10:43:56+09:00",
+  "generatedAt": "2026-10-30T10:44:44+09:00",
   "registrySyncId": "20261030-104346-sf1ec",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -128,23 +128,24 @@
       "target": "wide",
       "howTo": "",
       "run": "https://greatsong.github.io/stroke-challenge/",
-      "embed": false,
+      "embed": true,
       "short": "greatsong.github.io/screens/p/5",
       "shortUrl": "https://greatsong.github.io/screens/p/5/",
-      "images": {},
+      "images": {
+        "wide": "projects/f4b085fc/wide.jpg?v=2026-10-30T104429"
+      },
       "pinned": false,
       "source": "form",
-      "status": "unchecked",
+      "status": "ok",
       "problems": [],
-      "checkedAt": "",
-      "fingerprint": "",
+      "checkedAt": "2026-10-30T10:44:29+09:00",
+      "fingerprint": "b53fc68c719f9bb6",
       "teacher": "pending",
       "makerConfirmed": false,
       "published": false,
       "reasons": [
         "제작자 확인 전",
-        "교사 승인 전",
-        "검사 전"
+        "교사 승인 전"
       ],
       "changedAfterApproval": false,
       "demoSteps": []
