@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.3';
+  const APP_VERSION = '0.5.4';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -117,7 +117,8 @@
     prevSession: null, session: null,
     font: '확인 중', qr: '불러오는 중', wake: '확인 전',
     diagTimer: null,
-    show: { app: null, remote: false, until: 0 }, dismissedRemote: ''
+    show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
+    meal: store.get('meal', null), mealBusy: false
   };
 
   // ---------- 기록 ----------
@@ -377,6 +378,7 @@
       logEvent('콘텐츠 v' + prev.version + ' → v' + data.version);
     }
     if (!prev || prev.version !== data.version) state.slot = -1;
+    maybeLoadMeal();
     $('school').textContent = data.school || '당곡고등학교';
     const badge = $('badge');
     badge.hidden = !data.badge;
@@ -423,6 +425,7 @@
       $('date').textContent = date;
       $('stopClock').textContent = time;
       $('stopDate').textContent = date;
+      maybeLoadMeal();
     }
     renderPlayer();
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
@@ -569,7 +572,8 @@
     syncPromo(entry);
     const paint = () => {
       if (entry.promo) { card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
-      card.innerHTML = entry.project ? projectHTML(entry.project) : cardHTML(entrySide(entry));
+      const side = entrySide(entry);
+      card.innerHTML = entry.project ? projectHTML(entry.project) : (side && side.auto === 'meal' ? mealHTML(side) : cardHTML(side));
       drawSlideQR(entry);
       fitCard();
       card.classList.remove('out');
@@ -597,6 +601,115 @@
     box.hidden = false;
     if (Math.abs(v.currentTime - offset) > 0.6) { try { v.currentTime = offset; } catch (e) { /* 아직 불러오는 중 */ } }
     const pl = v.play(); if (pl && pl.catch) pl.catch(() => {});
+  }
+
+  // ---------- 급식: 나이스(NEIS) 급식식단정보를 화면이 직접 받는다 ----------
+  // 인증키 없이 부르면 한 번에 5건까지 오지만 오늘과 다음 급식일 몇 날이면 충분하다(공개 저장소라 키를 넣지 않는다).
+  // 받은 식단은 저장해 두고, 나이스가 응답하지 않으면 마지막으로 받은 식단을 그대로 쓴다.
+  const ymd = (ms) => { const d = new Date(ms + 9 * 3600000); return d.getUTCFullYear() + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()); };
+  const ymdLabel = (k) => { const d = new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))); return (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일 (' + WD[d.getUTCDay()] + ')'; };
+  function maybeLoadMeal() {
+    const c = state.content;
+    if (!c || !c.meal || state.mealBusy) return;
+    const m = state.meal;
+    const today = ymd(now());
+    if (m && m.from === today && Date.now() - m.at < 3600000) return; // 같은 날 한 시간 안에는 다시 받지 않는다
+    if (m && m.tryAt && Date.now() - m.tryAt < 600000) return;        // 실패했으면 10분 뒤에 다시
+    state.mealBusy = true;
+    const to = ymd(now() + 21 * 86400000);
+    const url = 'https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=5' +
+      '&ATPT_OFCDC_SC_CODE=' + encodeURIComponent(c.meal.office) + '&SD_SCHUL_CODE=' + encodeURIComponent(c.meal.school) +
+      '&MLSV_FROM_YMD=' + today + '&MLSV_TO_YMD=' + to;
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
+    fetch(url, ctrl ? { signal: ctrl.signal } : {}).then((r) => r.json()).then((d) => {
+      const days = {};
+      const box = d.mealServiceDietInfo;
+      const rows = box && box[1] && box[1].row ? box[1].row : [];
+      rows.forEach((r) => {
+        if (String(r.MMEAL_SC_CODE) !== '2') return; // 중식만
+        days[r.MLSV_YMD] = { dishes: mealDishes(r.DDISH_NM), cal: r.CAL_INFO || '' };
+      });
+      // 결과가 없다는 응답(INFO-200)도 정상: 방학·휴일이라 식단이 없는 것이다
+      if (!box && !(d.RESULT && d.RESULT.CODE === 'INFO-200')) throw new Error('응답 형식 오류');
+      state.meal = { at: Date.now(), from: today, days: days };
+      if (!embed) store.set('meal', state.meal);
+      const cur = state.sched[state.idx];
+      const side = cur && entrySide(cur);
+      if (side && side.auto === 'meal') state.slot = -1; // 지금 급식 카드를 보고 있으면 새 식단으로 다시 그린다
+    }).catch(() => {
+      state.meal = Object.assign({ days: {} }, state.meal || {}, { tryAt: Date.now() });
+      logEvent('급식 정보를 받지 못함 (마지막으로 받은 식단 사용)');
+    }).then(() => { clearTimeout(timer); state.mealBusy = false; });
+  }
+  function mealDishes(raw) {
+    return String(raw || '').split(/<br\s*\/?>/i)
+      .map((x) => x.replace(/\(\s*[\d.\s]+\s*\)/g, '').replace(/[*#+@]/g, '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+  }
+  // 메뉴 이름으로 이모지를 고른다. 위에서부터 먼저 맞는 것을 쓴다(볶음밥은 밥보다, 국은 그 안의 재료보다 먼저)
+  const MEAL_EMOJI = [
+    [/케이크/, '🍰'], [/아이스크림|빙수|샤베트/, '🍨'], [/요거트|요구르트|우유|두유/, '🥛'],
+    [/주스|에이드|스무디|식혜|음료/, '🧃'], [/김밥|주먹밥/, '🍙'], [/초밥/, '🍣'], [/카레/, '🍛'],
+    [/볶음밥|오므라이스/, '🍳'], [/스파게티|파스타|그라탕/, '🍝'],
+    [/짜장|짬뽕|라면|국수|우동|냉면|쫄면|소바|면$/, '🍜'], [/피자/, '🍕'], [/햄버거|버거/, '🍔'],
+    [/핫도그|소시지|소세지/, '🌭'], [/샌드위치/, '🥪'], [/타코/, '🌮'], [/부리또|또띠아/, '🌯'],
+    [/떡볶이/, '🌶️'], [/어묵|오뎅/, '🍢'], [/떡/, '🍡'], [/만두/, '🥟'],
+    [/치킨|닭|윙|너겟|텐더/, '🍗'], [/새우|깐쇼/, '🍤'], [/오징어|낙지|쭈꾸미|주꾸미|문어/, '🦑'],
+    [/생선|고등어|삼치|갈치|연어|동태|명태|참치|꽁치|가자미|코다리/, '🐟'],
+    [/국$|장국|스프|수프/, '🥣'], [/찌개|전골|탕$/, '🍲'],
+    [/돈가스|돈까스|커틀릿/, '🍖'], [/스테이크|함박|불고기|갈비|제육|돈육|쇠고기|소고기|고기|수육|보쌈|족발|목살|삼겹/, '🥩'],
+    [/호떡|와플|팬케이크|완자전|전$|부침/, '🥞'], [/도넛/, '🍩'], [/빵|토스트|베이글|크로와상|머핀|파이/, '🥐'],
+    [/쿠키|초코|브라우니|마카롱/, '🍪'], [/김치|깍두기|겉절이|석박지|섞박지/, '🥬'], [/샐러드/, '🥗'],
+    [/브로콜리/, '🥦'], [/단호박/, '🎃'], [/애호박|오이/, '🥒'], [/감자/, '🥔'], [/고구마/, '🍠'], [/옥수수/, '🌽'],
+    [/당근/, '🥕'], [/버섯|팽이/, '🍄'], [/치즈/, '🧀'], [/계란|달걀|에그/, '🥚'],
+    [/나물|무침|쌈|생채/, '🌿'],
+    [/사과/, '🍎'], [/^배$/, '🍐'], [/귤|오렌지|한라봉|천혜향/, '🍊'], [/바나나/, '🍌'], [/포도|샤인머스캣/, '🍇'],
+    [/수박/, '🍉'], [/딸기/, '🍓'], [/복숭아/, '🍑'], [/파인애플/, '🍍'], [/키위/, '🥝'], [/망고/, '🥭'],
+    [/체리/, '🍒'], [/멜론/, '🍈'], [/레몬/, '🍋'],
+    [/밥$|라이스/, '🍚'], [/묵|두부|조림|볶음|구이|찜/, '🥢']
+  ];
+  const mealEmoji = (name) => { for (const [re, e] of MEAL_EMOJI) if (re.test(name)) return e; return '🍽️'; };
+  // 제목 옆에는 그날의 주요리 이모지 하나를 붙인다. 카레·볶음밥 같은 한 그릇 요리가 있으면 그것을 먼저 고르고,
+  // 없으면 고기·생선 반찬, 그다음 찌개를 고른다(밥·국·김치는 고르지 않는다)
+  const MAIN = ['🍕', '🍔', '🍛', '🍝', '🍜', '🍳', '🍗', '🍖', '🥩', '🍤', '🦑', '🐟', '🥟', '🌶️', '🍲'];
+  function mainEmoji(dishes) {
+    const es = dishes.map(mealEmoji);
+    for (const e of MAIN) if (es.indexOf(e) >= 0) return e;
+    return '🍚';
+  }
+  // 후식·특식은 칸 테두리를 강조색으로 둘러 눈에 띄게 한다
+  const TREAT = /케이크|아이스크림|빙수|쿠키|초코|브라우니|마카롱|도넛|호떡|와플|팬케이크|주스|에이드|스무디|요거트|요구르트|피자|치킨|떡볶이|사과|^배$|귤|오렌지|한라봉|바나나|포도|수박|딸기|복숭아|파인애플|키위|망고|체리|멜론/;
+  function mealHTML(s) {
+    const m = state.meal;
+    const today = ymd(now());
+    const days = (m && m.days) || {};
+    const keys = Object.keys(days).filter((k) => k >= today).sort();
+    const nextKey = keys.filter((k) => k > today)[0];
+    const big = days[today] ? today : nextKey;
+    if (!big) {
+      return cardHTML({ tag: s.tag || '오늘의 급식', title: m ? '급식 정보가 없습니다' : '급식 정보를 불러오는 중입니다',
+        body: m ? '방학이거나 휴일이라 식단이 없습니다.' : '', source: '나이스 교육정보 개방 포털' });
+    }
+    const meal = days[big];
+    const isToday = big === today;
+    const chips = meal.dishes.map((d) =>
+      `<li${TREAT.test(d) ? ' class="treat"' : ''}><span class="emo">${mealEmoji(d)}</span>${esc(d)}</li>`).join('');
+    let next = '';
+    const after = isToday ? nextKey : keys.filter((k) => k > big)[0];
+    if (after) {
+      const tomorrow = ymd(now() + 86400000);
+      const label = after === tomorrow ? '내일' : ymdLabel(after);
+      // 줄이 바뀌어도 이모지와 메뉴 이름이 떨어지지 않게 한 덩어리로 묶는다
+      next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${mealEmoji(d)} ${esc(d)}</span>`).join(' · ')}</div>`;
+    }
+    const stale = m && Date.now() - m.at > 6 * 3600000 ? ' · ' + mdhm(m.at) + ' 기준' : '';
+    return `<div class="card-inner meal"><div class="card-text">
+      <div class="tag">${esc(isToday ? (s.tag || '오늘의 급식') : '다음 급식')}</div>
+      <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${mainEmoji(meal.dishes)}</span></h1>
+      <ul class="lines">${chips}</ul>${next}
+      <div class="source">나이스 교육정보 개방 포털${meal.cal ? ' · ' + esc(meal.cal.replace(/\s*Kcal/i, ' kcal')) : ''}${stale}</div>
+    </div></div>`;
   }
 
   function cardHTML(s) {

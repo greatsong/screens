@@ -1,7 +1,7 @@
 {
-  "version": 15,
-  "publishedAt": "2026-10-30T13:58:21+09:00",
-  "appVersion": "0.5.3",
+  "version": 16,
+  "publishedAt": "2026-10-30T14:01:08+09:00",
+  "appVersion": "0.5.4",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -83,16 +83,8 @@
     {
       "id": "lunch",
       "a": {
-        "tag": "오늘의 급식",
-        "title": "점심",
-        "lines": [
-          "잡곡밥",
-          "쇠고기미역국",
-          "닭갈비",
-          "깍두기",
-          "요구르트"
-        ],
-        "source": "시험용 예시이며 실제 급식이 아닙니다. 운영 때는 NEIS에서 자동으로 받습니다."
+        "auto": "meal",
+        "tag": "오늘의 급식"
       },
       "b": {
         "tag": "학사일정",
@@ -209,5 +201,9 @@
       "every": 8,
       "srcTall": "promo/2027-tall.mp4"
     }
-  ]
+  ],
+  "meal": {
+    "office": "B10",
+    "school": "7010073"
+  }
 }
