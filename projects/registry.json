@@ -1,0 +1,61 @@
+{
+  "_설명": "작품 등록부. 필수: id, title, url, summary, maker, target(wide|mobile|both). 선택: tryUrl, pinnedUrl, howTo, demoSteps. 승인: makerConfirmed, teacher(pending|approved|hidden), pinUntil. no·approvedFingerprint는 편성 스크립트가 채운다.",
+  "projects": [
+    {
+      "id": "touch-board",
+      "title": "터치 그림판",
+      "url": "https://greatsong.github.io/screens/demo/touch.html",
+      "summary": "여러 손가락으로 동시에 그리며 동시 터치가 몇 개까지 인식되는지 확인합니다.",
+      "maker": "시험용 샘플",
+      "target": "wide",
+      "howTo": "화면에 손가락 여러 개를 대고 그립니다.",
+      "demoSteps": [],
+      "makerConfirmed": true,
+      "teacher": "approved",
+      "no": 1,
+      "approvedFingerprint": "c6a7b60d8bca919d"
+    },
+    {
+      "id": "commit-galaxy",
+      "title": "Commit Galaxy",
+      "url": "https://greatsong.github.io/commit-galaxy/",
+      "summary": "깃허브 커밋을 날짜와 분야에 따라 별로 그린 3D 나선 은하입니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "wide",
+      "howTo": "은하를 손가락으로 돌려 보고, 다른 깃허브 아이디도 조회합니다.",
+      "demoSteps": [],
+      "makerConfirmed": true,
+      "teacher": "approved",
+      "pinUntil": "2026-11-06",
+      "no": 2,
+      "approvedFingerprint": "1c44702b74bb3548"
+    },
+    {
+      "id": "neural-explorer",
+      "title": "Neural Explorer",
+      "url": "https://neural-explorer.vercel.app/",
+      "summary": "코드 없이 직접 만져 보며 신경망을 12단계로 배우는 학습 앱입니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "both",
+      "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",
+      "demoSteps": [],
+      "makerConfirmed": true,
+      "teacher": "approved",
+      "no": 3,
+      "approvedFingerprint": "dbe97b7d5e14a260"
+    },
+    {
+      "id": "activation-lab",
+      "title": "활성화 함수 실험실",
+      "url": "https://activation-lab.vercel.app/",
+      "summary": "활성화 함수가 공간을 어떻게 휘게 하는지, 기울기 소실이 왜 생기는지 실험합니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "wide",
+      "howTo": "",
+      "demoSteps": [],
+      "makerConfirmed": false,
+      "teacher": "pending",
+      "no": 4
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "touch-board",
+  "checkedAt": "2026-10-30T09:20:59+09:00",
+  "url": "https://greatsong.github.io/screens/demo/touch.html",
+  "finalUrl": "https://greatsong.github.io/screens/demo/touch.html",
+  "http": 200,
+  "responseMs": 265,
+  "fingerprint": "c6a7b60d8bca919d",
+  "frame": {
+    "allowed": true,
+    "reason": "제한 없음"
+  },
+  "shots": {
+    "wide": {
+      "ok": true,
+      "image": "wide.jpg",
+      "title": "터치 그림판",
+      "loadMs": 2607,
+      "errors": [],
+      "stats": {
+        "text": 38,
+        "visual": 1
+      }
+    }
+  },
+  "status": "ok",
+  "problems": []
+}

@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-10-30T09:27:19+09:00",
+  "projects": [
+    {
+      "id": "touch-board",
+      "no": 1,
+      "title": "터치 그림판",
+      "summary": "여러 손가락으로 동시에 그리며 동시 터치가 몇 개까지 인식되는지 확인합니다.",
+      "maker": "시험용 샘플",
+      "target": "wide",
+      "howTo": "화면에 손가락 여러 개를 대고 그립니다.",
+      "run": "https://greatsong.github.io/screens/demo/touch.html",
+      "embed": true,
+      "short": "greatsong.github.io/screens/p/1",
+      "shortUrl": "https://greatsong.github.io/screens/p/1/",
+      "images": {
+        "wide": "projects/touch-board/wide.jpg?v=2026-10-30T092059"
+      },
+      "pinned": false,
+      "status": "ok",
+      "problems": [],
+      "checkedAt": "2026-10-30T09:20:59+09:00",
+      "teacher": "approved",
+      "makerConfirmed": true,
+      "published": true,
+      "reasons": [],
+      "changedAfterApproval": false,
+      "demoSteps": []
+    },
+    {
+      "id": "commit-galaxy",
+      "no": 2,
+      "title": "Commit Galaxy",
+      "summary": "깃허브 커밋을 날짜와 분야에 따라 별로 그린 3D 나선 은하입니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "wide",
+      "howTo": "은하를 손가락으로 돌려 보고, 다른 깃허브 아이디도 조회합니다.",
+      "run": "https://greatsong.github.io/commit-galaxy/",
+      "embed": true,
+      "short": "greatsong.github.io/screens/p/2",
+      "shortUrl": "https://greatsong.github.io/screens/p/2/",
+      "images": {
+        "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-30T092106"
+      },
+      "pinned": true,
+      "status": "ok",
+      "problems": [],
+      "checkedAt": "2026-10-30T09:21:06+09:00",
+      "teacher": "approved",
+      "makerConfirmed": true,
+      "published": true,
+      "reasons": [],
+      "changedAfterApproval": false,
+      "demoSteps": []
+    },
+    {
+      "id": "neural-explorer",
+      "no": 3,
+      "title": "Neural Explorer",
+      "summary": "코드 없이 직접 만져 보며 신경망을 12단계로 배우는 학습 앱입니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "both",
+      "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",
+      "run": "https://neural-explorer.vercel.app/",
+      "embed": true,
+      "short": "greatsong.github.io/screens/p/3",
+      "shortUrl": "https://greatsong.github.io/screens/p/3/",
+      "images": {
+        "wide": "projects/neural-explorer/wide.jpg?v=2026-10-30T092113",
+        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-30T092113"
+      },
+      "pinned": false,
+      "status": "ok",
+      "problems": [],
+      "checkedAt": "2026-10-30T09:21:13+09:00",
+      "teacher": "approved",
+      "makerConfirmed": true,
+      "published": true,
+      "reasons": [],
+      "changedAfterApproval": false,
+      "demoSteps": []
+    },
+    {
+      "id": "activation-lab",
+      "no": 4,
+      "title": "활성화 함수 실험실",
+      "summary": "활성화 함수가 공간을 어떻게 휘게 하는지, 기울기 소실이 왜 생기는지 실험합니다.",
+      "maker": "선생님 작품 예시 · 송석리",
+      "target": "wide",
+      "howTo": "",
+      "run": "https://activation-lab.vercel.app/",
+      "embed": true,
+      "short": "greatsong.github.io/screens/p/4",
+      "shortUrl": "https://greatsong.github.io/screens/p/4/",
+      "images": {
+        "wide": "projects/activation-lab/wide.jpg?v=2026-10-30T092117"
+      },
+      "pinned": false,
+      "status": "ok",
+      "problems": [],
+      "checkedAt": "2026-10-30T09:21:17+09:00",
+      "teacher": "pending",
+      "makerConfirmed": false,
+      "published": false,
+      "reasons": [
+        "제작자 확인 전",
+        "교사 승인 전"
+      ],
+      "changedAfterApproval": false,
+      "demoSteps": []
+    }
+  ]
+}

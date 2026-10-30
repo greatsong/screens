@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.1.0';
+  const APP_VERSION = '0.2.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -93,6 +93,7 @@
   const state = {
     content: null, netOk: false, lastOk: 0, lastErr: 0, errors: 0, errMsg: '',
     slot: -1, idx: -1, minKey: -1, fadeTimer: null, pollAt: Date.now(), loopId: 0,
+    sched: [], only: null, loadTimer: null,
     touch: false, startedAt: Date.now(), lastInteract: Date.now(),
     cont: { start: Date.now(), last: Date.now(), breaks: 0, longest: 0 },
     delay: store.get('delay', null), events: store.get('events', []),
@@ -182,10 +183,7 @@
   }
   window.__qrReady = function () {
     state.qr = '불러옴';
-    if (role && state.content && state.idx >= 0) {
-      const side = currentSide();
-      if (side && side.link) drawQR($('qr'), qrLink(side.link), 'M');
-    }
+    if (role && state.idx >= 0) drawSlideQR(state.sched[state.idx]);
   };
 
   // ======================================================================
@@ -200,7 +198,8 @@
     else if (window.__qrFailed) state.qr = '실패';
 
     const cached = store.get('content', null);
-    if (cached) { try { applyContent(cached, false); } catch (e) { /* 캐시가 깨졌으면 네트워크를 기다린다 */ } }
+    if (cached && !params.only) { try { applyContent(cached, false); } catch (e) { /* 캐시가 깨졌으면 네트워크를 기다린다 */ } }
+    if (params.only) loadOnly(params.only);
 
     initSession();
     logEvent('화면 시작 (' + ROLE_LABEL[role] + ')');
@@ -237,7 +236,7 @@
         <div class="notice" id="notice" hidden></div>
         <footer class="bottom">
           <div class="dots" id="dots"></div>
-          <button class="show-btn" id="showBtn" data-act="gallery" hidden>▶ 학생 작품 시연</button>
+          <button class="show-btn" id="showBtn" data-act="gallery" hidden>▶ 작품 체험하기</button>
           <div class="status" id="status">콘텐츠 확인 중</div>
         </footer>
         <div class="progress"><div class="bar" id="bar"></div></div>
@@ -245,13 +244,16 @@
       <div class="gallery" id="gallery" hidden></div>
       <div class="player" id="player" hidden>
         <div class="player-bar">
-          <button class="pbtn go" data-act="back">← 소식 화면으로</button>
+          <button class="pbtn go" data-act="back">끝내기</button>
           <span class="player-title" id="playerTitle"></span>
           <span class="player-left" id="playerLeft"></span>
-          <button class="pbtn" data-act="more">+5분</button>
-          <button class="pbtn" data-act="newtab">새 창으로 열기</button>
+          <button class="pbtn" data-act="more">시간 연장 +3분</button>
+          <button class="pbtn phone" data-act="phone">휴대폰으로 이어서</button>
         </div>
-        <iframe id="frame" title="학생 작품" allow="fullscreen; autoplay; camera; microphone; accelerometer; gyroscope"></iframe>
+        <div class="player-body">
+          <iframe id="frame" title="작품" allow="fullscreen; autoplay; camera; microphone; accelerometer; gyroscope"></iframe>
+          <div class="player-msg" id="playerMsg" hidden></div>
+        </div>
       </div>
       <div class="diag" id="diag" hidden>
         <div class="diag-bar">
@@ -343,6 +345,7 @@
     if (!data || !Array.isArray(data.items) || !data.items.length) throw new Error('콘텐츠 형식 오류');
     const prev = state.content;
     state.content = data;
+    state.sched = buildSchedule(data);
     if (fromNet && !embed) store.set('content', data);
     // 이 화면이 이미 한 번 받아 둔 뒤에 버전이 바뀐 경우에만 반영 지연을 잰다
     if (fromNet && state.netOk && prev && prev.version !== data.version) {
@@ -405,31 +408,92 @@
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
 
     const c = state.content;
-    if (!c || c.mode === 'stop') return;
+    if (!c || c.mode === 'stop' || !state.sched.length) return;
     const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     // 두 화면이 같은 시각을 기준으로 계산하므로 서버 없이도 같은 순간에 같은 카드를 보여 준다
     const slot = Math.floor(t / slideMs);
     if (slot !== state.slot) {
       const first = state.slot === -1;
       state.slot = slot;
-      showSlide(slot % c.items.length, first);
+      showSlide(slot % state.sched.length, first);
       startBar(t % slideMs, slideMs);
     }
   }
 
-  function currentSide() {
-    const item = state.content.items[state.idx];
-    return item ? (item[role] || item.a || {}) : null;
+  // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
+  function buildSchedule(c) {
+    if (state.only) return [{ project: state.only }];
+    const t = now();
+    const items = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t); // 오래된 소식은 내린다
+    const projs = c.projects || [];
+    const every = Math.max(1, c.projectEvery || 2);
+    const out = [];
+    let p = 0;
+    items.forEach((it, i) => {
+      out.push({ item: it });
+      if (projs.length && (i + 1) % every === 0) out.push({ project: projs[p++ % projs.length] });
+    });
+    while (p < projs.length) out.push({ project: projs[p++] }); // 모든 작품이 한 바퀴에 한 번은 나오게
+    return out;
+  }
+
+  function loadOnly(id) {
+    // 검토 화면의 미리보기: 게시 전 작품도 실제 화면과 같은 모양으로 보여 준다
+    fetchWithin('projects/index.json?t=' + Date.now(), {}, (r) => r.json()).then((d) => {
+      state.only = d.projects.filter((p) => p.id === id)[0] || null;
+      if (state.content) { state.sched = buildSchedule(state.content); state.slot = -1; }
+    }, () => {});
+  }
+
+  function entrySide(entry) { return entry && entry.item ? (entry.item[role] || entry.item.a || {}) : null; }
+
+  // 휴대폰으로 이어서 체험할 작품(모바일용, 이 화면에서 실행할 수 없는 작품)에만 QR을 붙인다
+  function needsQR(p) { return p.target !== 'wide' || !p.embed; }
+
+  function slideQR(entry) {
+    if (!entry) return '';
+    if (entry.project) return needsQR(entry.project) ? entry.project.shortUrl : '';
+    const s = entrySide(entry);
+    return s && s.link ? qrLink(s.link) : '';
+  }
+  function drawSlideQR(entry) {
+    const text = slideQR(entry);
+    if (text) drawQR($('qr'), text, 'M');
+  }
+
+  function projectHTML(p) {
+    const qr = needsQR(p);
+    const how = p.embed
+      ? (role === 'a' ? 'B 화면에서 「체험 시작」을 누르면 바로 해 볼 수 있습니다.' : '「체험 시작」을 누르면 이 화면에서 바로 해 볼 수 있습니다.')
+      : '휴대폰으로 QR을 찍어 체험합니다.';
+    const img = (p.target === 'mobile' && p.images.mobile) ? p.images.mobile : p.images.wide;
+    const shot = img ? `<div class="shot${p.target === 'mobile' ? ' phone' : ''}"><img src="${esc(img)}" alt=""></div>` : '';
+    const text = `
+      <div class="tag">${role === 'a' ? '작품 소개' : '직접 체험'}${p.pinned ? ' · 추천' : ''}</div>
+      <h1 class="title">${esc(p.title)}</h1>
+      <div class="maker">만든 사람 · ${esc(p.maker)}</div>
+      <p class="body">${esc(p.summary)}</p>`;
+    const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}${p.howTo ? ' ' + esc(p.howTo) : ''}</div>`;
+    if (role === 'a') {
+      return `<div class="proj proj-a">${shot}<div class="proj-text">${text}
+        <div class="howto-row">${qr ? '<div class="qr-box mini" id="qr"></div>' : ''}<div>${howHTML}${qr ? `<div class="short">${esc(p.short)}</div>` : ''}</div></div>
+      </div></div>`;
+    }
+    const tryBtn = p.embed ? `<button class="try-btn" data-try="${esc(p.id)}">▶ 체험 시작</button>` : '';
+    const side = qr
+      ? `<div class="qr big"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 체험<br><b>${esc(p.short)}</b></div></div>`
+      : shot;
+    return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}${tryBtn}</div>${side}</div>`;
   }
 
   function showSlide(idx, immediate) {
     state.idx = idx;
-    const side = currentSide();
-    renderDots(idx, state.content.items.length);
+    const entry = state.sched[idx];
+    renderDots(idx, state.sched.length);
     const card = $('card');
     const paint = () => {
-      card.innerHTML = cardHTML(side);
-      if (side.link) drawQR($('qr'), qrLink(side.link), 'M');
+      card.innerHTML = entry.project ? projectHTML(entry.project) : cardHTML(entrySide(entry));
+      drawSlideQR(entry);
       card.classList.remove('out');
     };
     clearTimeout(state.fadeTimer);
@@ -473,10 +537,12 @@
     if (!c || !el) return;
     const sc = c.showcase || {};
     const parts = [];
-    if (c.notice) parts.push('<b>공지</b>' + esc(c.notice));
-    if (sc.now && sc.now.url && sc.on && sc.on !== role) {
-      parts.push('<b>시연</b>' + esc(sc.where || '옆 화면') + '에서 학생 작품을 시연하고 있습니다 · ' +
-        esc(sc.now.title || '') + (sc.now.by ? ' (' + esc(sc.now.by) + ')' : ''));
+    const remote = remoteInfo();
+    // 기한이 지난 공지는 내린다
+    if (c.notice && !(c.noticeUntil && Date.parse(c.noticeUntil) <= now())) parts.push('<b>공지</b>' + esc(c.notice));
+    if (remote && sc.on && sc.on !== role) {
+      parts.push('<b>시연</b>' + esc(sc.where || '옆 화면') + '에서 작품을 시연하고 있습니다 · ' +
+        esc(remote.title) + (remote.by ? ' (' + esc(remote.by) + ')' : ''));
     }
     el.hidden = !parts.length;
     el.innerHTML = parts.map((p) => '<div>' + p + '</div>').join('');
@@ -496,34 +562,92 @@
   }
 
   // ---------- 학생 작품 시연 ----------
+  function findProject(key) {
+    const list = (state.content && state.content.projects) || [];
+    const hit = list.filter((p) => p.id === key || String(p.no) === String(key))[0];
+    return hit || (state.only && state.only.id === key ? state.only : null);
+  }
+
+  // 원격 시연: showcase.now 에 작품 id(또는 번호)나 주소가 들어 있다
+  function remoteInfo() {
+    const n = state.content && state.content.showcase && state.content.showcase.now;
+    if (!n) return null;
+    const p = n.project ? findProject(n.project) : null;
+    if (p) return { title: p.title, by: p.maker, url: p.run, project: p };
+    return n.url ? { title: n.title || n.url, by: n.by || '', url: n.url } : null;
+  }
+
   function syncShowcase() {
-    const sc = (state.content && state.content.showcase) || {};
+    if (!state.content || isStopped()) return;
+    const sc = state.content.showcase || {};
     const here = sc.on === role;
-    $('showBtn').hidden = !(here && sc.apps && sc.apps.length);
+    const count = (state.content.projects || []).length || (sc.apps || []).length;
+    $('showBtn').hidden = !(here && count);
     if (!here) { if (state.show.app) closePlayer('역할 변경'); return; }
-    const remote = sc.now && sc.now.url ? sc.now : null;
+    const remote = remoteInfo();
     if (!remote) state.dismissedRemote = '';
+    // 학생이 체험하는 중에는 원격 시연도 끼어들지 않는다. 체험이 끝나면 이어서 연다.
+    if (state.show.app && !state.show.remote) return;
     if (remote && remote.url !== state.dismissedRemote && (!state.show.app || state.show.app.url !== remote.url)) openPlayer(remote, true);
     else if (!remote && state.show.remote) closePlayer('원격 시연 끝');
   }
 
   function isStopped() { return document.body.classList.contains('is-stopped'); }
+  function holdMinutes() {
+    const e = (state.content && state.content.experience) || {};
+    return Math.min(5, Math.max(3, e.holdMinutes || 4));
+  }
+  function maxMinutes() {
+    const e = (state.content && state.content.experience) || {};
+    return Math.max(holdMinutes(), e.maxMinutes || 15);
+  }
 
   function openGallery() {
     if (isStopped()) return;
-    const sc = state.content.showcase || {};
-    const apps = sc.apps || [];
-    $('gallery').innerHTML = `
-      <div class="gallery-head"><h2>학생 작품 시연</h2><button class="btn primary" data-act="gclose">닫기</button></div>
-      <p class="gallery-note">작품을 누르면 이 화면에서 실행합니다. ${sc.returnMinutes || 5}분이 지나면 소식 화면으로 돌아옵니다.</p>
-      <div class="gallery-grid">${apps.map((a, i) => `
+    const c = state.content;
+    const projs = c.projects || [];
+    const apps = projs.length ? [] : ((c.showcase || {}).apps || []); // 등록 작품이 없을 때만 예전 목록을 사용한다
+    const cards = projs.map((p) => `
+        <button class="app-card" data-try="${esc(p.id)}">
+          ${p.images && p.images.wide ? `<img class="app-shot" src="${esc(p.images.wide)}" alt="">` : ''}
+          <span class="app-title">${esc(p.title)}</span>
+          <span class="app-by">${esc(p.maker)}</span>
+          <span class="app-host">${p.embed ? '이 화면에서 체험' : '휴대폰으로 체험 (QR)'}</span>
+        </button>`).concat(apps.map((a, i) => `
         <button class="app-card" data-app="${i}">
           <span class="app-title">${esc(a.title)}</span>
           <span class="app-by">${esc(a.by || '')}</span>
           <span class="app-host">${esc(hostOf(a.url))}</span>
-        </button>`).join('')}
+        </button>`));
+    $('gallery').innerHTML = `
+      <div class="gallery-head"><h2>작품 체험</h2><button class="btn primary" data-act="gclose">닫기</button></div>
+      <p class="gallery-note">작품을 누르면 이 화면에서 ${holdMinutes()}분 동안 실행합니다. 체험하는 동안에는 다른 작품으로 넘어가지 않습니다.</p>
+      <div class="gallery-grid">${cards.join('')}</div>`;
+    $('gallery').hidden = false;
+  }
+
+  function startExperience(key) {
+    const p = findProject(key);
+    if (!p || isStopped()) return;
+    if (!p.embed) { showQRPanel(p); return; }
+    openPlayer({ title: p.title, by: p.maker, url: p.run, project: p }, false);
+  }
+
+  // 이 화면 안에서 실행할 수 없는 작품은 휴대폰 체험으로 안내한다
+  function showQRPanel(p) {
+    $('gallery').innerHTML = `
+      <div class="gallery-head"><h2>${esc(p.title)}</h2><button class="btn primary" data-act="gclose">닫기</button></div>
+      <div class="qr-panel">
+        <div class="qr big"><div class="qr-box" id="panelQR"></div></div>
+        <div class="qr-panel-text">
+          <p class="body">휴대폰 카메라로 QR을 찍거나 아래 주소에 접속해 체험합니다.</p>
+          <p class="short-big">${esc(p.short)}</p>
+          <p class="gallery-note">이 작품은 다른 사이트 안에서 실행할 수 없어 휴대폰으로 안내합니다.</p>
+        </div>
       </div>`;
     $('gallery').hidden = false;
+    state.lastInteract = Date.now();
+    drawQR($('panelQR'), p.shortUrl, 'M');
   }
 
   function hostOf(url) {
@@ -535,23 +659,45 @@
 
   function openPlayer(info, remote) {
     if (isStopped()) return;
-    const sc = state.content.showcase || {};
-    state.show = { app: info, remote: !!remote, until: remote ? 0 : now() + (sc.returnMinutes || 5) * 60000 };
+    const t = now();
+    const mine = { app: info, remote: !!remote, started: t, until: remote ? 0 : t + holdMinutes() * 60000, loaded: false };
+    state.show = mine;
     $('playerTitle').textContent = (info.title || info.url) + (info.by ? ' · ' + info.by : '');
     $('player').classList.toggle('remote', !!remote);
-    $('frame').src = info.url;
+    $('player').classList.toggle('has-phone', !!(info.project && info.project.shortUrl));
+    $('playerMsg').hidden = true;
+    const frame = $('frame');
+    frame.onload = () => { if (state.show === mine) mine.loaded = true; };
+    frame.src = info.url;
     $('gallery').hidden = true;
     $('player').hidden = false;
-    logEvent('시연 시작' + (remote ? ' (원격)' : '') + ': ' + (info.title || info.url));
+    // 작품이 열리지 않아도 게시판 전체가 멈추지 않도록, 20초 안에 열리지 않으면 휴대폰 안내를 띄운다
+    clearTimeout(state.loadTimer);
+    state.loadTimer = setTimeout(() => { if (state.show === mine && !mine.loaded) playerMessage('작품을 불러오지 못했습니다.'); }, 20000);
+    logEvent('체험 시작' + (remote ? ' (원격)' : '') + ': ' + (info.title || info.url));
     renderPlayer();
+  }
+
+  // 작품 위에 안내를 겹쳐 보인다. 작품 안의 터치는 이 페이지가 알 수 없으므로 시간 연장·끝내기는 버튼으로만 받는다.
+  function playerMessage(text) {
+    const p = state.show.app && state.show.app.project;
+    const el = $('playerMsg');
+    el.innerHTML = `<div class="pm-box"><p class="pm-text">${esc(text)}</p>` +
+      (p && p.shortUrl ? `<div class="qr-box" id="pmQR"></div><p class="pm-short">휴대폰으로 체험 · <b>${esc(p.short)}</b></p>` : '') +
+      '<div><button class="btn primary" data-act="back">끝내기</button><button class="btn" data-act="pmclose">계속 보기</button></div></div>';
+    el.hidden = false;
+    if (p && p.shortUrl) drawQR($('pmQR'), p.shortUrl, 'M');
   }
 
   function closePlayer(why) {
     if (!state.show.app) return;
-    logEvent('시연 끝 (' + why + '): ' + (state.show.app.title || state.show.app.url));
+    logEvent('체험 끝 (' + why + '): ' + (state.show.app.title || state.show.app.url));
     state.show = { app: null, remote: false, until: 0 };
+    clearTimeout(state.loadTimer);
     $('player').hidden = true;
+    $('playerMsg').hidden = true;
     $('frame').src = 'about:blank';
+    setTimeout(syncShowcase, 0); // 체험 중에 들어온 원격 시연이 있으면 이어서 연다
   }
 
   function renderPlayer() {
@@ -561,7 +707,7 @@
     const ms = state.show.until - now();
     if (ms <= 0) { closePlayer('시간 종료'); return; }
     const s = Math.ceil(ms / 1000);
-    const text = Math.floor(s / 60) + ':' + p2(s % 60) + ' 뒤 소식 화면으로';
+    const text = Math.floor(s / 60) + ':' + p2(s % 60) + ' 남음';
     if (el.textContent !== text) el.textContent = text;
   }
 
@@ -592,6 +738,8 @@
   function onClick(e) {
     const actEl = e.target.closest('[data-act]');
     if (actEl) { act(actEl.getAttribute('data-act')); return; }
+    const tryEl = e.target.closest('[data-try]');
+    if (tryEl) { startExperience(tryEl.getAttribute('data-try')); return; }
     const appEl = e.target.closest('[data-app]');
     if (appEl) { openPlayer(state.content.showcase.apps[+appEl.getAttribute('data-app')], false); return; }
     if (e.target.closest('#player, #gallery, #diag')) return;
@@ -625,8 +773,16 @@
         if (state.show.remote) state.dismissedRemote = state.show.app.url;
         closePlayer('돌아가기 버튼');
         break;
-      case 'more': state.show.until = Math.max(state.show.until, now()) + 5 * 60000; renderPlayer(); break;
-      case 'newtab': if (state.show.app) window.open(state.show.app.url, '_blank'); break;
+      case 'more': {
+        if (!state.show.app || state.show.remote) break;
+        const max = state.show.started + maxMinutes() * 60000;
+        state.show.until = Math.min(max, Math.max(state.show.until, now()) + 3 * 60000);
+        if (state.show.until >= max) logEvent('체험 최대 시간(' + maxMinutes() + '분)에 도달');
+        renderPlayer();
+        break;
+      }
+      case 'phone': if (state.show.app) playerMessage('휴대폰으로 이어서 체험합니다.'); break;
+      case 'pmclose': $('playerMsg').hidden = true; break;
     }
   }
 
@@ -728,8 +884,8 @@
     checks.push(row(state.font === '불러옴' ? 'ok' : 'wait', '웹 글꼴', state.font));
     checks.push(row(state.qr === '불러옴' ? 'ok' : (state.qr === '실패' ? 'bad' : 'wait'), 'QR 라이브러리', state.qr));
     checks.push(row(state.wake === '사용 중' ? 'ok' : 'info', '화면 꺼짐 방지', state.wake));
-    checks.push(row('info', '학생 작품 시연', sc.on === role
-      ? '이 화면에서 사용 · 작품 ' + (sc.apps || []).length + '개' + (state.show.app ? ' · 지금 시연 중' : '')
+    checks.push(row('info', '작품 체험', sc.on === role
+      ? '이 화면에서 사용 · 작품 ' + ((c.projects || []).length || (sc.apps || []).length) + '개' + (state.show.app ? ' · 지금 체험 중' : '')
       : (sc.on ? sc.on.toUpperCase() + ' 화면에서 사용' : '사용 안 함')));
 
     const ua = navigator.userAgent;
@@ -744,7 +900,7 @@
       ['네트워크', navigator.onLine ? '연결됨' : '끊김'],
       ['보정 시각', hms(now())],
       ['버전', '앱 ' + APP_VERSION + ' · 콘텐츠 v' + esc(c.version || '?') + (c.publishedAt ? ' (' + mdhm(Date.parse(c.publishedAt)) + ' 게시)' : '')],
-      ['카드', state.idx >= 0 && c.items ? (state.idx + 1) + ' / ' + c.items.length : '-']
+      ['카드', state.idx >= 0 ? (state.idx + 1) + ' / ' + state.sched.length : '-']
     ].map((kv) => `<div class="row"><span class="label">${kv[0]}</span><span class="value">${kv[1]}</span></div>`).join('');
 
     const sessions = embed ? [] : store.get('sessions', []).slice(-8).reverse();
@@ -882,7 +1038,61 @@
     });
   }
 
+  // ---------- 작품 검토: 등록된 작품 전체의 검사 결과와 A·B 화면 미리보기 ----------
+  const STATUS = { ok: ['ok', '검사 정상'], warn: ['wait', '검사 주의'], fail: ['bad', '검사 실패'], unchecked: ['wait', '검사 전'] };
+  const TEACHER = { approved: ['ok', '교사 승인'], pending: ['wait', '교사 승인 전'], hidden: ['bad', '숨김'] };
+
+  function chip(kind, text) { return `<span class="chip ${kind}">${esc(text)}</span>`; }
+
+  function reviewHTML(p) {
+    const st = STATUS[p.status] || STATUS.unchecked;
+    const te = TEACHER[p.teacher] || TEACHER.pending;
+    return `
+      <article class="rv">
+        <header class="rv-head">
+          <div><h2>${p.no}. ${esc(p.title)}</h2><p class="rv-maker">${esc(p.maker)} · ${esc(p.summary)}</p></div>
+          <div class="rv-chips">
+            ${chip(p.published ? 'ok' : 'wait', p.published ? '게시 중' : '게시 안 함')}
+            ${chip(st[0], st[1])}
+            ${chip(p.makerConfirmed ? 'ok' : 'wait', p.makerConfirmed ? '제작자 확인' : '제작자 확인 전')}
+            ${chip(te[0], te[1])}
+            ${chip('info', p.embed ? 'B 화면에서 실행' : 'QR로 안내')}
+            ${p.changedAfterApproval ? chip('bad', '승인 뒤 작품이 바뀜') : ''}
+          </div>
+        </header>
+        ${p.problems.length ? `<ul class="rv-problems">${p.problems.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        <p class="rv-meta">실행 주소 <a href="${esc(p.run)}" target="_blank" rel="noopener">${esc(p.run)}</a>
+          · 짧은 주소 ${esc(p.short)}${p.checkedAt ? ' · ' + esc(p.checkedAt.slice(0, 16).replace('T', ' ')) + ' 검사' : ''}</p>
+        <button class="btn" data-open="${esc(p.id)}">A·B 화면으로 미리 보기</button>
+        <div class="rv-frames" id="pv-${esc(p.id)}"></div>
+      </article>`;
+  }
+
+  function startReview() {
+    document.title = '당곡고 화면 작품 검토';
+    app.innerHTML = `
+      <div class="review">
+        <div class="preview-head"><h1>작품 검토</h1><a class="btn" href="?preview">두 화면 미리보기</a></div>
+        <p class="preview-note left">게시·숨김은 지금은 projects/registry.json 의 teacher 값으로 정합니다. 다음 단계에서 이 화면의 버튼으로 바꿉니다.</p>
+        <div id="rlist">불러오는 중</div>
+      </div>`;
+    fetch('projects/index.json?t=' + Date.now(), { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => { $('rlist').innerHTML = d.projects.map(reviewHTML).join('') || '등록된 작품이 없습니다.'; })
+      .catch((e) => { $('rlist').textContent = '불러오지 못했습니다: ' + e.message; });
+    app.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-open]');
+      if (!b) return;
+      const id = b.getAttribute('data-open');
+      $('pv-' + id).innerHTML = `
+        <figure class="frame land"><iframe src="?screen=a&amp;embed=1&amp;only=${encodeURIComponent(id)}" title="A 화면"></iframe><figcaption>A · 작품 소개</figcaption></figure>
+        <figure class="frame land"><iframe src="?screen=b&amp;embed=1&amp;only=${encodeURIComponent(id)}" title="B 화면"></iframe><figcaption>B · 직접 체험 (「체험 시작」을 눌러 확인)</figcaption></figure>`;
+      b.remove();
+    });
+  }
+
   if (role) startScreen();
   else if ('preview' in params) startPreview();
+  else if ('review' in params) startReview();
   else startChooser();
 })();

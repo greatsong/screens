@@ -27,9 +27,15 @@ def main():
     data["mode"] = args.mode
     data["notice"] = args.notice.strip()
 
+    # 원격 시연: 주소를 넣으면 그 주소를, 작품 id나 번호(예: commit-galaxy, 2)를 넣으면 등록된 작품을 연다
     url = args.showcase_url.strip()
     showcase = data.setdefault("showcase", {})
-    showcase["now"] = {"title": args.showcase_title.strip() or url, "url": url} if url else None
+    if not url:
+        showcase["now"] = None
+    elif "://" in url or "/" in url:
+        showcase["now"] = {"title": args.showcase_title.strip() or url, "url": url}
+    else:
+        showcase["now"] = {"project": url}
 
     CONTENT.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"v{data['version']} · {data['publishedAt']} · mode={data['mode']} · "

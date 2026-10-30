@@ -1,0 +1,28 @@
+{
+  "id": "commit-galaxy",
+  "checkedAt": "2026-10-30T09:21:06+09:00",
+  "url": "https://greatsong.github.io/commit-galaxy/",
+  "finalUrl": "https://greatsong.github.io/commit-galaxy/",
+  "http": 200,
+  "responseMs": 314,
+  "fingerprint": "1c44702b74bb3548",
+  "frame": {
+    "allowed": true,
+    "reason": "제한 없음"
+  },
+  "shots": {
+    "wide": {
+      "ok": true,
+      "image": "wide.jpg",
+      "title": "2026 커밋 은하",
+      "loadMs": 5793,
+      "errors": [],
+      "stats": {
+        "text": 8953,
+        "visual": 3
+      }
+    }
+  },
+  "status": "ok",
+  "problems": []
+}

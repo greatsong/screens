@@ -164,7 +164,64 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
 }
 .pbtn.go { margin-left: 0; background: var(--accent); color: #111; font-weight: 700; border-color: transparent; }
 .player.remote [data-act="more"] { display: none; }
-.player iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+.player:not(.has-phone) .phone { display: none; }
+.player-body { flex: 1; position: relative; }
+.player-body iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+.player-msg {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(7, 11, 19, 0.92); display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.pm-box { max-width: 80vmin; }
+.pm-text { font-size: 3.4vmin; font-weight: 700; margin-bottom: 3vmin; }
+.pm-box .qr-box { width: 34vmin; margin: 0 auto; }
+.pm-short { font-size: 2.6vmin; color: var(--soft); margin: 2vmin 0 3vmin; }
+
+/* ---------- 작품 카드 ---------- */
+.proj { display: flex; align-items: center; }
+.proj-text { flex: 1; min-width: 0; }
+.proj-a .shot { width: 48%; flex: none; margin-right: 4vmin; }
+.proj-b .shot { width: 40%; flex: none; margin-left: 4vmin; }
+.shot img { display: block; width: 100%; height: auto; border-radius: 1.6vmin; border: 0.3vmin solid var(--line); }
+.shot.phone { width: 24%; }
+.shot.phone img { border-radius: 3vmin; border-width: 0.8vmin; border-color: #2a3756; }
+.proj .title { font-size: 6.4vmin; margin-bottom: 1.4vmin; }
+.maker { font-size: 2.8vmin; color: var(--accent); font-weight: 700; margin-bottom: 2.2vmin; }
+.proj .body { font-size: 3.6vmin; }
+.howto { margin-top: 2.6vmin; font-size: 3vmin; line-height: 1.5; color: var(--soft); }
+.howto b { display: block; font-size: 2.2vmin; color: var(--accent); margin-bottom: 0.6vmin; }
+.howto-row { display: flex; align-items: center; }
+.qr-box.mini { width: 17vmin; flex: none; margin: 2.6vmin 2.6vmin 0 0; padding: 1.2vmin; }
+.short { margin-top: 1vmin; font-size: 2.6vmin; font-weight: 700; font-variant-numeric: tabular-nums; }
+.try-btn {
+  margin-top: 3.4vmin; font-size: 3.6vmin; font-weight: 800; color: #111;
+  background: var(--accent); border: 0; border-radius: 99px; padding: 2vmin 5vmin;
+}
+.qr.big { width: 36vmin; }
+.app-shot { display: block; width: 100%; height: auto; border-radius: 1.2vmin; margin-bottom: 2vmin; }
+.qr-panel { display: flex; align-items: center; margin-top: 4vmin; }
+.qr-panel .qr { margin: 0 5vmin 0 0; }
+.qr-panel-text { flex: 1; }
+.short-big { font-size: 5vmin; font-weight: 800; margin: 2vmin 0; font-variant-numeric: tabular-nums; }
+
+/* ---------- 작품 검토 ---------- */
+.review { height: 100%; overflow: auto; padding: 3vmin 3vw 8vmin; -webkit-user-select: text; user-select: text; }
+.preview-note.left { text-align: left; margin: 0 0 3vmin; }
+.rv { background: var(--panel); border: 0.2vmin solid var(--line); border-radius: 2vmin; padding: 3vmin; margin-bottom: 3vmin; }
+.rv-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.rv-head h2 { font-size: 3.4vmin; }
+.rv-maker { color: var(--soft); font-size: 2.3vmin; margin-top: 0.8vmin; }
+.rv-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+.chip { font-size: 2vmin; font-weight: 700; padding: 0.5vmin 1.4vmin; border-radius: 99px; margin: 0.6vmin 0 0 1vmin; border: 0.2vmin solid currentColor; }
+.chip.ok { color: var(--ok); }
+.chip.wait { color: var(--wait); }
+.chip.bad { color: var(--bad); }
+.chip.info { color: var(--muted); }
+.rv-problems { margin: 2vmin 0 0 3vmin; color: var(--wait); font-size: 2.2vmin; line-height: 1.6; }
+.rv-meta { margin: 2vmin 0; font-size: 2vmin; color: var(--muted); word-break: break-all; }
+.rv-meta a { color: var(--soft); }
+.rv .btn { margin-left: 0; }
+.rv-frames { display: flex; flex-wrap: wrap; margin-top: 2vmin; }
+.rv-frames .frame { margin: 0 2vw 2vmin 0; }
 
 /* ---------- 진단 정보 ---------- */
 .diag {
@@ -215,6 +272,13 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
   .lines li { font-size: 5vmin; }
   .diag-grid { grid-template-columns: 1fr; }
   .diag { font-size: 2.8vmin; }
+  .proj { flex-direction: column; align-items: stretch; }
+  .proj-a .shot, .proj-b .shot { width: 100%; margin: 0 0 4vmin; }
+  .proj-b .shot, .proj-b .qr { order: -1; }
+  .proj-b .qr.big { margin: 0 auto 4vmin; width: 50vmin; }
+  .shot.phone { width: 46%; margin: 0 auto 4vmin; }
+  .proj .title { font-size: 8vmin; }
+  .proj .body { font-size: 4.4vmin; }
 }
 
 /* ---------- 역할 선택 ---------- */
