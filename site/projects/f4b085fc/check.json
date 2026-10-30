@@ -1,11 +1,11 @@
 {
   "id": "f4b085fc",
-  "checkedAt": "2026-10-30T10:44:29+09:00",
-  "url": "https://greatsong.github.io/stroke-challenge/",
-  "finalUrl": "https://greatsong.github.io/stroke-challenge/",
+  "checkedAt": "2026-10-30T10:48:45+09:00",
+  "url": "https://danggok-ai.vercel.app/",
+  "finalUrl": "https://danggok-ai.vercel.app/",
   "http": 200,
-  "responseMs": 140,
-  "fingerprint": "b53fc68c719f9bb6",
+  "responseMs": 135,
+  "fingerprint": "3b9f21acfb5f0a82",
   "frame": {
     "allowed": true,
     "reason": "제한 없음"
@@ -14,12 +14,23 @@
     "wide": {
       "ok": true,
       "image": "wide.jpg",
-      "title": "뇌졸중 위험 예측 챌린지 · DS 건강검진센터 인턴 미션",
-      "loadMs": 4169,
+      "title": "당곡고 AI 채팅",
+      "loadMs": 2958,
       "errors": [],
       "stats": {
-        "text": 2041,
-        "visual": 0
+        "text": 166,
+        "visual": 1
+      }
+    },
+    "mobile": {
+      "ok": true,
+      "image": "mobile.jpg",
+      "title": "당곡고 AI 채팅",
+      "loadMs": 2881,
+      "errors": [],
+      "stats": {
+        "text": 166,
+        "visual": 1
       }
     }
   },
