@@ -59,14 +59,15 @@
       "url": "https://danggok-ai.vercel.app/",
       "summary": "Claude·Gemini·ChatGPT·Solar 네 가지 AI를 한 화면에서 사용하는 당곡고 AI 채팅입니다.",
       "maker": "선생님 작품 · 송석리",
+      "makerType": "teacher",
       "target": "mobile",
       "howTo": "휴대폰으로 QR을 찍고 구글 계정으로 로그인합니다.",
       "demoSteps": [],
-      "makerConfirmed": false,
+      "makerConfirmed": true,
       "teacher": "pending",
       "approvedAt": "",
       "source": "form"
     }
   ],
-  "syncId": "20261030-104753-sb7fd"
+  "syncId": "20261030-111056-s6952"
 }
