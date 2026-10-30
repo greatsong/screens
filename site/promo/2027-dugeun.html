@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2027 두근두근 당곡</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}video{width:100%;height:100%;object-fit:contain}
+#tap{position:fixed;right:3vmin;top:3vmin;font:700 3vmin sans-serif;color:#fff;background:rgba(0,0,0,.45);padding:1.2vmin 3vmin;border-radius:99px}</style></head>
+<body>
+<video id="v" src="2027-dugeun.mp4" poster="2027-dugeun.jpg" autoplay muted loop playsinline></video>
+<div id="tap">화면을 누르면 소리가 나요 🔊</div>
+<script>
+// 자동 재생은 소리 없이만 허용되므로, 한 번 누르면 처음부터 소리와 함께 다시 튼다
+const v = document.getElementById('v'), tap = document.getElementById('tap');
+document.addEventListener('pointerdown', () => { v.muted = false; v.currentTime = 0; v.play(); tap.style.display = 'none'; });
+</script></body></html>
