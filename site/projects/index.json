@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T10:04:12+09:00",
+  "generatedAt": "2026-10-30T10:05:45+09:00",
   "registrySyncId": "",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -16,13 +16,13 @@
       "short": "greatsong.github.io/screens/p/1",
       "shortUrl": "https://greatsong.github.io/screens/p/1/",
       "images": {
-        "wide": "projects/touch-board/wide.jpg?v=2026-10-30T093426"
+        "wide": "projects/touch-board/wide.jpg?v=2026-10-30T100522"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-10-30T09:34:26+09:00",
+      "checkedAt": "2026-10-30T10:05:22+09:00",
       "fingerprint": "c6a7b60d8bca919d",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -44,13 +44,13 @@
       "short": "greatsong.github.io/screens/p/2",
       "shortUrl": "https://greatsong.github.io/screens/p/2/",
       "images": {
-        "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-30T093430"
+        "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-30T100526"
       },
       "pinned": true,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-10-30T09:34:30+09:00",
+      "checkedAt": "2026-10-30T10:05:26+09:00",
       "fingerprint": "1c44702b74bb3548",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -72,14 +72,14 @@
       "short": "greatsong.github.io/screens/p/3",
       "shortUrl": "https://greatsong.github.io/screens/p/3/",
       "images": {
-        "wide": "projects/neural-explorer/wide.jpg?v=2026-10-30T093436",
-        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-30T093436"
+        "wide": "projects/neural-explorer/wide.jpg?v=2026-10-30T100531",
+        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-30T100531"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-10-30T09:34:36+09:00",
+      "checkedAt": "2026-10-30T10:05:31+09:00",
       "fingerprint": "dbe97b7d5e14a260",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -101,13 +101,13 @@
       "short": "greatsong.github.io/screens/p/4",
       "shortUrl": "https://greatsong.github.io/screens/p/4/",
       "images": {
-        "wide": "projects/activation-lab/wide.jpg?v=2026-10-30T093440"
+        "wide": "projects/activation-lab/wide.jpg?v=2026-10-30T100535"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-10-30T09:34:40+09:00",
+      "checkedAt": "2026-10-30T10:05:35+09:00",
       "fingerprint": "f779780f0659e550",
       "teacher": "pending",
       "makerConfirmed": false,
