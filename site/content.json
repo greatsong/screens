@@ -1,6 +1,6 @@
 {
-  "version": 12,
-  "publishedAt": "2026-10-30T11:37:10+09:00",
+  "version": 13,
+  "publishedAt": "2026-10-30T13:17:21+09:00",
   "appVersion": "0.5.1",
   "mode": "normal",
   "notice": "",
@@ -204,17 +204,9 @@
       "id": "2027-dgdg",
       "title": "2027 두근두근 당곡 프로젝트",
       "caption": "인문사회·과학·수학·정보·AI·동아리·창체 — 다양한 프로그램이 2027년에 여러분을 기다립니다!",
-      "src": "promo/2027.mp4",
+      "src": "promo/2027-wide.mp4",
       "seconds": 15,
-      "every": 4
-    },
-    {
-      "id": "2027-dugeun",
-      "title": "2027 두근두근 당곡 프로젝트",
-      "caption": "인문사회·과학·수학·정보·AI·동아리·창체 활동, 그리고 나의 AI 사용 습관을 셀프 점검할 기회까지. 다양한 프로그램이 2027년에 여러분을 기다립니다!",
-      "src": "promo/2027-dugeun.mp4",
-      "seconds": 17,
-      "every": 4
+      "every": 8
     }
   ]
 }
