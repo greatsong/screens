@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-30T09:51:52+09:00",
+  "generatedAt": "2026-10-30T10:04:12+09:00",
   "registrySyncId": "",
-  "controlRequestId": "",
+  "controlRequestId": "20261030-100404-atest",
   "projects": [
     {
       "id": "touch-board",

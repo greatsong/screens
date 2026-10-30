@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "publishedAt": "2026-10-30T09:51:00+09:00",
+  "version": 8,
+  "publishedAt": "2026-10-30T10:04:12+09:00",
   "appVersion": "0.3.0",
   "mode": "normal",
   "notice": "",
@@ -194,6 +194,6 @@
     "maxMinutes": 15
   },
   "noticeUntil": "",
-  "controlRequestId": "",
-  "requestedAt": ""
+  "controlRequestId": "20261030-100404-atest",
+  "requestedAt": "2026-10-30T10:04:04+09:00"
 }
