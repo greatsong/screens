@@ -111,15 +111,25 @@
 | `site/projects/` | 작품별 검사 결과와 캡처, 검토 화면용 `index.json` |
 | `site/p/` | 작품 짧은 주소 |
 | `site/demo/touch.html` | 동시 터치 확인용 그림판 |
+| `site/meal/` | 급식 카드 음식 아이콘(Codex 이미지 생성, WebP) |
+| `site/promo/` | 홍보 영상(가로·세로)과 영상만 따로 트는 페이지 |
 | `projects/registry.json` | 작품 등록부. 관리 시트와 사람이 씁니다. |
 | `projects/control.json` | 화면 제어(긴급 정지, 공지, B 원격 시연). 관리 화면과 휴대폰 수동 실행이 씁니다. |
 | `projects/assigned.json` | 짧은 주소 번호와 승인 시점 지문. 편성 스크립트만 씁니다. |
+| `projects/news.json` | AI 뉴스. 「AI 뉴스」 워크플로만 씁니다. |
 | `scripts/check_projects.py` | 작품 검사와 캡처 |
 | `scripts/build_projects.py` | 편성 (등록부 + 검사 결과 + 화면 제어 → 화면 내용) |
 | `scripts/bump.py` | 휴대폰 수동 실행 때 화면 제어를 바꿉니다. |
+| `scripts/fetch_news.py` | AI 뉴스를 받아 학생에게 보여 줄 기사 5건을 고릅니다. |
 | `.github/workflows/pages.yml` | 화면 배포 (빠른 경로) |
 | `.github/workflows/check.yml` | 작품 검사 (느린 경로) |
+| `.github/workflows/news.yml` | AI 뉴스 (평일 07:30·12:00·15:30, 주말 09:00) |
 | `apps-script/` | 구글 설문·관리 시트·메일·관리 화면 (Apps Script), 설치 안내, 모의 시험 |
+
+## 급식과 AI 뉴스
+
+- 급식: 화면이 나이스 급식식단정보(서울 B10 · 당곡고 7010073)를 직접 받습니다. 인증키는 쓰지 않습니다(공개 저장소라 키가 드러나고, 키 없이도 5일치를 받을 수 있습니다). 오늘 점심을 크게, 다음 급식일 메뉴를 작게 보여 주고 메뉴마다 음식 아이콘을 붙입니다. 나이스가 응답하지 않으면 마지막으로 받은 식단을 씁니다.
+- AI 뉴스: 「AI 뉴스」 워크플로가 AI타임스·연합뉴스·전자신문·ZDNet Korea·한겨레(과학)의 RSS에서 기사를 골라 소식 앞에 넣습니다. 새 모델 발표, 벤치마크, 새로 발견한 문제와 해결에 점수를 주고, 매출·투자·주가 같은 돈 이야기와 자극적인 기사는 뺍니다. 화면에는 제목, 요약 첫 문장, 출처만 보이고 B 화면 QR로 기사 전문을 읽습니다. 기준은 `scripts/fetch_news.py` 맨 위에 있습니다.
 
 ## 알아 둘 점
 

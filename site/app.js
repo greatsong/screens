@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.4';
+  const APP_VERSION = '0.5.5';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -459,11 +459,23 @@
     return { idx: i, slot: round * sched.length + i, elapsed: pos, ms: sched[i].ms || slideMs, start: t - pos };
   }
 
+  // AI 뉴스 한 건 → 소식 카드(A: 제목과 요약, B: 같은 기사를 휴대폰으로 읽는 QR). 기사 본문은 옮기지 않는다
+  function newsItem(n) {
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || '');
+    const src = (n.source || '') + (d ? ' · ' + (+d[2]) + '월 ' + (+d[3]) + '일' : '');
+    return {
+      id: 'news-' + n.id,
+      a: { tag: 'AI 뉴스', title: n.title, body: n.summary, source: src },
+      b: { tag: 'AI 뉴스 · 기사 읽기', title: n.title, body: n.summary, source: src, link: n.link, linkLabel: '휴대폰으로 기사 읽기' }
+    };
+  }
+
   // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
   function buildSchedule(c) {
     if (state.only) return [{ project: state.only }];
     const t = now();
-    const items = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t); // 오래된 소식은 내린다
+    // AI 뉴스(「AI 뉴스」 워크플로가 고른 기사)를 소식 앞에 둔다. 오래된 소식은 내린다
+    const items = (c.news || []).map(newsItem).concat(c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     const projs = c.projects || [];
     const every = Math.max(1, c.projectEvery || 2);
     const out = [];
@@ -647,39 +659,38 @@
       .map((x) => x.replace(/\(\s*[\d.\s]+\s*\)/g, '').replace(/[*#+@]/g, '').replace(/\s+/g, ' ').trim())
       .filter(Boolean);
   }
-  // 메뉴 이름으로 이모지를 고른다. 위에서부터 먼저 맞는 것을 쓴다(볶음밥은 밥보다, 국은 그 안의 재료보다 먼저)
-  const MEAL_EMOJI = [
-    [/케이크/, '🍰'], [/아이스크림|빙수|샤베트/, '🍨'], [/요거트|요구르트|우유|두유/, '🥛'],
-    [/주스|에이드|스무디|식혜|음료/, '🧃'], [/김밥|주먹밥/, '🍙'], [/초밥/, '🍣'], [/카레/, '🍛'],
-    [/볶음밥|오므라이스/, '🍳'], [/스파게티|파스타|그라탕/, '🍝'],
-    [/짜장|짬뽕|라면|국수|우동|냉면|쫄면|소바|면$/, '🍜'], [/피자/, '🍕'], [/햄버거|버거/, '🍔'],
-    [/핫도그|소시지|소세지/, '🌭'], [/샌드위치/, '🥪'], [/타코/, '🌮'], [/부리또|또띠아/, '🌯'],
-    [/떡볶이/, '🌶️'], [/어묵|오뎅/, '🍢'], [/떡/, '🍡'], [/만두/, '🥟'],
-    [/치킨|닭|윙|너겟|텐더/, '🍗'], [/새우|깐쇼/, '🍤'], [/오징어|낙지|쭈꾸미|주꾸미|문어/, '🦑'],
-    [/생선|고등어|삼치|갈치|연어|동태|명태|참치|꽁치|가자미|코다리/, '🐟'],
-    [/국$|장국|스프|수프/, '🥣'], [/찌개|전골|탕$/, '🍲'],
-    [/돈가스|돈까스|커틀릿/, '🍖'], [/스테이크|함박|불고기|갈비|제육|돈육|쇠고기|소고기|고기|수육|보쌈|족발|목살|삼겹/, '🥩'],
-    [/호떡|와플|팬케이크|완자전|전$|부침/, '🥞'], [/도넛/, '🍩'], [/빵|토스트|베이글|크로와상|머핀|파이/, '🥐'],
-    [/쿠키|초코|브라우니|마카롱/, '🍪'], [/김치|깍두기|겉절이|석박지|섞박지/, '🥬'], [/샐러드/, '🥗'],
-    [/브로콜리/, '🥦'], [/단호박/, '🎃'], [/애호박|오이/, '🥒'], [/감자/, '🥔'], [/고구마/, '🍠'], [/옥수수/, '🌽'],
-    [/당근/, '🥕'], [/버섯|팽이/, '🍄'], [/치즈/, '🧀'], [/계란|달걀|에그/, '🥚'],
-    [/나물|무침|쌈|생채/, '🌿'],
-    [/사과/, '🍎'], [/^배$/, '🍐'], [/귤|오렌지|한라봉|천혜향/, '🍊'], [/바나나/, '🍌'], [/포도|샤인머스캣/, '🍇'],
-    [/수박/, '🍉'], [/딸기/, '🍓'], [/복숭아/, '🍑'], [/파인애플/, '🍍'], [/키위/, '🥝'], [/망고/, '🥭'],
-    [/체리/, '🍒'], [/멜론/, '🍈'], [/레몬/, '🍋'],
-    [/밥$|라이스/, '🍚'], [/묵|두부|조림|볶음|구이|찜/, '🥢']
+  // 메뉴 이름으로 아이콘을 고른다. 위에서부터 먼저 맞는 것을 쓴다(볶음밥은 밥보다, 국은 그 안의 재료보다 먼저).
+  // 아이콘은 Codex 이미지 생성으로 만든 애니메이션풍 그림(site/meal/<이름>.webp)이다. 기기 이모지 글꼴은 기기마다 깨져 쓰지 않는다
+  const MEAL_ICON = [
+    [/케이크/, 'cake'], [/아이스크림|빙수|샤베트/, 'icecream'], [/요거트|요구르트/, 'yogurt'], [/우유|두유/, 'milk'], [/주스|에이드|스무디|식혜|음료/, 'juice'],
+    [/김밥|주먹밥/, 'kimbap'], [/초밥/, 'sushi'], [/카레/, 'curry'], [/볶음밥|오므라이스/, 'friedrice'], [/스파게티|파스타|그라탕/, 'pasta'],
+    [/짜장/, 'jjajang'], [/짬뽕|라면|국수|우동|냉면|쫄면|소바|면$/, 'noodle'], [/피자/, 'pizza'], [/햄버거|버거/, 'burger'], [/핫도그|소시지|소세지/, 'hotdog'],
+    [/샌드위치/, 'sandwich'], [/타코/, 'taco'], [/부리또|또띠아/, 'burrito'], [/떡볶이/, 'tteokbokki'], [/어묵|오뎅/, 'fishcake'],
+    [/만두/, 'dumpling'], [/치킨|닭|윙|너겟|텐더/, 'chicken'], [/새우|깐쇼/, 'shrimp'], [/오징어|낙지|쭈꾸미|주꾸미|문어/, 'squid'],
+    [/생선|고등어|삼치|갈치|연어|동태|명태|참치|꽁치|가자미|코다리/, 'fish'], [/국$|장국|스프|수프/, 'soup'], [/찌개|전골|탕$/, 'stew'], [/돈가스|돈까스|커틀릿/, 'cutlet'],
+    [/스테이크|함박|불고기|갈비|제육|돈육|쇠고기|소고기|고기|수육|보쌈|족발|목살|삼겹/, 'meat'], [/호떡|와플|팬케이크/, 'hotteok'], [/떡/, 'tteok'],
+    [/완자전|동그랑땡|전$|부침/, 'jeon'], [/도넛/, 'donut'], [/빵|토스트|베이글|크로와상|머핀|파이/, 'bread'], [/쿠키|초코|브라우니|마카롱/, 'cookie'],
+    [/김치|깍두기|겉절이|석박지|섞박지/, 'kimchi'], [/샐러드/, 'salad'], [/브로콜리/, 'broccoli'], [/단호박/, 'pumpkin'], [/애호박|오이/, 'zucchini'],
+    [/감자/, 'potato'], [/고구마/, 'sweetpotato'], [/옥수수/, 'corn'], [/당근/, 'carrot'], [/버섯|팽이/, 'mushroom'], [/치즈/, 'cheese'],
+    [/계란|달걀|에그/, 'egg'], [/나물|무침|쌈|생채/, 'namul'], [/사과/, 'apple'], [/^배$/, 'pear'], [/귤|오렌지|한라봉|천혜향/, 'tangerine'],
+    [/바나나/, 'banana'], [/포도|샤인머스캣/, 'grape'], [/수박/, 'watermelon'], [/딸기/, 'strawberry'], [/복숭아/, 'peach'],
+    [/파인애플/, 'pineapple'], [/키위/, 'kiwi'], [/망고/, 'mango'], [/체리/, 'cherry'], [/멜론/, 'melon'], [/레몬/, 'lemon'],
+    [/밥$|라이스/, 'rice'], [/묵|두부|조림|볶음|구이|찜/, 'side']
   ];
-  const mealEmoji = (name) => { for (const [re, e] of MEAL_EMOJI) if (re.test(name)) return e; return '🍽️'; };
-  // 제목 옆에는 그날의 주요리 이모지 하나를 붙인다. 카레·볶음밥 같은 한 그릇 요리가 있으면 그것을 먼저 고르고,
+  const mealIcon = (name) => { for (const [re, k] of MEAL_ICON) if (re.test(name)) return k; return 'dish'; };
+  const icon = (k) => `<img class="ic" src="meal/${k}.webp" alt="" draggable="false" onerror="this.style.display='none'">`;
+  // 제목 옆에는 그날의 주요리 아이콘 하나를 붙인다. 카레·볶음밥 같은 한 그릇 요리가 있으면 그것을 먼저 고르고,
   // 없으면 고기·생선 반찬, 그다음 찌개를 고른다(밥·국·김치는 고르지 않는다)
-  const MAIN = ['🍕', '🍔', '🍛', '🍝', '🍜', '🍳', '🍗', '🍖', '🥩', '🍤', '🦑', '🐟', '🥟', '🌶️', '🍲'];
-  function mainEmoji(dishes) {
-    const es = dishes.map(mealEmoji);
-    for (const e of MAIN) if (es.indexOf(e) >= 0) return e;
-    return '🍚';
+  const MAIN = ['pizza', 'burger', 'curry', 'pasta', 'jjajang', 'noodle', 'friedrice', 'kimbap', 'tteokbokki', 'chicken', 'cutlet', 'meat',
+    'shrimp', 'squid', 'fish', 'dumpling', 'hotdog', 'stew'];
+  function mainIcon(dishes) {
+    const ks = dishes.map(mealIcon);
+    for (const k of MAIN) if (ks.indexOf(k) >= 0) return k;
+    return 'rice';
   }
-  // 후식·특식은 칸 테두리를 강조색으로 둘러 눈에 띄게 한다
-  const TREAT = /케이크|아이스크림|빙수|쿠키|초코|브라우니|마카롱|도넛|호떡|와플|팬케이크|주스|에이드|스무디|요거트|요구르트|피자|치킨|떡볶이|사과|^배$|귤|오렌지|한라봉|바나나|포도|수박|딸기|복숭아|파인애플|키위|망고|체리|멜론/;
+  // 후식·특식은 칸 테두리를 강조색으로 두르고 반짝이를 지나가게 한다
+  const TREAT = ['cake', 'icecream', 'yogurt', 'juice', 'pizza', 'burger', 'chicken', 'tteokbokki', 'hotteok', 'donut', 'cookie', 'apple', 'pear',
+    'tangerine', 'banana', 'grape', 'watermelon', 'strawberry', 'peach', 'pineapple', 'kiwi', 'mango', 'cherry', 'melon'];
   function mealHTML(s) {
     const m = state.meal;
     const today = ymd(now());
@@ -693,20 +704,20 @@
     }
     const meal = days[big];
     const isToday = big === today;
-    const chips = meal.dishes.map((d) =>
-      `<li${TREAT.test(d) ? ' class="treat"' : ''}><span class="emo">${mealEmoji(d)}</span>${esc(d)}</li>`).join('');
+    const chips = meal.dishes.map((d, i) =>
+      `<li style="--i:${i}"${TREAT.indexOf(mealIcon(d)) >= 0 ? ' class="treat"' : ''}>${icon(mealIcon(d))}${esc(d)}</li>`).join('');
     let next = '';
     const after = isToday ? nextKey : keys.filter((k) => k > big)[0];
     if (after) {
       const tomorrow = ymd(now() + 86400000);
       const label = after === tomorrow ? '내일' : ymdLabel(after);
       // 줄이 바뀌어도 이모지와 메뉴 이름이 떨어지지 않게 한 덩어리로 묶는다
-      next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${mealEmoji(d)} ${esc(d)}</span>`).join(' · ')}</div>`;
+      next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${icon(mealIcon(d))}${esc(d)}</span>`).join(' · ')}</div>`;
     }
     const stale = m && Date.now() - m.at > 6 * 3600000 ? ' · ' + mdhm(m.at) + ' 기준' : '';
     return `<div class="card-inner meal"><div class="card-text">
       <div class="tag">${esc(isToday ? (s.tag || '오늘의 급식') : '다음 급식')}</div>
-      <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${mainEmoji(meal.dishes)}</span></h1>
+      <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${icon(mainIcon(meal.dishes))}</span></h1>
       <ul class="lines">${chips}</ul>${next}
       <div class="source">나이스 교육정보 개방 포털${meal.cal ? ' · ' + esc(meal.cal.replace(/\s*Kcal/i, ' kcal')) : ''}${stale}</div>
     </div></div>`;

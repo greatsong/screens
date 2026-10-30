@@ -1,0 +1,56 @@
+name: AI 뉴스
+
+# AI 뉴스를 받아 학생에게 보여 줄 기사를 고른다(scripts/fetch_news.py). 고른 기사가 바뀌면 커밋하고 화면 배포를 다시 부른다.
+# 편성(build_projects.py)이 projects/news.json 을 화면 내용(content.json)의 news 로 합친다.
+on:
+  schedule:
+    - cron: '30 22 * * 0-4'   # 평일 07:30 (한국 시간)
+    - cron: '0 3 * * 1-5'     # 평일 12:00
+    - cron: '30 6 * * 1-5'    # 평일 15:30
+    - cron: '0 0 * * 0,6'     # 주말 09:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: news
+  cancel-in-progress: false
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Git 사용자 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 뉴스 고르기
+        run: python3 scripts/fetch_news.py
+
+      # projects/news.json 은 이 워크플로만 쓰므로 rebase가 충돌하지 않는다
+      - name: 뉴스 커밋
+        id: commit
+        run: |
+          git add projects/news.json
+          if git diff --cached --quiet; then echo "바뀐 기사 없음"; exit 0; fi
+          git commit -q -m "AI 뉴스 갱신"
+          for i in 1 2 3; do
+            if git push -q origin HEAD:main; then echo "committed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            echo "push 거절, ${i}번째 재시도"
+            git pull -q --rebase origin main || { git rebase --abort; exit 1; }
+            sleep $((i * 5))
+          done
+          exit 1
+
+      # 봇 커밋은 push 워크플로를 깨우지 않으므로 화면 배포를 직접 부른다
+      - name: 화면 다시 배포
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/${{ github.repository }}/dispatches" -f event_type=redeploy

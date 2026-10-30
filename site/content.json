@@ -1,7 +1,7 @@
 {
-  "version": 16,
-  "publishedAt": "2026-10-30T14:01:08+09:00",
-  "appVersion": "0.5.4",
+  "version": 18,
+  "publishedAt": "2026-10-30T14:38:58+09:00",
+  "appVersion": "0.5.5",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -205,5 +205,47 @@
   "meal": {
     "office": "B10",
     "school": "7010073"
-  }
+  },
+  "news": [
+    {
+      "id": "50f9f80af8",
+      "title": "엔비디아, 40개 언어 지원하는 음성 인식 AI 공개…오픈 모델 최고 정확도 달성",
+      "summary": "엔비디아가 40개 언어의 음성을 텍스트로 변환하고 여러 사람이 겹쳐 말하는 상황에서도 화자를 구분하는 오픈웨이트 AI 모델을 공개했다.",
+      "source": "AI타임스",
+      "date": "2026-10-29",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216779"
+    },
+    {
+      "id": "50083dae4c",
+      "title": "미스트랄, '라지 4' 가중치 공개로 정식 출시…유럽 사이버보안 시장 공략",
+      "summary": "미스트랄 AI가 이달 초 선보인 '미스트랄 라지 4'의 성능을 개선하고 모델 가중치를 공개하며 정식 출시했다.",
+      "source": "AI타임스",
+      "date": "2026-10-30",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216821"
+    },
+    {
+      "id": "825d41bae1",
+      "title": "AAII 평가 대폭 개편에 순위 변동…구글 1위·오픈AI 약진",
+      "summary": "글로벌 AI 모델 평가업체 아티피셜 애널리시스가 종합 성능 평가 기준을 대폭 개편하면서 주요 AI 모델의 순위가 달라졌다.",
+      "source": "AI타임스",
+      "date": "2026-10-29",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216802"
+    },
+    {
+      "id": "b867e348b2",
+      "title": "오픈AI, 연내 '챗GPT' 대화·업무 기능 통합…별도 모드 전환 없앤다",
+      "summary": "오픈AI가 올해 안에 '챗GPT'의 일반 대화 기능과 업무 자동화 기능을 통합한다.",
+      "source": "AI타임스",
+      "date": "2026-10-29",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216804"
+    },
+    {
+      "id": "00ca9ffc93",
+      "title": "앤트로픽, '클로드' 자기 대화 감시 기술 도입…유해 사용 78% 탐지",
+      "summary": "앤트로픽이 '클로드'가 이용자와 나눈 대화의 위험성을 스스로 평가하는 기술을 개발해 실제 서비스에 적용했다.",
+      "source": "AI타임스",
+      "date": "2026-10-30",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216824"
+    }
+  ]
 }
