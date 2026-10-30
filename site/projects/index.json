@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T15:02:32+09:00",
+  "generatedAt": "2026-10-30T15:13:48+09:00",
   "registrySyncId": "20261030-111056-s6952",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -84,13 +84,10 @@
       "problems": [],
       "checkedAt": "2026-10-30T10:05:35+09:00",
       "fingerprint": "f779780f0659e550",
-      "teacher": "pending",
-      "makerConfirmed": false,
-      "published": false,
-      "reasons": [
-        "제작자 확인 전",
-        "교사 승인 전"
-      ],
+      "teacher": "approved",
+      "makerConfirmed": true,
+      "published": true,
+      "reasons": [],
       "changedAfterApproval": false,
       "demoSteps": []
     },
