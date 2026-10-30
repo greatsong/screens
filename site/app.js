@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.4.0';
+  const APP_VERSION = '0.5.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -215,6 +215,7 @@
     initSession();
     logEvent('화면 시작 (' + ROLE_LABEL[role] + ')');
     bindInput();
+    if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', fitCard);
     requestWake();
     checkFont();
     probeClock(7);
@@ -447,6 +448,25 @@
       if (projs.length && (i + 1) % every === 0) out.push({ project: projs[p++ % projs.length] });
     });
     while (p < projs.length) out.push({ project: projs[p++] }); // 모든 작품이 한 바퀴에 한 번은 나오게
+    return insertPromos(out, c, t);
+  }
+
+  // 홍보 영상 카드: 카드 몇 장마다 한 번, 영상 길이만큼 슬롯 여러 칸을 차지한다(두 화면이 같은 순서를 계산)
+  function insertPromos(list, c, t) {
+    const promos = (c.promos || []).filter((x) => (!x.until || Date.parse(x.until) > t) && (!x.from || Date.parse(x.from) <= t));
+    if (!promos.length || !list.length) return list;
+    const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
+    const out = [];
+    let k = 0;
+    list.forEach((e, i) => {
+      out.push(e);
+      const every = Math.max(1, promos[k % promos.length].every || 4);
+      if ((i + 1) % every === 0) {
+        const pr = promos[k++ % promos.length];
+        const n = Math.max(1, Math.ceil((pr.seconds || 15) * 1000 / slideMs));
+        for (let part = 0; part < n; part++) out.push({ promo: pr, part: part });
+      }
+    });
     return out;
   }
 
@@ -476,17 +496,19 @@
 
   function projectHTML(p) {
     const qr = needsQR(p);
-    const how = p.embed
+    // 체험 방법: 제작자가 적은 문장을 먼저 쓰고, 없을 때만 기본 안내를 쓴다 (같은 말이 두 번 나오지 않게)
+    const base = p.embed
       ? (role === 'a' ? 'B 화면에서 「체험 시작」을 누르면 바로 해 볼 수 있습니다.' : '「체험 시작」을 누르면 이 화면에서 바로 해 볼 수 있습니다.')
       : '휴대폰으로 QR을 찍어 체험합니다.';
+    const how = p.howTo ? (p.embed && role === 'a' ? 'B 화면에서 체험합니다. ' + p.howTo : p.howTo) : base;
     const img = (p.target === 'mobile' && p.images.mobile) ? p.images.mobile : p.images.wide;
     const shot = img ? `<div class="shot${p.target === 'mobile' ? ' phone' : ''}"><img src="${esc(img)}" alt=""></div>` : '';
     const text = `
       <div class="tag">${role === 'a' ? '작품 소개' : '직접 체험'}${p.pinned ? ' · 추천' : ''}</div>
       <h1 class="title">${esc(p.title)}</h1>
-      <div class="maker">${badgeHTML(p.makerType)}<span>만든 사람 · ${esc(p.maker)}</span></div>
+      <div class="maker">${badgeHTML(p.makerType)}<span>${esc(p.maker)}</span></div>
       <p class="body">${esc(p.summary)}</p>`;
-    const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}${p.howTo ? ' ' + esc(p.howTo) : ''}</div>`;
+    const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}</div>`;
     if (role === 'a') {
       return `<div class="proj proj-a">${shot}<div class="proj-text">${text}
         <div class="howto-row">${qr ? '<div class="qr-box mini" id="qr"></div>' : ''}<div>${howHTML}${qr ? `<div class="short">${esc(p.short)}</div>` : ''}</div></div>
@@ -499,20 +521,60 @@
     return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}${tryBtn}</div>${side}</div>`;
   }
 
+  // 글자를 5m 거리용으로 크게 잡았으므로, 내용이 길어 화면을 넘치면 글자 배율(--f)을 조금씩 줄여 한 화면에 맞춘다
+  function fitCard() {
+    const card = $('card');
+    if (!card) return;
+    const stage = card.parentNode;
+    const cs = getComputedStyle(stage);
+    const room = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    let f = 1;
+    card.style.setProperty('--f', '1');
+    while (f > 0.6 && card.offsetHeight > room) {
+      f = Math.round((f - 0.05) * 100) / 100;
+      card.style.setProperty('--f', String(f));
+    }
+    // 캡처 이미지가 늦게 열리면 높이가 바뀌므로 다시 맞춘다
+    Array.prototype.forEach.call(card.querySelectorAll('img'), (img) => {
+      if (!img.complete) img.addEventListener('load', fitCard, { once: true });
+    });
+  }
+
   function showSlide(idx, immediate) {
     state.idx = idx;
     const entry = state.sched[idx];
     renderDots(idx, state.sched.length);
     const card = $('card');
+    syncPromo(entry);
     const paint = () => {
+      if (entry.promo) { card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
       card.innerHTML = entry.project ? projectHTML(entry.project) : cardHTML(entrySide(entry));
       drawSlideQR(entry);
+      fitCard();
       card.classList.remove('out');
     };
     clearTimeout(state.fadeTimer);
     if (immediate) { paint(); return; }
     card.classList.add('out');
     state.fadeTimer = setTimeout(paint, 450);
+  }
+
+  // A 화면은 홍보 영상을 전체 화면으로 소리 없이 재생한다. 슬롯 시각으로 재생 위치를 맞춰 두 화면과 순서가 어긋나지 않게 한다.
+  function syncPromo(entry) {
+    let box = $('promo');
+    if (!box) {
+      box = document.createElement('div'); box.id = 'promo'; box.hidden = true;
+      box.innerHTML = '<video muted playsinline preload="auto"></video>';
+      document.body.appendChild(box);
+    }
+    const v = box.querySelector('video');
+    if (!entry || !entry.promo || role !== 'a') { if (!box.hidden) { box.hidden = true; v.pause(); } return; }
+    const slideMs = Math.max(5, state.content.slideSeconds || 12) * 1000;
+    const offset = (entry.part * slideMs + (now() % slideMs)) / 1000;
+    if (v.getAttribute('src') !== entry.promo.src) v.setAttribute('src', entry.promo.src);
+    box.hidden = false;
+    if (Math.abs(v.currentTime - offset) > 0.6) { try { v.currentTime = offset; } catch (e) { /* 아직 불러오는 중 */ } }
+    const pl = v.play(); if (pl && pl.catch) pl.catch(() => {});
   }
 
   function cardHTML(s) {
