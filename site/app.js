@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.5';
+  const APP_VERSION = '0.5.6';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -459,15 +459,31 @@
     return { idx: i, slot: round * sched.length + i, elapsed: pos, ms: sched[i].ms || slideMs, start: t - pos };
   }
 
-  // AI 뉴스 한 건 → 소식 카드(A: 제목과 요약, B: 같은 기사를 휴대폰으로 읽는 QR). 기사 본문은 옮기지 않는다
+  // AI 뉴스: 분야(cat)마다 이름과 색을 붙인다. 고르는 기준은 scripts/fetch_news.py
+  const NEWS_CAT = { tech: 'AI 기술', society: 'AI와 사회', economy: 'AI와 경제', science: 'AI와 과학·건강', culture: 'AI와 문화·생활' };
+  const newsDate = (n) => { const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || ''); return d ? (+d[2]) + '월 ' + (+d[3]) + '일' : ''; };
+  // 뉴스 한 건 → 소식 카드(A: 제목과 요약, B: 같은 기사를 휴대폰으로 읽는 QR). 기사 본문은 옮기지 않는다
   function newsItem(n) {
-    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || '');
-    const src = (n.source || '') + (d ? ' · ' + (+d[2]) + '월 ' + (+d[3]) + '일' : '');
+    const src = [n.source, newsDate(n)].filter(Boolean).join(' · ');
+    const tag = NEWS_CAT[n.cat] || 'AI 뉴스';
     return {
       id: 'news-' + n.id,
-      a: { tag: 'AI 뉴스', title: n.title, body: n.summary, source: src },
-      b: { tag: 'AI 뉴스 · 기사 읽기', title: n.title, body: n.summary, source: src, link: n.link, linkLabel: '휴대폰으로 기사 읽기' }
+      a: { tag: tag, cat: n.cat, title: n.title, body: n.summary, source: src },
+      b: { tag: tag + ' · 기사 읽기', cat: n.cat, title: n.title, body: n.summary, source: src, link: n.link, linkLabel: '휴대폰으로 기사 읽기' }
     };
+  }
+  // 뉴스 맨 앞의 목록 카드. B 화면에는 휴대폰용 뉴스 목록(news.html) QR을 붙인다
+  const NEWS_DIGEST = { id: 'news-digest', a: { auto: 'newsdigest' }, b: { auto: 'newsdigest', link: new URL('news.html', location.href).href } };
+  function newsDigestHTML(s) {
+    const news = (state.content && state.content.news) || [];
+    const rows = news.map((n) => `<li><span class="chip cat-${esc(n.cat)}">${esc(NEWS_CAT[n.cat] || 'AI 뉴스')}</span><span class="dg-title">${esc(n.title)}</span></li>`).join('');
+    const qr = s.link ? `<div class="qr"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 뉴스 목록 보기</div></div>` : '';
+    return `<div class="card-inner digest"><div class="card-text">
+      <div class="tag">오늘의 AI 뉴스</div>
+      <h1 class="title">AI가 바꾸는 세상, ${news.length}가지 소식</h1>
+      <ul class="dg-list">${rows}</ul>
+      <div class="source">${esc([...new Set(news.map((n) => n.source))].join(' · '))}</div>
+    </div>${qr}</div>`;
   }
 
   // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
@@ -475,7 +491,8 @@
     if (state.only) return [{ project: state.only }];
     const t = now();
     // AI 뉴스(「AI 뉴스」 워크플로가 고른 기사)를 소식 앞에 둔다. 오래된 소식은 내린다
-    const items = (c.news || []).map(newsItem).concat(c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
+    const news = c.news || [];
+    const items = (news.length > 1 ? [NEWS_DIGEST] : []).concat(news.map(newsItem), c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     const projs = c.projects || [];
     const every = Math.max(1, c.projectEvery || 2);
     const out = [];
@@ -585,7 +602,9 @@
     const paint = () => {
       if (entry.promo) { card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
       const side = entrySide(entry);
-      card.innerHTML = entry.project ? projectHTML(entry.project) : (side && side.auto === 'meal' ? mealHTML(side) : cardHTML(side));
+      card.innerHTML = entry.project ? projectHTML(entry.project)
+        : side && side.auto === 'meal' ? mealHTML(side)
+        : side && side.auto === 'newsdigest' ? newsDigestHTML(side) : cardHTML(side);
       drawSlideQR(entry);
       fitCard();
       card.classList.remove('out');
@@ -725,7 +744,7 @@
 
   function cardHTML(s) {
     const text =
-      (s.tag ? `<div class="tag">${esc(s.tag)}</div>` : '') +
+      (s.tag ? `<div class="tag${s.cat ? ' cat-' + esc(s.cat) : ''}">${esc(s.tag)}</div>` : '') +
       (s.title ? `<h1 class="title">${esc(s.title)}</h1>` : '') +
       (s.body ? `<p class="body">${esc(s.body)}</p>` : '') +
       (s.lines ? `<ul class="lines">${s.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '') +

@@ -1,7 +1,7 @@
 {
-  "version": 18,
-  "publishedAt": "2026-10-30T14:38:58+09:00",
-  "appVersion": "0.5.5",
+  "version": 19,
+  "publishedAt": "2026-10-30T14:50:26+09:00",
+  "appVersion": "0.5.6",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -209,6 +209,7 @@
   "news": [
     {
       "id": "50f9f80af8",
+      "cat": "tech",
       "title": "엔비디아, 40개 언어 지원하는 음성 인식 AI 공개…오픈 모델 최고 정확도 달성",
       "summary": "엔비디아가 40개 언어의 음성을 텍스트로 변환하고 여러 사람이 겹쳐 말하는 상황에서도 화자를 구분하는 오픈웨이트 AI 모델을 공개했다.",
       "source": "AI타임스",
@@ -217,6 +218,7 @@
     },
     {
       "id": "50083dae4c",
+      "cat": "tech",
       "title": "미스트랄, '라지 4' 가중치 공개로 정식 출시…유럽 사이버보안 시장 공략",
       "summary": "미스트랄 AI가 이달 초 선보인 '미스트랄 라지 4'의 성능을 개선하고 모델 가중치를 공개하며 정식 출시했다.",
       "source": "AI타임스",
@@ -224,28 +226,40 @@
       "link": "https://www.aitimes.com/news/articleView.html?idxno=216821"
     },
     {
-      "id": "825d41bae1",
-      "title": "AAII 평가 대폭 개편에 순위 변동…구글 1위·오픈AI 약진",
-      "summary": "글로벌 AI 모델 평가업체 아티피셜 애널리시스가 종합 성능 평가 기준을 대폭 개편하면서 주요 AI 모델의 순위가 달라졌다.",
-      "source": "AI타임스",
-      "date": "2026-10-29",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216802"
-    },
-    {
-      "id": "b867e348b2",
-      "title": "오픈AI, 연내 '챗GPT' 대화·업무 기능 통합…별도 모드 전환 없앤다",
-      "summary": "오픈AI가 올해 안에 '챗GPT'의 일반 대화 기능과 업무 자동화 기능을 통합한다.",
-      "source": "AI타임스",
-      "date": "2026-10-29",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216804"
-    },
-    {
-      "id": "00ca9ffc93",
-      "title": "앤트로픽, '클로드' 자기 대화 감시 기술 도입…유해 사용 78% 탐지",
-      "summary": "앤트로픽이 '클로드'가 이용자와 나눈 대화의 위험성을 스스로 평가하는 기술을 개발해 실제 서비스에 적용했다.",
-      "source": "AI타임스",
+      "id": "851efda6f4",
+      "cat": "society",
+      "title": "오픈AI·앤트로픽·구글 “AI 에이전트 확산에 보안·권한 관리 문제 커져”",
+      "summary": "오픈AI와 앤트로픽, 구글 등 인공지능 선도기업들이 AI 에이전트 확산으로 기업의 보안·권한 관리 문제가 커지고 있다고 입을 모았다.",
+      "source": "전자신문",
       "date": "2026-10-30",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216824"
+      "link": "https://www.etnews.com/20261030000002"
+    },
+    {
+      "id": "7a9f24b0f2",
+      "cat": "economy",
+      "title": "AI가 고객센터 상담원 일자리 뺏을 줄 알았는데",
+      "summary": "인공지능이 고객센터 상담원의 일자리를 대거 축소할 것이라는 통념과 달리, 실제 도입 기업 현장에서는 인력 감축보다 '충원' 및 '업무 재배치'가 훨씬 활발하게…",
+      "source": "ZDNet Korea",
+      "date": "2026-10-30",
+      "link": "https://zdnet.co.kr/view/?no=20261030113643"
+    },
+    {
+      "id": "04b94e87ea",
+      "cat": "science",
+      "title": "[AI픽] 갤럭시 워치, AI로 수면 중 호흡 장애 수준 분석한다",
+      "summary": "삼성전자[005930]가 갤럭시 워치의 수면 무호흡 기능을 개선해 수면 중 호흡 장애 수준까지 파악할 수 있도...",
+      "source": "연합뉴스",
+      "date": "2026-10-28",
+      "link": "https://www.yna.co.kr/view/AKR20261028029500017"
+    },
+    {
+      "id": "eed9e77267",
+      "cat": "culture",
+      "title": "구글, '마마 어워즈'와 협업…유튜브 중계·제미나이 연출",
+      "summary": "구글이 대표적인 글로벌 K-팝 시상식 '2026 마마 어워즈'와 손잡고 유튜브 생중계...",
+      "source": "연합뉴스",
+      "date": "2026-10-30",
+      "link": "https://www.yna.co.kr/view/AKR20261030038000017"
     }
   ]
 }
