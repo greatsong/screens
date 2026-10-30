@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "publishedAt": "2026-10-30T09:34:40+09:00",
+  "version": 6,
+  "publishedAt": "2026-10-30T09:35:37+09:00",
   "appVersion": "0.2.0",
   "mode": "normal",
   "notice": "",
@@ -173,7 +173,7 @@
       "id": "neural-explorer",
       "no": 3,
       "title": "Neural Explorer",
-      "summary": "코드 없이 직접 만져 보며 신경망을 12단계로 배우는 학습 앱입니다.",
+      "summary": "코드 없이 직접 만져 보며 신경망부터 LLM의 기초까지 16단계로 배우는 학습 앱입니다.",
       "maker": "선생님 작품 예시 · 송석리",
       "target": "both",
       "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",

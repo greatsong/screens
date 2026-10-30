@@ -34,7 +34,7 @@
       "id": "neural-explorer",
       "title": "Neural Explorer",
       "url": "https://neural-explorer.vercel.app/",
-      "summary": "코드 없이 직접 만져 보며 신경망을 12단계로 배우는 학습 앱입니다.",
+      "summary": "코드 없이 직접 만져 보며 신경망부터 LLM의 기초까지 16단계로 배우는 학습 앱입니다.",
       "maker": "선생님 작품 예시 · 송석리",
       "target": "both",
       "howTo": "1단계부터 차례로 눌러 신경망의 값을 바꿔 봅니다.",
