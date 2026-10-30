@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-30T10:44:44+09:00",
-  "registrySyncId": "20261030-104346-sf1ec",
+  "generatedAt": "2026-10-30T10:48:03+09:00",
+  "registrySyncId": "20261030-104753-sb7fd",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
     {
@@ -122,30 +122,29 @@
     {
       "id": "f4b085fc",
       "no": 5,
-      "title": "뇌졸중 예측 챌린지",
-      "summary": "브라우저 안에서 모델을 만들고 F1 점수로 겨루는 뇌졸중 예측 챌린지입니다.",
+      "title": "당곡 AI",
+      "summary": "Claude·Gemini·ChatGPT·Solar 네 가지 AI를 한 화면에서 사용하는 당곡고 AI 채팅입니다.",
       "maker": "선생님 작품 · 송석리",
-      "target": "wide",
-      "howTo": "",
-      "run": "https://greatsong.github.io/stroke-challenge/",
-      "embed": true,
+      "target": "mobile",
+      "howTo": "휴대폰으로 QR을 찍고 구글 계정으로 로그인합니다.",
+      "run": "https://danggok-ai.vercel.app/",
+      "embed": false,
       "short": "greatsong.github.io/screens/p/5",
       "shortUrl": "https://greatsong.github.io/screens/p/5/",
-      "images": {
-        "wide": "projects/f4b085fc/wide.jpg?v=2026-10-30T104429"
-      },
+      "images": {},
       "pinned": false,
       "source": "form",
-      "status": "ok",
+      "status": "unchecked",
       "problems": [],
-      "checkedAt": "2026-10-30T10:44:29+09:00",
-      "fingerprint": "b53fc68c719f9bb6",
+      "checkedAt": "",
+      "fingerprint": "",
       "teacher": "pending",
       "makerConfirmed": false,
       "published": false,
       "reasons": [
         "제작자 확인 전",
-        "교사 승인 전"
+        "교사 승인 전",
+        "검사 전"
       ],
       "changedAfterApproval": false,
       "demoSteps": []
