@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.2';
+  const APP_VERSION = '0.5.3';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -431,13 +431,29 @@
     if (!c || c.mode === 'stop' || !state.sched.length) return;
     const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     // 두 화면이 같은 시각을 기준으로 계산하므로 서버 없이도 같은 순간에 같은 카드를 보여 준다
-    const slot = Math.floor(t / slideMs);
-    if (slot !== state.slot) {
+    const at = locate(t, state.sched, slideMs);
+    if (at.slot !== state.slot) {
       const first = state.slot === -1;
-      state.slot = slot;
-      showSlide(slot % state.sched.length, first);
-      startBar(t % slideMs, slideMs);
+      state.slot = at.slot;
+      state.slotStart = at.start;
+      showSlide(at.idx, first);
+      startBar(at.elapsed, at.ms);
     }
+  }
+
+  // 카드마다 보여 주는 시간이 다르다(홍보 영상은 영상 길이만큼, 나머지는 slideSeconds).
+  // 한 바퀴 길이로 나눈 나머지에서 지금 칸을 찾으므로 두 화면이 같은 시각에 같은 칸을 고른다.
+  function locate(t, sched, slideMs) {
+    let cycle = 0;
+    sched.forEach((e) => { cycle += e.ms || slideMs; });
+    const round = Math.floor(t / cycle);
+    let pos = t - round * cycle, i = 0;
+    for (; i < sched.length - 1; i++) {
+      const d = sched[i].ms || slideMs;
+      if (pos < d) break;
+      pos -= d;
+    }
+    return { idx: i, slot: round * sched.length + i, elapsed: pos, ms: sched[i].ms || slideMs, start: t - pos };
   }
 
   // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
@@ -457,11 +473,11 @@
     return insertPromos(out, c, t);
   }
 
-  // 홍보 영상 카드: 카드 몇 장마다 한 번, 영상 길이만큼 슬롯 여러 칸을 차지한다(두 화면이 같은 순서를 계산)
+  // 홍보 영상 카드: 카드 몇 장마다 한 번, 영상 길이만큼 한 칸을 차지한다(두 화면이 같은 순서를 계산).
+  // 칸을 slideSeconds 단위로 올려 잡으면 영상이 끝난 뒤 마지막 장면에서 몇 초씩 멈춰 있게 된다
   function insertPromos(list, c, t) {
     const promos = (c.promos || []).filter((x) => (!x.until || Date.parse(x.until) > t) && (!x.from || Date.parse(x.from) <= t));
     if (!promos.length || !list.length) return list;
-    const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     const out = [];
     let k = 0;
     list.forEach((e, i) => {
@@ -469,8 +485,7 @@
       const every = Math.max(1, promos[k % promos.length].every || 4);
       if ((i + 1) % every === 0) {
         const pr = promos[k++ % promos.length];
-        const n = Math.max(1, Math.ceil((pr.seconds || 15) * 1000 / slideMs));
-        for (let part = 0; part < n; part++) out.push({ promo: pr, part: part });
+        out.push({ promo: pr, ms: Math.max(5, pr.seconds || 15) * 1000 });
       }
     });
     return out;
@@ -576,8 +591,7 @@
     }
     const v = box.querySelector('video');
     if (!entry || !entry.promo || role !== 'a') { if (!box.hidden) { box.hidden = true; v.pause(); } return; }
-    const slideMs = Math.max(5, state.content.slideSeconds || 12) * 1000;
-    const offset = (entry.part * slideMs + (now() % slideMs)) / 1000;
+    const offset = Math.max(0, now() - (state.slotStart || now())) / 1000;
     const src = (innerHeight > innerWidth && entry.promo.srcTall) || entry.promo.src;
     if (v.getAttribute('src') !== src) v.setAttribute('src', src);
     box.hidden = false;
