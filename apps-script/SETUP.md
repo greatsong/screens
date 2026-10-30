@@ -4,6 +4,35 @@
 
 준비물은 두 가지입니다. 설문·시트·메일을 맡을 학교 구글 계정과, 토큰을 만들 GitHub `greatsong` 계정이 필요합니다. 처음 한 번 설치하는 데 20분쯤 걸립니다.
 
+## 지금 설치 상태 (2026-10-30)
+
+clasp로 프로젝트 만들기, 파일 올리기, 웹 앱 배포를 마쳤습니다. 남은 일은 토큰 만들기, 토큰 넣기, setup 실행입니다.
+
+| 항목 | 상태 |
+|---|---|
+| Apps Script 프로젝트 | 개인 계정 `greatsong21@gmail.com`의 「당곡고 스탠바이미 작품 등록」 ([편집기](https://script.google.com/d/1e6LcTU-Z5If6BiCLsTd4nMDysxKu67lwUw8ox77UE4hW-Tp4uZ8_sFhg/edit)) |
+| 올린 파일 | `Code.gs`, `Deploy.gs`, `Admin.html`, `Status.html`, `appsscript.json` |
+| 학생용 상태 화면 | 배포함(누구나 링크로 열 수 있음). 주소는 `Deploy.gs`의 `STATUS_URL` |
+| 관리 화면 | 테스트 배포(/dev) 주소. 스크립트 주인 계정으로 로그인해야 열림. 주소는 `Deploy.gs`의 `ADMIN_URL` |
+| 등록 설문 | setup을 실행하면 만들어짐. 로그인 없이 제출하고 이메일 문항이 있음 |
+
+개인 계정이라 메일은 하루 100통까지 보낼 수 있고, 학생 이메일은 이 계정의 관리 시트에 저장됩니다.
+
+남은 순서는 다음과 같습니다.
+
+1. [토큰 만들기 링크](https://github.com/settings/personal-access-tokens/new?name=screens-apps-script&description=%EB%8B%B9%EA%B3%A1%EA%B3%A0%20%EC%8A%A4%ED%83%A0%EB%B0%94%EC%9D%B4%EB%AF%B8%20Apps%20Script%EA%B0%80%20greatsong%2Fscreens%20%EB%93%B1%EB%A1%9D%EB%B6%80%EC%99%80%20%ED%99%94%EB%A9%B4%20%EC%A0%9C%EC%96%B4%20%ED%8C%8C%EC%9D%BC%EC%9D%84%20%EA%B3%A0%EC%B9%A0%20%EB%95%8C%20%EC%82%AC%EC%9A%A9&target_name=greatsong&expires_in=365&contents=write)를 엽니다. 이름, 설명, 만료(365일), Contents 쓰기 권한이 채워져 있습니다. Repository access에서 Only select repositories → `greatsong/screens`를 직접 고르고 Generate token을 누릅니다.
+2. 편집기 왼쪽 「프로젝트 설정」 → 스크립트 속성에 `GITHUB_TOKEN`을 추가하고 토큰을 붙여 넣습니다.
+3. 편집기에서 함수 `setup`을 고르고 실행합니다. 권한 요청을 승인합니다. '확인되지 않은 앱' 경고가 나오면 「고급」 → 「(안전하지 않음)으로 이동」을 누릅니다. 내 계정에서 내가 만든 스크립트라서 나오는 경고입니다.
+4. 실행 기록에 표시되는 설문 주소를 학생에게 안내하고, `Deploy.gs`의 `ADMIN_URL`(관리 화면)을 휴대폰 홈 화면에 추가합니다.
+
+코드를 고친 뒤에는 이 폴더에서 다음 두 명령으로 올리고 다시 배포합니다. 학생용 주소는 바뀌지 않습니다.
+
+```bash
+clasp push -f && clasp create-deployment -i AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA -d "학생용 상태 화면"
+```
+
+아래 1~6단계는 처음부터 손으로 설치할 때의 안내입니다.
+
 ## 1단계. GitHub 토큰 만들기
 
 1. github.com에서 Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token을 차례로 누릅니다.
@@ -32,7 +61,7 @@
 | 속성 | 값 | 필수 |
 |---|---|---|
 | `GITHUB_TOKEN` | 1단계에서 만든 토큰 | 필수 |
-| `REQUIRE_SCHOOL_LOGIN` | 학생에게 학교 구글 계정이 없으면 `false`. 설문에 이메일 문항이 생깁니다. | 선택 |
+| `REQUIRE_SCHOOL_LOGIN` | 학교 워크스페이스 계정에 설치하고 학생에게 학교 계정이 있으면 `true`. 학교 계정으로 로그인해야 제출할 수 있습니다. 넣지 않으면 로그인 없이 제출하고 설문에 이메일 문항이 생깁니다. | 선택 |
 | `ADMIN_EMAILS` | 관리 화면을 함께 사용할 선생님 이메일 (쉼표로 구분) | 선택 |
 
 `WEBAPP_URL`은 5단계에서 넣습니다.
@@ -83,7 +112,7 @@ setup이 하는 일은 세 가지입니다.
 | 승인 뒤 작품 변경 감지 | 제작자, 교사 | 메일 | 바뀐 사실. 교사가 관리 화면에서 다시 승인합니다. |
 
 이 방식을 권하는 이유는 다음과 같습니다.
-- 학생에게 GitHub 계정이 없어도 됩니다. 학교 계정으로 로그인한 설문은 확인된 이메일로 결과를 보냅니다.
+- 학생에게 GitHub 계정이 없어도 됩니다. 결과는 설문에 적은 이메일로 보냅니다. 학교 계정 로그인을 켜면 로그인한 이메일로 보냅니다.
 - 실패와 보완은 제작자에게 먼저 갑니다. 교사는 제작자가 확인을 마친 작품만, 그것도 한 통으로 묶어 받습니다.
 - 상태 화면은 메일의 링크로만 열립니다. 링크마다 따로 만든 열쇠가 들어 있어 다른 학생의 작품 상태는 볼 수 없습니다.
 - 같은 결과로는 메일을 다시 보내지 않습니다.

@@ -10,8 +10,9 @@
  *   관리 화면의 긴급 정지·공지·B 시연 ─→ projects/control.json 바로 커밋
  *   관리 화면의 숨김 ─→ 등록부의 해당 작품만 바로 커밋 (다음 정기 동기화를 기다리지 않는다)
  *
- * 스크립트 속성: GITHUB_TOKEN(필수), WEBAPP_URL(웹 앱 주소), ADMIN_EMAILS(관리자 추가), REQUIRE_SCHOOL_LOGIN(false면 이메일 문항)
- * 웹 앱 하나를 배포한다. 학생은 메일의 링크(?t=토큰)로, 교사는 ?page=admin 으로 연다.
+ * 스크립트 속성: GITHUB_TOKEN(필수), ADMIN_EMAILS(관리자 추가), REQUIRE_SCHOOL_LOGIN(true면 학교 계정 로그인 설문)
+ * 주소: clasp 배포가 Deploy.gs에 적는다(STATUS_URL 학생용, ADMIN_URL 관리용). 스크립트 속성 WEBAPP_URL·ADMIN_URL이 있으면 그 값을 먼저 쓴다.
+ * 학생은 메일의 링크(?t=토큰)로, 교사는 ?page=admin 으로 연다.
  * 설치 방법은 apps-script/SETUP.md 에 있다.
  */
 
@@ -92,7 +93,8 @@ function ensureSheet_(ss, name, cols) {
 }
 
 function createForm_() {
-  const login = prop_('REQUIRE_SCHOOL_LOGIN') !== 'false';
+  // 학교 계정 로그인은 학교 구글 워크스페이스 계정에 설치하고 학생 계정이 있을 때만 켠다. 꺼 두면 설문에 이메일 문항이 생긴다.
+  const login = prop_('REQUIRE_SCHOOL_LOGIN') === 'true';
   const form = FormApp.create(CONFIG.TITLE + ' 작품 등록');
   form.setDescription(TEXT.formDesc);
   form.setAllowResponseEdits(true);
@@ -353,7 +355,7 @@ function teacherDigest_(waiting, changed) {
   const html = mailHtml_([
     '검토할 작품이 있습니다.',
     '<ul>' + waiting.map((r) => line(r, '')).join('') + changed.map((r) => line(r, '승인 뒤 작품이 바뀜')).join('') + '</ul>',
-  ], webappUrl_() ? { href: webappUrl_() + '?page=admin', label: '관리 화면 열기' } : null);
+  ], adminUrl_() ? { href: adminUrl_(), label: '관리 화면 열기' } : null);
   MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: '[' + CONFIG.TITLE + '] 검토할 작품 ' + (waiting.length + changed.length) + '개',
     htmlBody: html, name: CONFIG.TITLE });
 }
@@ -593,7 +595,11 @@ function closeRequests_(projectId, types, note) {
 // ======================================================================
 // 메일
 // ======================================================================
-function webappUrl_() { return prop_('WEBAPP_URL') || ScriptApp.getService().getUrl() || ''; }
+// Deploy.gs(배포 때 자동 생성)가 없으면 스크립트 속성과 현재 배포 주소를 사용한다
+function deployed_(key) { return typeof DEPLOY !== 'undefined' && DEPLOY[key] ? DEPLOY[key] : ''; }
+function webappUrl_() { return prop_('WEBAPP_URL') || deployed_('STATUS_URL') || ScriptApp.getService().getUrl() || ''; }
+// 관리 화면은 스크립트 주인만 열 수 있는 테스트 배포(/dev) 주소를 쓴다
+function adminUrl_() { return prop_('ADMIN_URL') || deployed_('ADMIN_URL') || (webappUrl_() ? webappUrl_() + '?page=admin' : ''); }
 
 function statusUrl_(r) {
   const base = webappUrl_();
