@@ -1,13 +1,52 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>2027 두근두근 당곡</title>
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}video{width:100%;height:100%;object-fit:contain}
-#tap{position:fixed;right:3vmin;top:3vmin;font:700 3vmin sans-serif;color:#fff;background:rgba(0,0,0,.45);padding:1.2vmin 3vmin;border-radius:99px}</style></head>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Pretendard",system-ui,sans-serif}
+video{width:100%;height:100%;object-fit:contain}
+.ui{position:fixed;display:flex;gap:1.2vmin;transition:opacity .4s}
+.ui.hide{opacity:0;pointer-events:none}
+#tap{right:3vmin;top:3vmin;font:700 3vmin sans-serif;color:#fff;background:rgba(0,0,0,.45);padding:1.2vmin 3vmin;border-radius:99px}
+#pick{left:50%;bottom:3vmin;transform:translateX(-50%);background:rgba(0,0,0,.5);padding:.8vmin;border-radius:99px}
+#pick button{font:700 3vmin sans-serif;color:#fff;background:transparent;border:0;padding:1.2vmin 3.6vmin;border-radius:99px;cursor:pointer}
+#pick button[aria-pressed="true"]{background:#ffe14d;color:#2a0636}
+</style></head>
 <body>
-<video id="v" src="2027.mp4" autoplay muted loop playsinline></video>
-<div id="tap">화면을 누르면 소리가 나요 🔊</div>
+<video id="v" autoplay muted loop playsinline></video>
+<div class="ui" id="tap">화면을 누르면 소리가 나요 🔊</div>
+<div class="ui" id="pick" role="group" aria-label="영상 방향"><button type="button" data-v="wide">가로</button><button type="button" data-v="tall">세로</button></div>
 <script>
+// 가로·세로 영상을 고른다. 주소에 ?v=가로(wide)·?v=세로(tall)가 있으면 그것으로 고정하고,
+// 없으면 화면 방향을 따라 자동으로 바꾼다. 버튼을 누르면 그 방향으로 고정한다.
+const SRC = { wide: { src: '2027-wide.mp4', poster: '2027-wide.jpg' }, tall: { src: '2027-tall.mp4', poster: '2027-tall.jpg' } };
+const v = document.getElementById('v'), tap = document.getElementById('tap'), pick = document.getElementById('pick');
+const q = new URLSearchParams(location.search).get('v');
+let fixed = q === 'wide' || q === '가로' ? 'wide' : q === 'tall' || q === '세로' ? 'tall' : null;
+let cur = null, unmuted = false, hideTimer = null;
+const auto = () => (innerWidth >= innerHeight ? 'wide' : 'tall');
+function show(which) {
+  if (which === cur) return;
+  cur = which;
+  v.poster = SRC[which].poster; v.src = SRC[which].src;
+  v.muted = !unmuted; v.play().catch(() => {});
+  pick.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === which)));
+}
+function wake() {                       // 버튼은 5초 뒤 숨기고, 화면을 누르면 다시 보인다
+  pick.classList.remove('hide'); clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => pick.classList.add('hide'), 5000);
+}
+pick.addEventListener('pointerdown', (e) => e.stopPropagation());
+pick.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  fixed = b.dataset.v;
+  history.replaceState(null, '', '?v=' + (fixed === 'wide' ? '가로' : '세로'));
+  show(fixed); wake();
+});
 // 자동 재생은 소리 없이만 허용되므로, 한 번 누르면 처음부터 소리와 함께 다시 튼다
-const v = document.getElementById('v'), tap = document.getElementById('tap');
-document.addEventListener('pointerdown', () => { v.muted = false; v.currentTime = 0; v.play(); tap.style.display = 'none'; });
+document.addEventListener('pointerdown', () => {
+  if (!unmuted) { unmuted = true; v.muted = false; v.currentTime = 0; v.play().catch(() => {}); tap.classList.add('hide'); }
+  wake();
+});
+addEventListener('resize', () => { if (!fixed) show(auto()); });
+show(fixed || auto()); wake();
 </script></body></html>
