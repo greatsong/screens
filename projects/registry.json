@@ -49,7 +49,21 @@
       "demoSteps": [],
       "makerConfirmed": false,
       "teacher": "pending"
+    },
+    {
+      "id": "f4b085fc",
+      "title": "뇌졸중 예측 챌린지",
+      "url": "https://greatsong.github.io/stroke-challenge/",
+      "summary": "브라우저 안에서 모델을 만들고 F1 점수로 겨루는 뇌졸중 예측 챌린지입니다.",
+      "maker": "선생님 작품 · 송석리",
+      "target": "wide",
+      "howTo": "",
+      "demoSteps": [],
+      "makerConfirmed": false,
+      "teacher": "pending",
+      "approvedAt": "",
+      "source": "form"
     }
   ],
-  "syncId": ""
+  "syncId": "20261030-104346-sf1ec"
 }
