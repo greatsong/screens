@@ -52,10 +52,10 @@
       "howTo": "휴대폰으로 QR을 찍고 구글 계정으로 로그인합니다.",
       "demoSteps": [],
       "makerConfirmed": true,
-      "teacher": "pending",
-      "approvedAt": "",
+      "teacher": "approved",
+      "approvedAt": "2026-10-30T15:14:02+09:00",
       "source": "form"
     }
   ],
-  "syncId": "20261030-111056-s6952"
+  "syncId": "20261030-151410-s643f"
 }
