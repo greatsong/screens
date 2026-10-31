@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.7';
+  const APP_VERSION = '0.5.8';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -110,7 +110,7 @@
   const state = {
     content: null, netOk: false, lastOk: 0, lastErr: 0, errors: 0, errMsg: '',
     slot: -1, idx: -1, minKey: -1, fadeTimer: null, pollAt: Date.now(), loopId: 0,
-    sched: [], only: null, loadTimer: null,
+    sched: [], news: [], scheduleAt: 0, nextContentAt: Infinity, emptyShown: false, only: null, loadTimer: null,
     touch: false, startedAt: Date.now(), lastInteract: Date.now(),
     cont: { start: Date.now(), last: Date.now(), breaks: 0, longest: 0 },
     delay: store.get('delay', null), events: store.get('events', []),
@@ -364,7 +364,7 @@
     if (!data || !Array.isArray(data.items) || !data.items.length) throw new Error('콘텐츠 형식 오류');
     const prev = state.content;
     state.content = data;
-    state.sched = buildSchedule(data);
+    refreshTimedContent(now(), false);
     if (fromNet && !embed) store.set('content', data);
     // 이 화면이 이미 한 번 받아 둔 뒤에 버전이 바뀐 경우에만 반영 지연을 잰다
     if (fromNet && state.netOk && prev && prev.version !== data.version) {
@@ -388,11 +388,22 @@
     if (stopped !== isStopped()) {
       document.body.classList.toggle('is-stopped', stopped);
       $('screen').classList.toggle('is-stopped', stopped);
+      state.slot = -1; // 정지를 풀면 현재 시각의 칸과 영상 위치로 돌아간다
       logEvent(stopped ? '긴급 정지 화면으로 전환' : '평소 화면으로 전환');
     }
-    renderNotice();
+    // 게시가 해제되거나 실행 주소가 바뀐 작품은 이미 열린 체험·QR에도 즉시 반영한다.
+    // 검토용 only 미리보기는 게시 전 작품을 의도적으로 열 수 있다.
+    if (fromNet && !params.only && !state.only) {
+      if (prev && prev.version !== data.version) { $('gallery').hidden = true; $('gallery').innerHTML = ''; }
+      const playing = state.show.app;
+      if (playing && playing.project) {
+        const current = (data.projects || []).filter((p) => p.id === playing.project.id)[0];
+        if (!current || current.run !== playing.url) closePlayer('작품 게시 변경');
+      }
+    }
     // 긴급 정지는 작품 시연보다 항상 우선한다
     if (stopped) {
+      stopPromo(); // CSS로 가리는 것만으로는 영상 소리가 멈추지 않는다
       closePlayer('긴급 정지');
       $('gallery').hidden = true;
       $('showBtn').hidden = true;
@@ -433,7 +444,10 @@
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
 
     const c = state.content;
-    if (!c || c.mode === 'stop' || !state.sched.length) return;
+    if (c && (t >= state.nextContentAt || t < state.scheduleAt)) refreshTimedContent(t, true);
+    if (!c || c.mode === 'stop') return;
+    if (!state.sched.length) { showEmptySchedule(); return; }
+    state.emptyShown = false;
     const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     // 두 화면이 같은 시각을 기준으로 계산하므로 서버 없이도 같은 순간에 같은 카드를 보여 준다
     const at = locate(t, state.sched, slideMs);
@@ -477,7 +491,7 @@
   // 뉴스 맨 앞의 목록 카드. B 화면에는 휴대폰용 뉴스 목록(news.html) QR을 붙인다
   const NEWS_DIGEST = { id: 'news-digest', a: { auto: 'newsdigest' }, b: { auto: 'newsdigest', link: new URL('news.html', location.href).href } };
   function newsDigestHTML(s) {
-    const news = (state.content && state.content.news) || [];
+    const news = state.news;
     const rows = news.map((n) => `<li><span class="chip cat-${esc(n.cat)}">${esc(NEWS_CAT[n.cat] || 'AI 뉴스')}</span><span class="dg-title">${esc(n.title)}</span></li>`).join('');
     const qr = s.link ? `<div class="qr"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 뉴스 목록 보기</div></div>` : '';
     return `<div class="card-inner digest"><div class="card-text">
@@ -488,12 +502,55 @@
     </div>${qr}</div>`;
   }
 
+  // 새 편성을 받지 못하는 동안에도 기한은 기기의 보정 시계로 지킨다.
+  // 새 뉴스는 until(정확한 발행 시각 + 72시간), 예전 뉴스는 한국 날짜의 시작부터 3일을 사용한다.
+  function newsExpiry(n) {
+    if (n.until) { const until = Date.parse(n.until); return isNaN(until) ? 0 : until; }
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || '');
+    if (!d) return 0;
+    const day = Date.UTC(+d[1], +d[2] - 1, +d[3]);
+    if (new Date(day).toISOString().slice(0, 10) !== n.date) return 0;
+    return day - 9 * 3600000 + 72 * 3600000;
+  }
+  function activeNews(c, t) { return (c.news || []).filter((n) => newsExpiry(n) > t); }
+
+  function refreshTimedContent(t, invalidate) {
+    const c = state.content;
+    state.news = activeNews(c, t);
+    state.sched = buildSchedule(c, t);
+    state.scheduleAt = t;
+    let next = Infinity;
+    const boundary = (ms) => { if (ms > t && ms < next) next = ms; };
+    boundary(Date.parse(c.noticeUntil || ''));
+    (c.items || []).forEach((it) => boundary(Date.parse(it.until || '')));
+    (c.news || []).forEach((n) => boundary(newsExpiry(n)));
+    (c.promos || []).forEach((p) => { boundary(Date.parse(p.from || '')); boundary(Date.parse(p.until || '')); });
+    state.nextContentAt = next;
+    if (invalidate) state.slot = -1;
+    renderNotice();
+  }
+
+  function showEmptySchedule() {
+    if (state.emptyShown) return;
+    state.emptyShown = true;
+    state.idx = state.slot = -1;
+    clearTimeout(state.fadeTimer);
+    stopPromo();
+    const card = $('card');
+    card.classList.remove('out');
+    card.innerHTML = cardHTML({ tag: '안내', title: '지금 표시할 소식이 없습니다', body: '새 소식이 준비되면 자동으로 표시합니다.' });
+    $('dots').innerHTML = '';
+    $('bar').style.transition = 'none';
+    $('bar').style.width = '0%';
+    fitCard();
+  }
+
   // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
-  function buildSchedule(c) {
+  function buildSchedule(c, t) {
     if (state.only) return [{ project: state.only }];
-    const t = now();
+    if (t == null) t = now();
     // AI 뉴스(「AI 뉴스」 워크플로가 고른 기사)를 소식 앞에 둔다. 오래된 소식은 내린다
-    const news = c.news || [];
+    const news = activeNews(c, t);
     const items = (news.length > 1 ? [NEWS_DIGEST] : []).concat(news.map(newsItem), c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     const projs = c.projects || [];
     const every = Math.max(1, c.projectEvery || 2);
@@ -620,6 +677,13 @@
 
   // A 화면은 홍보 영상을 전체 화면으로 소리 없이 재생한다. 슬롯 시각으로 재생 위치를 맞춰 두 화면과 순서가 어긋나지 않게 한다.
   // 화면을 세로로 세우면 세로판(srcTall)을 튼다. 방향을 바꾸면 resize 로 슬롯을 다시 그리며 영상도 바뀐다.
+  function stopPromo() {
+    const box = $('promo');
+    if (!box) return;
+    box.hidden = true;
+    box.querySelector('video').pause();
+  }
+
   function syncPromo(entry) {
     let box = $('promo');
     if (!box) {
@@ -636,7 +700,7 @@
       });
     }
     const v = box.querySelector('video');
-    if (!entry || !entry.promo || role !== 'a') { if (!box.hidden) { box.hidden = true; v.pause(); } return; }
+    if (!entry || !entry.promo || role !== 'a') { stopPromo(); return; }
     const offset = Math.max(0, now() - (state.slotStart || now())) / 1000;
     const src = (innerHeight > innerWidth && entry.promo.srcTall) || entry.promo.src;
     if (v.getAttribute('src') !== src) v.setAttribute('src', src);
@@ -650,7 +714,7 @@
     hint.hidden = !(state.content.promoSound !== false && state.sound === 'blocked');
     const pl = v.play();
     if (pl && pl.catch) pl.catch(() => {
-      if (v.muted) return;
+      if (v.muted || box.hidden || isStopped()) return;
       state.sound = 'blocked';
       v.muted = true; hint.hidden = false;
       const p2 = v.play(); if (p2 && p2.catch) p2.catch(() => {});
@@ -863,6 +927,12 @@
     return n.url ? { title: n.title || n.url, by: n.by || '', url: n.url } : null;
   }
 
+  function remoteRequestKey(info) {
+    const request = state.content && state.content.controlRequestId;
+    // 요청 번호가 없는 예전 편성은 해제 상태를 받은 뒤에만 같은 주소를 다시 연다.
+    return (request ? 'request:' + request + ':' : 'url:') + info.url;
+  }
+
   function syncShowcase() {
     if (!state.content || isStopped()) return;
     const sc = state.content.showcase || {};
@@ -874,7 +944,7 @@
     if (!remote) state.dismissedRemote = '';
     // 학생이 체험하는 중에는 원격 시연도 끼어들지 않는다. 체험이 끝나면 이어서 연다.
     if (state.show.app && !state.show.remote) return;
-    if (remote && remote.url !== state.dismissedRemote && (!state.show.app || state.show.app.url !== remote.url)) openPlayer(remote, true);
+    if (remote && remoteRequestKey(remote) !== state.dismissedRemote && (!state.show.app || state.show.app.url !== remote.url)) openPlayer(remote, true);
     else if (!remote && state.show.remote) closePlayer('원격 시연 끝');
   }
 
@@ -947,7 +1017,7 @@
   function openPlayer(info, remote) {
     if (isStopped()) return;
     const t = now();
-    const mine = { app: info, remote: !!remote, started: t, until: remote ? 0 : t + holdMinutes() * 60000, loaded: false };
+    const mine = { app: info, remote: !!remote, remoteKey: remote ? remoteRequestKey(info) : '', started: t, until: remote ? 0 : t + holdMinutes() * 60000, loaded: false };
     state.show = mine;
     $('playerTitle').textContent = (info.title || info.url) + (info.by ? ' · ' + info.by : '');
     $('player').classList.toggle('remote', !!remote);
@@ -1059,7 +1129,7 @@
       case 'gallery': openGallery(); break;
       case 'gclose': $('gallery').hidden = true; break;
       case 'back':
-        if (state.show.remote) state.dismissedRemote = state.show.app.url;
+        if (state.show.remote) state.dismissedRemote = state.show.remoteKey;
         closePlayer('돌아가기 버튼');
         break;
       case 'more': {

@@ -1,6 +1,7 @@
 // Code.gs 전체 흐름 시험: 구글 서비스는 가짜로 두고, GitHub 저장소는 임시 복사본으로 흉내 낸다.
-// 검사·편성은 실제 파이썬 스크립트(check_projects.py, build_projects.py)를 임시 복사본에서 돌린다.
-// 사용법: node apps-script/test/run_test.mjs <임시 폴더>
+// 기본 검사는 고정 검사 결과와 실제 편성 스크립트로 네트워크 없이 실행한다.
+// 실제 사이트 캡처까지 시험하려면 --network-checks를 명시한다.
+// 사용법: node apps-script/test/run_test.mjs <임시 폴더> [--network-checks]
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -11,17 +12,28 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
 const TMP = process.argv[2];
+const NETWORK_CHECKS = process.argv.includes('--network-checks');
 if (!TMP) { console.error('임시 폴더를 인자로 넘깁니다.'); process.exit(2); }
 fs.rmSync(TMP, { recursive: true, force: true });
 for (const d of ['projects', 'site', 'scripts']) fs.cpSync(path.join(REPO, d), path.join(TMP, d), { recursive: true });
+fs.writeFileSync(path.join(TMP, 'projects/news-control.json'), JSON.stringify({ requestId: '', updatedAt: '', entries: {} }));
 
 const SITE = 'https://greatsong.github.io/screens';
 const TEACHER = 'teacher@school.kr';
-const state = { active: TEACHER, outbox: [], commits: [], conflictOnce: '' };
+const state = { active: TEACHER, outbox: [], commits: [], conflictOnce: '', failMailOnce: false, triggers: [], deletedTriggers: [], createdTriggers: [] };
 
 // ---------- 가짜 구글 서비스 ----------
 class Sheet {
   constructor() { this.data = []; }
+  value(v) {
+    if (typeof v !== 'string') return v;
+    if (v.startsWith("'=")) return v.slice(1); // Google Sheets의 문자 이스케이프
+    const m = /^=([A-Z]+)([1-9][0-9]*)$/.exec(v);
+    if (!m) return v;
+    let c = 0;
+    for (const a of m[1]) c = c * 26 + a.charCodeAt(0) - 64;
+    return this.data[Number(m[2]) - 1]?.[c - 1] ?? '';
+  }
   getLastRow() { return this.data.length; }
   getLastColumn() { return this.data.reduce((m, r) => Math.max(m, r.length), 0); }
   getRange(r, c, nr = 1, nc = 1) {
@@ -29,9 +41,10 @@ class Sheet {
     return {
       getValues() {
         const out = [];
-        for (let i = 0; i < nr; i++) { const row = sh.data[r - 1 + i] || []; out.push(Array.from({ length: nc }, (_, j) => (row[c - 1 + j] === undefined ? '' : row[c - 1 + j]))); }
+        for (let i = 0; i < nr; i++) { const row = sh.data[r - 1 + i] || []; out.push(Array.from({ length: nc }, (_, j) => sh.value(row[c - 1 + j] === undefined ? '' : row[c - 1 + j]))); }
         return out;
       },
+      getFormulas() { return Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => { const v = sh.data[r - 1 + i]?.[c - 1 + j]; return typeof v === 'string' && v.startsWith('=') ? v : ''; })); },
       setValues(v) { for (let i = 0; i < nr; i++) { sh.data[r - 1 + i] = sh.data[r - 1 + i] || []; for (let j = 0; j < nc; j++) sh.data[r - 1 + i][c - 1 + j] = v[i][j]; } },
       setValue(x) { sh.data[r - 1] = sh.data[r - 1] || []; sh.data[r - 1][c - 1] = x; },
     };
@@ -42,7 +55,7 @@ class Sheet {
 }
 const sheets = {};
 const ss = { getId: () => 'SHEET', getUrl: () => 'https://sheets.example/SHEET', getSheetByName: (n) => sheets[n] || null, insertSheet: (n) => (sheets[n] = new Sheet()) };
-const props = { SHEET_ID: 'SHEET', GITHUB_TOKEN: 'test-token', WEBAPP_URL: 'https://script.example/exec' };
+const props = { SHEET_ID: 'SHEET', GITHUB_TOKEN: 'test-token', WEBAPP_URL: 'https://script.example/exec', FORM_ID: 'fake-form', FORM_VERSION: '2' };
 
 function formatDate(d, tz, f) {
   const k = new Date(d.getTime() + 9 * 3600e3);
@@ -98,10 +111,19 @@ const ctx = vm.createContext({
     newBlob: (bytes) => ({ getDataAsString: () => Buffer.from(bytes).toString('utf8') }),
   },
   UrlFetchApp: { fetch },
-  MailApp: { sendEmail: (o) => state.outbox.push(o) },
+  MailApp: { sendEmail: (o) => { if (state.failMailOnce) { state.failMailOnce = false; throw new Error('mock mail failure'); } state.outbox.push(o); } },
   Session: { getActiveUser: () => ({ getEmail: () => state.active }), getEffectiveUser: () => ({ getEmail: () => TEACHER }) },
   LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-  ScriptApp: { getService: () => ({ getUrl: () => '' }) },
+  FormApp: { openById: () => ({ getPublishedUrl: () => 'https://forms.example/fake', getEditUrl: () => 'https://forms.example/edit/fake' }) },
+  ScriptApp: {
+    getService: () => ({ getUrl: () => '' }), getProjectTriggers: () => state.triggers,
+    deleteTrigger: (t) => state.deletedTriggers.push(t),
+    newTrigger: (name) => {
+      const chain = { create: () => { state.createdTriggers.push(name); } };
+      for (const f of ['forForm', 'onFormSubmit', 'timeBased', 'atHour', 'nearMinute', 'everyDays', 'inTimezone', 'everyMinutes']) chain[f] = () => chain;
+      return chain;
+    },
+  },
   Logger: { log: (x) => console.log('  [Logger]', x) },
 });
 vm.runInContext(fs.readFileSync(path.join(REPO, 'apps-script', 'Code.gs'), 'utf8'), ctx, { filename: 'Code.gs' });
@@ -114,7 +136,7 @@ function check(name, ok, detail) {
   if (!ok) fails++;
 }
 function rows(name = '작품') {
-  const [head, ...rest] = sheets[name].data;
+  const [head, ...rest] = sheets[name].getDataRange().getValues();
   return rest.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i]])));
 }
 const row = (id) => rows().find((r) => r.id === id);
@@ -125,7 +147,24 @@ function py(script) {
   const out = execFileSync('python3', [path.join(TMP, 'scripts', script)], { env: { ...process.env, SITE_BASE: SITE }, encoding: 'utf8' });
   console.log(out.trim().split('\n').map((l) => '    ' + l).join('\n'));
 }
-function github() { console.log('  [GitHub 흉내] 작품 검사 → 편성'); py('check_projects.py'); py('build_projects.py'); }
+function github() {
+  console.log('  [GitHub 흉내] ' + (NETWORK_CHECKS ? '실제 작품 검사' : '고정 검사 결과') + ' → 편성');
+  if (NETWORK_CHECKS) py('check_projects.py');
+  else {
+    for (const p of json('projects/registry.json').projects) {
+      if (p.source !== 'form') continue;
+      const run = p.pinnedUrl || p.tryUrl || p.url, fail = run.includes('no-such-repo-xyz-123');
+      const dir = path.join(TMP, 'site/projects', p.id);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'check.json'), JSON.stringify({
+        id: p.id, target: p.target || 'wide', url: run, checkedAt: '2026-10-31T09:00:00+09:00',
+        status: fail ? 'fail' : 'ok', frame: { allowed: true }, fingerprint: sha(Buffer.from(run)),
+        shots: { wide: { ok: !fail, image: 'wide.jpg' } }, problems: fail ? ['HTTP 404'] : [],
+      }));
+    }
+  }
+  py('build_projects.py');
+}
 function poll() { G.applyResults_(json('site/projects/index.json'), json('site/content.json')); }
 function submit(id, email, a) {
   return G.handleSubmission_({
@@ -251,6 +290,110 @@ const bodies = state.outbox.map((m) => m.htmlBody).join('\n');
 check('작품명 바로 뒤에 조사가 붙지 않음', !/시험 작품 [ABC]」(을|를|이|가|은|는)/.test(bodies));
 check('빈 문단이 없음', !bodies.includes('<p></p>'));
 check('게시 메일에 짧은 주소를 굵게 표시', /짧은 주소는 <b>[^<]+\/p\/\d+<\/b>입니다/.test(mails('a@school.kr', '게시 시작')[0].htmlBody));
+
+console.log('11. 수식 주입·설치 권한·기존 수식 전환');
+state.active = '';
+denied = false;
+try { G.setup(); } catch (e) { denied = /권한/.test(e.message); }
+check('비로그인 setup 차단, 트리거 변경 없음', denied && state.deletedTriggers.length === 0 && state.createdTriggers.length === 0);
+check('트리거 전용 함수는 공개 RPC 이름에서 제거', !G.onFormSubmitTrigger && !G.scheduledSync && !G.pollResults && typeof G.pollResults_ === 'function');
+for (const fn of ['adminNewsHide', 'adminNewsEdit', 'adminNewsRequest']) {
+  denied = false;
+  try { G[fn]('news-fixture-1', 'test', 'test'); } catch (e) { denied = /권한/.test(e.message); }
+  check(fn + ' 비로그인 차단', denied);
+}
+state.active = TEACHER;
+const formula = submit('resp-formula', 'formula@school.kr', answers('=L2', 'https://app.example.invalid/', {
+  '한 줄 소개': '=X2', '제작자 표시명': '=Y2', '체험 방법': '=L2', '자동 시연할 동작': '=X2',
+}));
+const formulaRow = row(formula.id);
+check('제출 문구를 수식이 아닌 문자로 보관', formulaRow['작품명'] === '=L2' && formulaRow['한 줄 소개'] === '=X2' && formulaRow['제작자 표시명'] === '=Y2');
+check('새로 저장한 셀에는 실행 수식이 없음', sheets['작품'].getDataRange().getFormulas().flat().every((f) => !f));
+G.adminPin(formula.id, '2026-11-06'); // editRow_ → save 경로도 같은 보호를 적용한다
+G.addRequest_('수식 시험', formula.id, '=L2', '접수', '=X2');
+check('save와 요청 기록의 수식도 문자 유지', row(formula.id)['작품명'] === '=L2' && reqs(formula.id).at(-1)['내용'] === '=L2' && sheets['요청'].getDataRange().getFormulas().flat().every((f) => !f));
+const dataRow = rows().findIndex((r) => r.id === formula.id) + 2;
+sheets['작품'].getRange(dataRow, 3).setValue('=L2'); // 이전 버전에서 들어온 수식
+check('기존 수식은 계산된 개인정보 대신 수식 문자로 읽음', G.table_('작품', []).rows.find((r) => r.id === formula.id)['작품명'] === '=L2');
+state.triggers = ['old-form-trigger', 'old-sync-trigger'];
+G.setup();
+check('관리자 setup이 기존 수식을 문자로 전환', sheets['작품'].getDataRange().getFormulas().flat().every((f) => !f) && row(formula.id)['작품명'] === '=L2');
+check('setup이 기존 트리거를 비공개 함수 이름으로 교체', state.deletedTriggers.length === 2 && state.createdTriggers.length === 5 && state.createdTriggers.every((n) => n.endsWith('_')));
+G.syncRegistry_('수식 안전 시험');
+const safeEntry = json('projects/registry.json').projects.find((p) => p.id === formula.id);
+check('공개 등록부에도 수식 문자만 나오고 다른 학생 정보 없음', safeEntry.title === '=L2' && safeEntry.summary === '=X2' && safeEntry.maker === '=Y2');
+
+console.log('12. 교사 메일 실패 뒤 재시도');
+const oldDigest = props.DIGEST_KEY;
+props.DIGEST_KEY = 'before-failure';
+state.failMailOnce = true;
+let mailFailed = false;
+try { G.teacherDigest_([row(A.id)], []); } catch (e) { mailFailed = /mock mail failure/.test(e.message); }
+check('메일 실패 때 알림 완료로 기록하지 않음', mailFailed && props.DIGEST_KEY === 'before-failure');
+const teacherMailsBefore = mails(TEACHER).length;
+G.teacherDigest_([row(A.id)], []);
+check('다음 확인 때 같은 검토 목록을 다시 발송', mails(TEACHER).length === teacherMailsBefore + 1 && props.DIGEST_KEY === A.id);
+props.DIGEST_KEY = oldDigest;
+
+console.log('13. 뉴스 숨김·문구 수정·수정 요청 추적');
+const newsId = 'news-fixture-1';
+const newsFixture = { id: newsId, title: '원래 뉴스 제목', summary: '원래 요약', source: '시험 출처', date: new Date().toISOString().slice(0, 10), link: 'https://news.example.invalid/1' };
+fs.writeFileSync(path.join(TMP, 'projects/news.json'), JSON.stringify({ items: [newsFixture] }));
+G.adminNewsHide(newsId, true);
+let newsControl = json('projects/news-control.json');
+check('뉴스 숨김을 별도 파일에 저장', newsControl.entries[newsId].hidden && newsControl.entries[newsId].label === newsFixture.title && !('title' in newsControl.entries[newsId]));
+newsFixture.title = '다시 받은 뉴스 제목';
+fs.writeFileSync(path.join(TMP, 'projects/news.json'), JSON.stringify({ items: [newsFixture] }));
+py('build_projects.py');
+poll();
+check('재수집·편성해도 숨긴 뉴스가 다시 나타나지 않음', !json('site/content.json').news.some((n) => n.id === newsId));
+check('뉴스 숨김 요청은 배포 확인 뒤 완료', reqs(newsId).find((q) => q['종류'] === '뉴스 숨김')['상태'] === '반영 완료');
+check('관리 화면에는 숨긴 뉴스도 남음', G.adminData().news.items.some((n) => n.id === newsId && n.hidden));
+G.adminNewsHide(newsId, false);
+py('build_projects.py');
+check('숨김 해제는 최신 원문 제목을 사용', json('site/content.json').news.find((n) => n.id === newsId)?.title === newsFixture.title);
+const privateNewsNote = '요약에서 핵심 기능을 먼저 알려 주세요. 비공개 교사 메모입니다.';
+const commitsBeforeNewsNote = state.commits.length;
+G.adminNewsRequest(newsId, privateNewsNote);
+check('교사 수정 요청은 공개 JSON이나 새 커밋에 남기지 않음', state.commits.length === commitsBeforeNewsNote && !JSON.stringify(json('projects/news-control.json')).includes(privateNewsNote));
+check('비공개 수정 요청은 관리자에게 표시', G.adminData().news.items.find((n) => n.id === newsId).request === privateNewsNote);
+py('build_projects.py');
+poll();
+check('요청 메모만 배포했다고 수정 완료로 표시하지 않음', reqs(newsId).find((q) => q['종류'] === '뉴스 수정 요청')['상태'] === '접수');
+G.adminNewsEdit(newsId, '교사가 고친 제목', '교사가 고친 요약');
+check('문구 수정 뒤에도 내부 메모를 공개하지 않음', !JSON.stringify(json('projects/news-control.json')).includes(privateNewsNote) && !('request' in json('projects/news-control.json').entries[newsId]));
+check('문구 수정 뒤 요청은 배포 대기', reqs(newsId).find((q) => q['종류'] === '뉴스 수정 요청')['상태'] === '처리 중');
+py('build_projects.py');
+poll();
+check('교사 문구를 화면에 반영', json('site/content.json').news.find((n) => n.id === newsId)?.title === '교사가 고친 제목' && json('site/content.json').news.find((n) => n.id === newsId)?.summary === '교사가 고친 요약');
+check('수정 요청과 문구 수정 모두 배포 확인 뒤 완료', reqs(newsId).filter((q) => ['뉴스 수정 요청', '뉴스 문구 수정'].includes(q['종류'])).every((q) => q['상태'] === '반영 완료'));
+
+console.log('14. 연속 요청의 배포 확인 순서');
+check('같은 초에 나온 새 요청이 앞선 요청을 반영 완료로 만들 수 있음', G.idAtLeast_('20261031-090000124-nbbbb', '20261031-090000123-naaaa') && !G.idAtLeast_('20261031-090000123-naaaa', '20261031-090000124-nbbbb'));
+check('예전 초 단위 ID와 새 밀리초 ID를 함께 비교', G.idAtLeast_('20261031-090000001-nbbbb', '20261031-090000-naaaa') && G.idAtLeast_('20261031-090001-nbbbb', '20261031-090000999-naaaa'));
+check('같은 초의 서로 다른 예전 ID는 완료로 추측하지 않음', !G.idAtLeast_('20261031-090000-nbbbb', '20261031-090000-naaaa'));
+const oldNow = G.now_, oldRequestMs = props.LAST_REQUEST_MS;
+G.now_ = () => new Date(Number(oldRequestMs) + 2000);
+const firstId = G.rid_('n'), secondId = G.rid_('n');
+check('시계가 같은 밀리초여도 요청 ID가 순서대로 증가', firstId !== secondId && G.idAtLeast_(secondId, firstId) && !G.idAtLeast_(firstId, secondId));
+G.now_ = oldNow;
+props.LAST_REQUEST_MS = oldRequestMs;
+
+console.log('15. 같은 내용을 다시 요청해도 배포 전에 완료로 표시하지 않음');
+G.adminPin(B.id, '2026-12-01');
+G.adminSyncNow();
+const pendingSyncId = json('projects/registry.json').syncId;
+G.adminPin(B.id, '2026-12-01');
+const duplicatePinId = reqs(B.id).at(-1)['요청 ID'];
+const duplicateSync = G.syncRegistry_('중복 요청 시험');
+const duplicatePin = () => reqs(B.id).find((q) => q['요청 ID'] === duplicatePinId);
+check('내용이 같으면 새 커밋 없이 기존 동기화 ID에 연결', !duplicateSync.changed && duplicatePin()['반영 확인 값'] === pendingSyncId);
+check('기존 커밋이 배포되기 전 중복 요청도 처리 중 유지', duplicatePin()['상태'] === '처리 중');
+poll();
+check('예전 배포 파일을 확인해도 중복 요청을 완료로 만들지 않음', duplicatePin()['상태'] === '처리 중');
+py('build_projects.py');
+poll();
+check('기존 커밋의 실제 배포를 확인한 뒤 중복 요청 완료', duplicatePin()['상태'] === '반영 완료');
 
 console.log(fails ? `\n실패 ${fails}개` : '\n모든 시험 통과');
 console.log(`보낸 메일 ${state.outbox.length}통, GitHub 커밋 ${state.commits.length}번`);

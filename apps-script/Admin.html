@@ -42,6 +42,7 @@
   <h1>스탠바이미 관리</h1>
   <div id="screen" class="card">불러오는 중입니다.</div>
   <div id="sync" class="card"></div>
+  <div id="news" class="card"></div>
   <div id="projects"></div>
   <div id="requests" class="card"></div>
 </main>
@@ -75,7 +76,7 @@
     var options = d.published.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.no + '. ' + p.title) + '</option>'; }).join('');
     document.getElementById('screen').innerHTML =
       '<h2>화면 상태</h2>' +
-      '<div class="state"><b>화면에 반영됨</b>' + (live.mode === 'stop' ? '<span class="pending">긴급 정지 중</span>' : '평소') +
+      '<div class="state"><b>배포된 내용</b>' + (live.mode === 'stop' ? '<span class="pending">긴급 정지 중</span>' : '평소') +
       ' · 공지 ' + esc(live.notice || '없음') + ' · B 시연 ' + esc(showcaseText(live.showcase)) + ' · 콘텐츠 v' + esc(live.version) + '</div>' +
       (waiting ? '<div class="state pending">요청을 반영하는 중입니다 (보통 1~2분). 새로 고치면 다시 확인합니다.</div>' : '') +
       '<div class="row" style="margin-top:10px">' +
@@ -83,6 +84,7 @@
         ? '<button class="btn primary" onclick="call(\'adminStop\',[false])">정지 해제</button>'
         : '<button class="btn red" onclick="call(\'adminStop\',[true],\'두 화면을 긴급 정지합니다. 작품 체험도 닫힙니다.\')">긴급 정지</button>') +
       '<button class="btn" onclick="load()">새로 고침</button></div>' +
+      '<p class="muted">각 스탠바이미가 받은 내용은 해당 기기의 진단 정보로 확인합니다.</p>' +
       '<div class="row" style="margin-top:10px"><input id="notice" placeholder="공지 문구 (비우면 공지 내림)" style="flex:1;min-width:200px" value="' + esc(req.notice || '') + '">' +
       '<input id="noticeUntil" type="datetime-local" title="이 시각이 지나면 공지를 내립니다">' +
       '<button class="btn" onclick="call(\'adminNotice\',[document.getElementById(\'notice\').value, document.getElementById(\'noticeUntil\').value])">공지 적용</button></div>' +
@@ -100,11 +102,44 @@
     var list = d.projects.slice().sort(function (a, b) { return ORDER.indexOf(a.status) - ORDER.indexOf(b.status); });
     document.getElementById('projects').innerHTML = '<div class="card"><h2>작품 ' + list.length + '개</h2>' +
       (list.length ? '' : '<p class="muted">아직 등록된 작품이 없습니다.</p>') + '</div>' + list.map(projectHTML).join('');
+    renderNews(d.news || { items: [] });
 
     document.getElementById('requests').innerHTML = '<h2>최근 요청</h2><table>' + d.requests.map(function (q) {
       return '<tr><td>' + esc(q.at) + '</td><td>' + esc(q.type) + (q.project ? '<br><span class="muted">' + esc(q.project) + '</span>' : '') +
         '</td><td>' + esc(q.text) + '</td><td><b>' + esc(q.status) + '</b><br><span class="muted">' + esc(q.note) + '</span></td></tr>';
     }).join('') + '</table>';
+  }
+
+  function renderNews(news) {
+    var waiting = news.requestId && news.requestId !== news.liveRequestId;
+    document.getElementById('news').innerHTML = '<h2>AI 뉴스 관리</h2>' +
+      '<p class="muted">숨김과 고친 문구는 뉴스를 다시 수집해도 유지됩니다. 수정 요청은 기록되며, 「문구 수정」으로 직접 고친 뒤 배포까지 추적합니다.</p>' +
+      (news.error ? '<p class="pending">뉴스 관리 내용을 읽지 못했습니다. ' + esc(news.error) + '</p>' : '') +
+      (waiting ? '<p class="pending">뉴스 변경을 배포하는 중입니다.</p>' : '') +
+      (news.items.length ? news.items.map(function (n, i) {
+        return '<div style="border-top:1px solid var(--line);padding:12px 0"><div class="row"><b>' + esc(n.title) + '</b>' +
+          (n.hidden ? '<span class="chip s-숨김">숨김</span>' : '') + '</div>' +
+          '<p style="margin:6px 0">' + esc(n.summary) + '</p><div class="muted">' + esc([n.source, n.date].filter(Boolean).join(' · ')) + '</div>' +
+          (n.request ? '<p style="white-space:pre-line">수정 요청: ' + esc(n.request) + '</p>' : '') +
+          '<div class="row" style="margin-top:8px"><button class="btn' + (n.hidden ? '' : ' red') + '" onclick="toggleNews(' + i + ')">' + (n.hidden ? '숨김 해제' : '숨김') + '</button>' +
+          '<button class="btn" onclick="editNews(' + i + ')">문구 수정</button>' +
+          '<button class="btn" onclick="requestNews(' + i + ')">수정 요청</button></div></div>';
+      }).join('') : '<p class="muted">수집된 뉴스가 없습니다.</p>');
+  }
+
+  function toggleNews(index) {
+    var n = DATA.news.items[index];
+    call('adminNewsHide', [n.id, !n.hidden], n.hidden ? '' : '이 뉴스를 숨깁니다. 다시 수집해도 숨김을 유지합니다.');
+  }
+  function editNews(index) {
+    var n = DATA.news.items[index], title = prompt('뉴스 제목', n.title);
+    if (title === null) return;
+    var summary = prompt('뉴스 요약 (비워 두면 요약 없음)', n.summary || '');
+    if (summary !== null) call('adminNewsEdit', [n.id, title, summary]);
+  }
+  function requestNews(index) {
+    var n = DATA.news.items[index], message = prompt('고칠 내용을 기록합니다. 이후 「문구 수정」으로 직접 반영합니다.', n.request || '');
+    if (message) call('adminNewsRequest', [n.id, message]);
   }
 
   function projectHTML(p) {

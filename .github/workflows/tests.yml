@@ -1,0 +1,31 @@
+name: 회귀 검사
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/app.js'
+      - 'site/news.html'
+      - 'scripts/**'
+      - 'apps-script/**'
+      - 'tests/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 화면 동작
+        run: node --test tests/frontend.test.mjs
+      - name: 작품 검사·편성·뉴스 정책
+        run: python3 -m unittest discover -s tests -v
+      - name: Apps Script 등록·승인·보안 흐름 (오프라인)
+        run: node apps-script/test/run_test.mjs "$RUNNER_TEMP/screens-regression"

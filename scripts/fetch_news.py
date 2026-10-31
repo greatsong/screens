@@ -24,13 +24,14 @@ import re
 import sys
 import urllib.request
 
+from news_policy import HOURS
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "projects" / "news.json"
 KST = datetime.timezone(datetime.timedelta(hours=9))
 PICK = 6                 # 화면에 내보낼 기사 수
 PER_CAT = 2              # 한 분야에서 많아야 이만큼
 MIN_SCORE = 4            # 이 점수보다 낮으면 내보내지 않는다
-HOURS = 72               # 이 시간 안에 나온 기사만(주말을 넘겨도 비지 않게)
 
 SOURCES = [
     ("AI타임스", "https://www.aitimes.com/rss/allArticle.xml"),
@@ -112,7 +113,10 @@ def when(s):
     except (TypeError, ValueError):
         pass
     m = re.match(r"(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})", s or "")
-    return datetime.datetime(*map(int, m.groups()), tzinfo=KST) if m else None
+    try:
+        return datetime.datetime(*map(int, m.groups()), tzinfo=KST) if m else None
+    except ValueError:
+        return None
 
 
 def first_sentence(desc, title):
@@ -184,7 +188,8 @@ def main(dry):
         print("고를 기사가 없어 이전 목록을 그대로 둔다")
         return
     items = [{"id": hashlib.sha1(c["link"].encode()).hexdigest()[:10], "cat": c["cat"], "title": c["title"], "summary": c["summary"],
-              "source": c["source"], "date": c["at"].astimezone(KST).strftime("%Y-%m-%d"), "link": c["link"]} for c in picked]
+              "source": c["source"], "date": c["at"].astimezone(KST).strftime("%Y-%m-%d"), "link": c["link"],
+              "until": (c["at"] + datetime.timedelta(hours=HOURS)).astimezone(KST).isoformat(timespec="seconds")} for c in picked]
     old = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     if old.get("items") == items:
         print("바뀐 기사 없음")

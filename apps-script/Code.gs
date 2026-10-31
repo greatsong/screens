@@ -62,8 +62,10 @@ const REGISTRY_TYPES = ['등록', '수정', '제작자 확인', '게시 승인',
 // 설치
 // ======================================================================
 function setup() {
+  requireAdmin_();
   if (!prop_('SHEET_ID')) setProp_('SHEET_ID', SpreadsheetApp.create(CONFIG.TITLE + ' 작품 관리').getId());
   initSheets_();
+  Logger.log('기존 수식의 문자 전환: ' + neutralizeSheetFormulas_() + '개');
   if (!prop_('FORM_ID')) {
     const form = createForm_();
     form.setDestination(FormApp.DestinationType.SPREADSHEET, prop_('SHEET_ID'));
@@ -146,17 +148,17 @@ function ensureFormItems_() {
 
 function installTriggers_() {
   ScriptApp.getProjectTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('onFormSubmitTrigger').forForm(prop_('FORM_ID')).onFormSubmit().create();
+  ScriptApp.newTrigger('onFormSubmitTrigger_').forForm(prop_('FORM_ID')).onFormSubmit().create();
   CONFIG.SYNC_TIMES.forEach((hm) => {
-    ScriptApp.newTrigger('scheduledSync').timeBased().atHour(hm[0]).nearMinute(hm[1]).everyDays(1).inTimezone(CONFIG.TZ).create();
+    ScriptApp.newTrigger('scheduledSync_').timeBased().atHour(hm[0]).nearMinute(hm[1]).everyDays(1).inTimezone(CONFIG.TZ).create();
   });
-  ScriptApp.newTrigger('pollResults').timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger('pollResults_').timeBased().everyMinutes(10).create();
 }
 
 // ======================================================================
 // 설문 접수
 // ======================================================================
-function onFormSubmitTrigger(e) {
+function onFormSubmitTrigger_(e) {
   withLock_(() => handleSubmission_(e.response));
 }
 
@@ -212,7 +214,7 @@ function validate_(p) {
 // ======================================================================
 // GitHub로 보내기
 // ======================================================================
-function scheduledSync() {
+function scheduledSync_() {
   const day = Number(fmt_(now_(), 'u')); // 1 월요일 ~ 7 일요일
   if (day >= 6) return;
   withLock_(() => syncRegistry_('정기'));
@@ -237,6 +239,7 @@ function toRegistry_(r) {
 function syncRegistry_(why) {
   const t = table_('작품', P_COLS);
   const syncId = rid_('s');
+  let targetSyncId = '';
   const valid = t.rows.filter((r) => r.id && !validate_(r).length);
   const held = {};
   valid.forEach((r) => { if (r['보류'] === true) held[r.id] = true; });
@@ -246,25 +249,26 @@ function syncRegistry_(why) {
     const manual = old.filter((p) => p.source !== 'form');
     const form = valid.map((r) => (held[r.id] ? old.filter((o) => o.id === r.id)[0] : toRegistry_(r))).filter(Boolean);
     reg.projects = manual.concat(form);
-    if (JSON.stringify(reg.projects) !== before) reg.syncId = syncId;
+    if (JSON.stringify(reg.projects) !== before || !reg.syncId) reg.syncId = syncId;
+    targetSyncId = reg.syncId;
   }, '등록부 동기화 (' + why + ')');
 
   valid.forEach((r) => {
     if (held[r.id]) return;
-    if (changed) r['동기화 ID'] = syncId;
+    if (targetSyncId) r['동기화 ID'] = targetSyncId;
     if (r['상태'] === S.RECEIVED) r['상태'] = S.WAIT_CHECK;
     t.save(r);
   });
   const reqs = table_('요청', R_COLS);
   reqs.rows.forEach((q) => {
     if (q['상태'] !== RS.NEW || REGISTRY_TYPES.indexOf(q['종류']) < 0 || held[q['작품 id']]) return;
-    q['상태'] = changed ? RS.DOING : RS.DONE;
+    q['상태'] = RS.DOING;
     q['처리 시각'] = now_();
-    q['반영 확인 값'] = changed ? syncId : '';
-    q['비고'] = changed ? why + ' 동기화로 GitHub에 보냄' : '바뀐 내용 없음';
+    q['반영 확인 값'] = targetSyncId;
+    q['비고'] = changed ? why + ' 동기화로 GitHub에 보냄' : '같은 내용의 기존 배포 확인 대기';
     reqs.save(q);
   });
-  return { changed: changed, syncId: changed ? syncId : '' };
+  return { changed: changed, syncId: targetSyncId };
 }
 
 // 등록부에서 작품 하나만 바로 고친다 (긴급 숨김). 다른 작품의 대기 중인 변경은 건드리지 않는다.
@@ -294,7 +298,7 @@ function setControl_(patch, why) {
 // ======================================================================
 // 결과 확인 (10분마다)
 // ======================================================================
-function pollResults() {
+function pollResults_() {
   try { ensureFormItems_(); } catch (e) { Logger.log('설문 문항 갱신 실패: ' + e); }
   const h = Number(fmt_(now_(), 'H'));
   if (h < CONFIG.POLL_HOURS[0] || h >= CONFIG.POLL_HOURS[1]) return;
@@ -304,7 +308,14 @@ function pollResults() {
 function idAtLeast_(live, target) {
   if (!target) return true;
   if (!live) return false;
-  return live === target || String(live).slice(0, 15) > String(target).slice(0, 15);
+  if (live === target) return true;
+  // 예전 ID는 초, 새 ID는 밀리초까지 비교한다. 같은 초의 예전 ID 순서는 추측하지 않는다.
+  const stamp = (id) => {
+    const m = /^(\d{8}-\d{6})(\d{3})?-/.exec(String(id));
+    return m ? m[1] + (m[2] || '000') : '';
+  };
+  const a = stamp(live), b = stamp(target);
+  return !!(a && b && a > b);
 }
 
 function applyResults_(idx, content) {
@@ -350,7 +361,8 @@ function applyResults_(idx, content) {
   reqs.rows.forEach((q) => {
     if (q['상태'] !== RS.DOING || !q['반영 확인 값']) return;
     const v = String(q['반영 확인 값']);
-    const live = v.indexOf('-s') > 0 ? idx.registrySyncId : (content && content.controlRequestId);
+    const live = v.indexOf('-s') > 0 ? idx.registrySyncId :
+      (v.indexOf('-n') > 0 ? (content && content.newsControlRequestId) : (content && content.controlRequestId));
     if (!idAtLeast_(live, v)) return;
     q['상태'] = RS.DONE;
     q['처리 시각'] = now_();
@@ -372,8 +384,7 @@ function notifyOnce_(r, key, kind, extra) {
 function teacherDigest_(waiting, changed) {
   const key = waiting.map((r) => r.id).concat(changed.map((r) => 'c:' + r.id)).sort().join(',');
   if (key === (prop_('DIGEST_KEY') || '')) return;
-  setProp_('DIGEST_KEY', key);
-  if (!key) return; // 검토할 작품이 없어지면 기록만 비운다
+  if (!key) { setProp_('DIGEST_KEY', ''); return; } // 검토할 작품이 없어지면 기록만 비운다
   const line = (r, note) => '<li>' + esc_(r['작품명']) + ' · ' + esc_(r['제작자 표시명']) + (note ? ' · ' + note : '') + '</li>';
   const html = mailHtml_([
     '검토할 작품이 있습니다.',
@@ -381,6 +392,7 @@ function teacherDigest_(waiting, changed) {
   ], adminUrl_() ? { href: adminUrl_(), label: '관리 화면 열기' } : null);
   MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: '[' + CONFIG.TITLE + '] 검토할 작품 ' + (waiting.length + changed.length) + '개',
     htmlBody: html, name: CONFIG.TITLE });
+  setProp_('DIGEST_KEY', key); // 발송 실패 때는 다음 확인에서 다시 시도한다
 }
 
 // ======================================================================
@@ -456,7 +468,17 @@ function adminData() {
   idx.projects.forEach((e) => { map[e.id] = e; });
   let requested = null;
   try { requested = readRepoJson_('projects/control.json').data; } catch (err) { requested = { error: String(err) }; }
+  let newsControl = { entries: {} }, newsSource = { items: [] }, newsError = '';
+  try {
+    newsControl = readRepoJson_('projects/news-control.json').data;
+    newsSource = readRepoJson_('projects/news.json').data;
+  } catch (err) { newsError = String(err); }
+  const newsEntries = newsControl.entries || {};
+  const newsById = {};
+  (newsSource.items || []).concat(live.news || []).forEach((n) => { if (!newsById[n.id]) newsById[n.id] = n; });
+  Object.keys(newsEntries).forEach((id) => { if (!newsById[id]) newsById[id] = { id: id, title: newsEntries[id].label || id, summary: '' }; });
   const t = table_('작품', P_COLS);
+  const requestRows = table_('요청', R_COLS).rows;
   return {
     site: CONFIG.SITE, nextSync: nextSyncText_(), sheetUrl: ss_().getUrl(),
     formUrl: prop_('FORM_ID') ? FormApp.openById(prop_('FORM_ID')).getPublishedUrl() : '',
@@ -466,6 +488,16 @@ function adminData() {
         requestId: live.controlRequestId || '', version: live.version },
     },
     published: (live.projects || []).map((p) => ({ id: p.id, no: p.no, title: p.title })),
+    news: {
+      requestId: newsControl.requestId || '', liveRequestId: live.newsControlRequestId || '', error: newsError,
+      items: Object.keys(newsById).map((id) => {
+        const n = newsById[id], edit = newsEntries[id] || {};
+        const pending = requestRows.filter((q) => q['작품 id'] === id && q['종류'] === '뉴스 수정 요청' && q['상태'] !== RS.DONE).slice(-1)[0];
+        return { id: id, title: edit.title !== undefined ? edit.title : n.title,
+          summary: edit.summary !== undefined ? edit.summary : (n.summary || ''), source: n.source || '', date: n.date || '',
+          hidden: edit.hidden === true, request: pending ? pending['내용'] : '', link: n.link || '' };
+      }),
+    },
     projects: t.rows.filter((r) => r.id).map((r) => {
       const e = map[r.id] || {};
       return {
@@ -479,7 +511,7 @@ function adminData() {
         previewB: CONFIG.SITE + '/?screen=b&embed=1&only=' + encodeURIComponent(r.id),
       };
     }),
-    requests: table_('요청', R_COLS).rows.slice(-30).reverse().map((q) => ({
+    requests: requestRows.slice(-30).reverse().map((q) => ({
       id: q['요청 ID'], at: q['시각'] ? fmt_(new Date(q['시각']), 'MM/dd HH:mm') : '', type: q['종류'], project: q['작품 id'],
       text: q['내용'], status: q['상태'], note: q['비고'],
     })),
@@ -592,7 +624,70 @@ function adminSyncNow() {
   requireAdmin_();
   return withLock_(() => {
     const r = syncRegistry_('지금 반영');
-    return r.changed ? 'GitHub에 보냈습니다. 검사가 필요한 작품은 몇 분 더 걸립니다.' : '보낼 변경이 없습니다.';
+    return r.changed ? 'GitHub에 보냈습니다. 검사가 필요한 작품은 몇 분 더 걸립니다.' : '새로 보낼 변경이 없습니다. 같은 내용의 기존 배포 여부를 확인합니다.';
+  });
+}
+
+// 뉴스 숨김과 교사의 문구 수정은 RSS 재수집과 별도로 보관한다.
+// 수정 요청 메모는 자동 집필이 아니라 대기 기록이며, 문구를 직접 고친 뒤 배포 확인으로 닫는다.
+function newsId_(id) {
+  const value = String(id || '');
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(value) || ['__proto__', 'constructor', 'prototype'].indexOf(value) >= 0) throw new Error('뉴스 번호가 올바르지 않습니다.');
+  return value;
+}
+
+function setNewsControl_(id, patch, why, source) {
+  const requestId = rid_('n');
+  updateRepoJson_('projects/news-control.json', (c) => {
+    const entries = c.entries || (c.entries = {});
+    const before = entries[id] || {};
+    const label = source ? { label: source.title || id } : {};
+    entries[id] = Object.assign({}, label, before, patch, { updatedAt: iso_(now_()) });
+    if (patch.request === null) delete entries[id].request;
+    c.requestId = requestId;
+    c.updatedAt = iso_(now_());
+  }, '뉴스 관리: ' + why);
+  return requestId;
+}
+
+function adminNewsHide(id, hidden) {
+  requireAdmin_();
+  const key = newsId_(id);
+  return withLock_(() => {
+    const source = (readRepoJson_('projects/news.json').data.items || []).filter((n) => n.id === key)[0];
+    const requestId = setNewsControl_(key, { hidden: !!hidden }, hidden ? '숨김' : '숨김 해제', source);
+    addRequest_(hidden ? '뉴스 숨김' : '뉴스 숨김 해제', key, '', RS.DOING, '화면 배포 대기', requestId);
+    return hidden ? '뉴스 숨김을 요청했습니다. 다시 수집해도 숨김을 유지합니다.' : '뉴스 숨김을 해제했습니다. 수집 목록에 남아 있는 기사는 다시 표시합니다.';
+  });
+}
+
+function adminNewsEdit(id, title, summary) {
+  requireAdmin_();
+  const key = newsId_(id), headline = clean_(title, 180), body = clean_(summary, 500);
+  if (!headline) throw new Error('뉴스 제목을 적어 주세요.');
+  return withLock_(() => {
+    const requestId = setNewsControl_(key, { title: headline, summary: body, request: null }, '문구 수정');
+    const reqs = table_('요청', R_COLS);
+    reqs.rows.forEach((q) => {
+      if (q['작품 id'] !== key || q['종류'] !== '뉴스 수정 요청' || q['상태'] === RS.DONE) return;
+      q['상태'] = RS.DOING;
+      q['반영 확인 값'] = requestId;
+      q['비고'] = '문구 수정 · 화면 배포 대기';
+      reqs.save(q);
+    });
+    addRequest_('뉴스 문구 수정', key, headline, RS.DOING, '화면 배포 대기', requestId);
+    return '고친 제목과 요약을 보냈습니다. 화면 배포 뒤 반영 완료로 바뀝니다.';
+  });
+}
+
+function adminNewsRequest(id, message) {
+  requireAdmin_();
+  const key = newsId_(id), text = clean_(message, 500, true);
+  if (!text) throw new Error('수정할 내용을 적어 주세요.');
+  return withLock_(() => {
+    // 교사의 요청 메모는 비공개 시트에만 둔다. 공개 저장소에는 게시 문구만 보낸다.
+    addRequest_('뉴스 수정 요청', key, text, RS.NEW, '수정 요청 기록 · 문구 수정으로 반영');
+    return '수정 요청을 기록했습니다. 해당 뉴스의 「문구 수정」으로 고치면 배포까지 추적합니다.';
   });
 }
 
@@ -723,7 +818,13 @@ function ss_() { return SpreadsheetApp.openById(prop_('SHEET_ID')); }
 function now_() { return new Date(); }
 function fmt_(d, f) { return Utilities.formatDate(d, CONFIG.TZ, f); }
 function iso_(d) { return fmt_(d instanceof Date ? d : new Date(d), "yyyy-MM-dd'T'HH:mm:ssXXX"); }
-function rid_(kind) { return fmt_(now_(), 'yyyyMMdd-HHmmss') + '-' + kind + Utilities.getUuid().slice(0, 4); }
+function rid_(kind) {
+  // 같은 밀리초에 연속 요청이 와도 순서를 알 수 있도록 잠금 안에서 단조 증가시킨다.
+  const previous = Number(prop_('LAST_REQUEST_MS') || 0);
+  const ms = Math.max(now_().getTime(), previous + 1);
+  setProp_('LAST_REQUEST_MS', String(ms));
+  return fmt_(new Date(ms), 'yyyyMMdd-HHmmss') + String(ms % 1000).padStart(3, '0') + '-' + kind + Utilities.getUuid().slice(0, 4);
+}
 function esc_(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -732,6 +833,25 @@ function withLock_(fn) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try { return fn(); } finally { lock.releaseLock(); }
+}
+
+// 이 앱의 관리 시트에는 수식을 사용하지 않는다. Google Sheets는 '=' 문자열을
+// 수식으로 실행하므로, 모든 쓰기 경로에서 문자로 저장한다.
+function sheetValue_(value) { return typeof value === 'string' && value.charAt(0) === '=' ? "'" + value : value; }
+
+function neutralizeSheetFormulas_() {
+  let count = 0;
+  ['작품', '요청'].forEach((name) => {
+    const sh = ss_().getSheetByName(name);
+    if (!sh || sh.getLastRow() < 2) return;
+    const formulas = sh.getDataRange().getFormulas();
+    formulas.slice(1).forEach((row, i) => row.forEach((formula, j) => {
+      if (!formula) return;
+      sh.getRange(i + 2, j + 1).setValue(sheetValue_(formula));
+      count++;
+    }));
+  });
+  return count;
 }
 
 function nextSyncText_() {
@@ -754,14 +874,17 @@ function nextSyncText_() {
 // 시트를 머리글 이름으로 읽고 쓴다. 열 순서를 바꿔도 동작한다.
 function table_(name, cols) {
   const sh = ss_().getSheetByName(name);
-  const values = sh.getDataRange().getValues();
+  const range = sh.getDataRange();
+  const values = range.getValues(), formulas = range.getFormulas();
+  // 이전 버전에서 저장된 수식이 있더라도 계산 결과(다른 학생의 정보)를 내보내지 않는다.
+  formulas.forEach((row, i) => row.forEach((formula, j) => { if (formula) values[i][j] = formula; }));
   const head = values[0];
   const rows = values.slice(1).map((v, i) => {
     const o = { _row: i + 2 };
     head.forEach((h, j) => { o[h] = v[j]; });
     return o;
   });
-  const toArr = (o) => head.map((h) => (o[h] === undefined ? '' : o[h]));
+  const toArr = (o) => head.map((h) => sheetValue_(o[h] === undefined ? '' : o[h]));
   return {
     rows: rows,
     save: (o) => { sh.getRange(o._row, 1, 1, head.length).setValues([toArr(o)]); },

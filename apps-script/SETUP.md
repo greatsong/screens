@@ -4,9 +4,15 @@
 
 준비물은 두 가지입니다. 설문·시트·메일을 맡을 학교 구글 계정과, 토큰을 만들 GitHub `greatsong` 계정이 필요합니다. 처음 한 번 설치하는 데 20분쯤 걸립니다.
 
-## 지금 설치 상태 (2026-10-30)
+## 설치 상태
 
-clasp로 프로젝트 만들기, 파일 올리기, 웹 앱 배포를 마쳤습니다. 남은 일은 토큰 만들기, 토큰 넣기, setup 실행입니다.
+설문·관리 시트·GitHub 동기화가 설치되어 운영 중입니다. 아래 초기 설치 절차는 새 계정에 설치할 때 사용합니다. 기존 설치에는 저장된 토큰과 설문을 그대로 사용합니다.
+
+### 2026-10-31 보안 수정 배포 시
+
+수정본을 `clasp push`한 뒤 소유자 계정으로 편집기에서 `setup`을 한 번 실행합니다. 기존 관리 시트의 수식을 실행되지 않는 문자로 전환하고, 자동 실행 트리거를 `onFormSubmitTrigger_`, `scheduledSync_`, `pollResults_`로 교체합니다. 설치 함수는 관리자만 실행할 수 있고, 내부 트리거 함수는 공개 학생 화면에서 호출할 수 없습니다. 학생용 `/exec` 배포도 새 버전으로 갱신해야 합니다. 기존 주소와 접근 범위는 유지합니다.
+
+뉴스 목록에서는 숨김·숨김 해제·문구 수정·수정 요청을 사용할 수 있습니다. 숨김·수정은 별도 등록부에 영속적으로 보관합니다. 수정 요청 메모는 자동으로 집필하지 않으며, 「문구 수정」으로 반영하면 배포 완료까지 추적합니다. 배포 완료는 기기 수신 확인과 구분합니다.
 
 | 항목 | 상태 |
 |---|---|
@@ -14,11 +20,11 @@ clasp로 프로젝트 만들기, 파일 올리기, 웹 앱 배포를 마쳤습�
 | 올린 파일 | `Code.gs`, `Deploy.gs`, `Admin.html`, `Status.html`, `appsscript.json` |
 | 학생용 상태 화면 | 배포함(누구나 링크로 열 수 있음). 주소는 `Deploy.gs`의 `STATUS_URL` |
 | 관리 화면 | 테스트 배포(/dev) 주소. 스크립트 주인 계정으로 로그인해야 열림. 주소는 `Deploy.gs`의 `ADMIN_URL` |
-| 등록 설문 | setup을 실행하면 만들어짐. 로그인 없이 제출하고 이메일 문항이 있음 |
+| 등록 설문 | 기존 설문 사용. setup을 다시 실행해도 기존 설문·관리 시트를 유지함 |
 
 개인 계정이라 메일은 하루 100통까지 보낼 수 있고, 학생 이메일은 이 계정의 관리 시트에 저장됩니다.
 
-남은 순서는 다음과 같습니다.
+새 계정에 처음 설치할 때의 순서는 다음과 같습니다.
 
 1. [토큰 만들기 링크](https://github.com/settings/personal-access-tokens/new?name=screens-apps-script&description=%EB%8B%B9%EA%B3%A1%EA%B3%A0%20%EC%8A%A4%ED%83%A0%EB%B0%94%EC%9D%B4%EB%AF%B8%20Apps%20Script%EA%B0%80%20greatsong%2Fscreens%20%EB%93%B1%EB%A1%9D%EB%B6%80%EC%99%80%20%ED%99%94%EB%A9%B4%20%EC%A0%9C%EC%96%B4%20%ED%8C%8C%EC%9D%BC%EC%9D%84%20%EA%B3%A0%EC%B9%A0%20%EB%95%8C%20%EC%82%AC%EC%9A%A9&target_name=greatsong&expires_in=365&contents=write)를 엽니다. 이름, 설명, 만료(365일), Contents 쓰기 권한이 채워져 있습니다. Repository access에서 Only select repositories → `greatsong/screens`를 직접 고르고 Generate token을 누릅니다.
 2. 편집기 왼쪽 「프로젝트 설정」 → 스크립트 속성에 `GITHUB_TOKEN`을 추가하고 토큰을 붙여 넣습니다.
@@ -28,7 +34,9 @@ clasp로 프로젝트 만들기, 파일 올리기, 웹 앱 배포를 마쳤습�
 코드를 고친 뒤에는 이 폴더에서 다음 두 명령으로 올리고 다시 배포합니다. 학생용 주소는 바뀌지 않습니다.
 
 ```bash
-clasp push -f && clasp create-deployment -i AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA -d "학생용 상태 화면"
+clasp push -f
+clasp create-version "보안·화면 운영 수정"
+clasp update-deployment AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA --versionNumber <새 버전 번호> -d "학생용 상태 화면"
 ```
 
 아래 1~6단계는 처음부터 손으로 설치할 때의 안내입니다.
@@ -137,7 +145,7 @@ setup이 하는 일은 세 가지입니다.
 
 | 증상 | 확인할 곳 |
 |---|---|
-| 접수 메일이 오지 않음 | Apps Script → 실행 기록에서 `onFormSubmitTrigger` 오류 |
-| 정기 동기화가 안 됨 | 실행 기록의 `scheduledSync`. 'GITHUB_TOKEN이 없습니다'나 '쓰기 실패 (401)'이면 토큰을 확인합니다. |
+| 접수 메일이 오지 않음 | Apps Script → 실행 기록에서 `onFormSubmitTrigger_` 오류 |
+| 정기 동기화가 안 됨 | 실행 기록의 `scheduledSync_`. 'GITHUB_TOKEN이 없습니다'나 '쓰기 실패 (401)'이면 토큰을 확인합니다. |
 | 확인 요청 메일이 늦음 | GitHub → Actions의 「작품 검사」 실행 기록. 검사 준비에 1~2분 걸립니다. |
 | 관리 화면이 '권한 없음' | 스크립트를 만든 학교 계정으로 로그인했는지 확인합니다. |

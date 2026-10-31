@@ -48,8 +48,21 @@ const CAT = { tech: 'AI 기술', society: 'AI와 사회', economy: 'AI와 경제
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const md = (s) => { const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return d ? (+d[2]) + '월 ' + (+d[3]) + '일' : ''; };
 const color = (k) => `var(--${CAT[k] ? k : 'tech'})`;
-fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => {
-  const news = c.news || [];
+// 화면 카드와 같은 만료 규칙. 오래 열린 휴대폰 목록도 통신 없이 만료 내용을 내린다.
+function newsExpiry(n) {
+  if (n.until) { const until = Date.parse(n.until); return isNaN(until) ? 0 : until; }
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || '');
+  if (!d) return 0;
+  const day = Date.UTC(+d[1], +d[2] - 1, +d[3]);
+  if (new Date(day).toISOString().slice(0, 10) !== n.date) return 0;
+  return day - 9 * 3600000 + 72 * 3600000;
+}
+let newsContent = null, nextNewsAt = Infinity, renderedAt = 0;
+function renderNews(c) {
+  const t = Date.now();
+  const news = (c.news || []).filter((n) => newsExpiry(n) > t);
+  renderedAt = t;
+  nextNewsAt = news.reduce((next, n) => Math.min(next, newsExpiry(n)), Infinity);
   if (c.publishedAt) {
     const d = new Date(c.publishedAt);
     document.getElementById('when').textContent = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + d.getHours() + '시 기준 · ' + news.length + '건';
@@ -64,7 +77,12 @@ fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => {
       <div class="meta"><span>${esc([n.source, md(n.date)].filter(Boolean).join(' · '))}</span>
         <a href="${esc(n.link)}" target="_blank" rel="noopener">기사 읽기 →</a></div>
     </article>`).join('') : '<p class="empty">지금은 고른 뉴스가 없습니다.</p>';
-}).catch(() => { document.getElementById('list').innerHTML = '<p class="empty">뉴스를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>'; });
+}
+fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => { newsContent = c; renderNews(c); })
+.catch(() => { document.getElementById('list').innerHTML = '<p class="empty">뉴스를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>'; });
+setInterval(() => {
+  if (newsContent && (Date.now() >= nextNewsAt || Date.now() < renderedAt)) renderNews(newsContent);
+}, 1000);
 </script>
 </body>
 </html>

@@ -40,8 +40,9 @@ def origin_of(url):
 
 def frame_policy(url, headers):
     """화면 페이지(DISPLAY_ORIGIN) 안의 iframe으로 열 수 있는지 응답 헤더로 판단한다."""
+    headers = {key.lower(): value for key, value in headers.items()}
     same = origin_of(url) == DISPLAY_ORIGIN
-    csp = headers.get("Content-Security-Policy", "")
+    csp = headers.get("content-security-policy", "")
     m = re.search(r"frame-ancestors([^;]*)", csp, re.I)
     if m:  # frame-ancestors가 있으면 X-Frame-Options보다 우선한다
         srcs = m.group(1).split()
@@ -50,7 +51,7 @@ def frame_policy(url, headers):
         if "'self'" in srcs and same:
             return True, "같은 출처라 허용"
         return False, f"frame-ancestors{m.group(1)}"
-    xfo = headers.get("X-Frame-Options", "").strip().upper()
+    xfo = headers.get("x-frame-options", "").strip().upper()
     if xfo == "DENY" or (xfo == "SAMEORIGIN" and not same):
         return False, f"X-Frame-Options: {xfo}"
     return True, "제한 없음"
@@ -105,19 +106,28 @@ def run_url(p):
     return p.get("pinnedUrl") or p.get("tryUrl") or p["url"]
 
 
+def target_of(p):
+    target = p.get("target", "wide")
+    return target if target in (*VIEWPORTS, "both") else "wide"
+
+
 def needs_check(p, max_age_hours, force):
     f = OUT / p["id"] / "check.json"
     if force or not f.exists():
         return True
     old = json.loads(f.read_text(encoding="utf-8"))
-    if old.get("url") != run_url(p):
+    if old.get("url") != run_url(p) or old.get("target") != target_of(p):
         return True
-    age = datetime.datetime.now(KST) - datetime.datetime.fromisoformat(old["checkedAt"])
+    try:
+        age = datetime.datetime.now(KST) - datetime.datetime.fromisoformat(old["checkedAt"])
+    except (KeyError, TypeError, ValueError):
+        return True
     return age.total_seconds() > max_age_hours * 3600
 
 
 def check(browser, p):
     url = run_url(p)
+    target = target_of(p)
     d = OUT / p["id"]
     d.mkdir(parents=True, exist_ok=True)
     h = fetch_headers(url)
@@ -128,7 +138,7 @@ def check(browser, p):
     if not allowed:
         problems.append(f"다른 사이트 안에서 실행할 수 없도록 막혀 있습니다 ({reason}). B 화면에서는 QR로 안내합니다.")
     shots = {}
-    kinds = ["wide", "mobile"] if p["target"] == "both" else [p["target"] if p["target"] in VIEWPORTS else "wide"]
+    kinds = ["wide", "mobile"] if target == "both" else [target]
     for kind in ["wide", "mobile"]:
         if kind in kinds or kind == "wide":  # 소개 카드에는 가로 화면이 항상 필요하다
             shots[kind] = capture(browser, url, kind, d / f"{kind}.jpg")
@@ -138,7 +148,7 @@ def check(browser, p):
     fatal = h["http"] != 200 or not all(shots[k]["ok"] for k in kinds)
     status = "fail" if fatal else ("warn" if problems else "ok")
     result = {
-        "id": p["id"], "checkedAt": now_iso(), "url": url, "finalUrl": h["finalUrl"], "http": h["http"],
+        "id": p["id"], "target": target, "checkedAt": now_iso(), "url": url, "finalUrl": h["finalUrl"], "http": h["http"],
         "responseMs": h["ms"], "fingerprint": h["fingerprint"],
         "frame": {"allowed": allowed, "reason": reason},
         "shots": shots, "status": status, "problems": problems,

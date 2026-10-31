@@ -5,6 +5,7 @@
 - projects/registry.json   등록부. 관리 시트(Apps Script)와 사람이 쓴다.
 - projects/control.json    화면 제어(긴급 정지, 공지, 원격 시연). 관리 화면과 휴대폰 수동 실행이 쓴다.
 - projects/news.json       AI 뉴스. 「AI 뉴스·학사일정」 워크플로(fetch_news.py)가 쓴다.
+- projects/news-control.json  뉴스 숨김·문구 수정. 관리 화면이 쓰고 수집 원문과 따로 보존한다.
 - projects/schedule.json   학사일정. 같은 워크플로(fetch_schedule.py)가 쓴다.
 - site/projects/<id>/      검사 결과와 캡처. 작품 검사(check_projects.py)가 쓴다.
 - projects/assigned.json   짧은 주소 번호와 승인 시점 지문. 이 스크립트만 쓴다.
@@ -20,10 +21,13 @@ import os
 import pathlib
 import shutil
 
+from news_policy import apply_news_policy
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REG = ROOT / "projects" / "registry.json"
 CONTROL = ROOT / "projects" / "control.json"
 NEWS = ROOT / "projects" / "news.json"
+NEWS_CONTROL = ROOT / "projects" / "news-control.json"
 SCHEDULE = ROOT / "projects" / "schedule.json"
 ASSIGNED = ROOT / "projects" / "assigned.json"
 SITE = ROOT / "site"
@@ -63,6 +67,7 @@ def main():
     reg = load(REG)
     projects = reg["projects"]
     control = load(CONTROL, {})
+    news_control = load(NEWS_CONTROL, {}) or {}
     assigned = load(ASSIGNED, {"projects": {}})
     amap = assigned.setdefault("projects", {})
     a_before = json.dumps(assigned, sort_keys=True, ensure_ascii=False)
@@ -78,9 +83,16 @@ def main():
     for p in projects:
         a = amap[p["id"]]
         chk = load(SITE / "projects" / p["id"] / "check.json")
-        if chk and chk.get("url") != run_url(p):
-            chk = None  # 주소가 바뀌었으면 예전 주소의 검사 결과로 게시하지 않는다
+        target = p.get("target", "wide")
+        if chk and (chk.get("url") != run_url(p) or (chk.get("target") is not None and chk["target"] != target)):
+            chk = None  # 주소·검사 대상 화면이 바뀌었으면 예전 결과로 게시하지 않는다
         status = chk["status"] if chk else "unchecked"
+        required = ("wide", "mobile") if target == "both" else (target if target in ("wide", "mobile") else "wide",)
+        failed_shots = [kind for kind in required if not (chk or {}).get("shots", {}).get(kind, {}).get("ok")]
+        problems = list((chk or {}).get("problems", []))
+        if chk and failed_shots:
+            status = "fail"  # target이 없던 예전 검사 결과도 필요한 화면의 성공 여부를 확인한다
+            problems.append("현재 대상 화면의 검사에 통과하지 못했습니다: " + ", ".join(failed_shots))
         fp = chk.get("fingerprint") if chk else ""
         approved = p.get("teacher") == "approved"
         if approved and fp and (not a.get("fingerprint") or a.get("approvedAt", "") != p.get("approvedAt", "")):
@@ -114,7 +126,7 @@ def main():
         if not reasons:
             published.append(entry)
         review.append({**entry, "source": p.get("source", "manual"), "status": status,
-                       "problems": (chk or {}).get("problems", []), "checkedAt": (chk or {}).get("checkedAt", ""),
+                       "problems": problems, "checkedAt": (chk or {}).get("checkedAt", ""),
                        "fingerprint": fp, "teacher": p.get("teacher", "pending"),
                        "makerConfirmed": bool(p.get("makerConfirmed")), "published": not reasons,
                        "reasons": reasons, "changedAfterApproval": changed, "demoSteps": p.get("demoSteps", [])})
@@ -149,7 +161,8 @@ def main():
     content.setdefault("showcase", {})["now"] = control.get("showcase")
     content["controlRequestId"] = control.get("requestId", "")
     content["requestedAt"] = control.get("updatedAt", "")
-    content["news"] = (load(NEWS, {}) or {}).get("items", [])
+    content["news"] = apply_news_policy((load(NEWS, {}) or {}).get("items", []), news_control)
+    content["newsControlRequestId"] = news_control.get("requestId", "")
     content["schedule"] = (load(SCHEDULE, {}) or {}).get("events", [])
     # B 화면 「작품 체험하기」 목록: 이 화면에서 바로 실행할 수 있는 게시 작품
     content.setdefault("showcase", {})["apps"] = [{"title": e["title"], "by": e["maker"], "url": e["run"]} for e in published if e.get("embed")]

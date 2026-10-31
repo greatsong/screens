@@ -51,9 +51,9 @@ jobs:
           done
           exit 1
 
-      # 봇 커밋은 push 워크플로를 깨우지 않으므로 화면 배포를 직접 부른다
+      # 바뀐 기사가 없어도 만료된 뉴스를 내려야 하므로 편성·배포를 다시 부른다.
+      # 봇 커밋은 push 워크플로를 깨우지 않는다.
       - name: 화면 다시 배포
-        if: steps.commit.outputs.committed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api "repos/${{ github.repository }}/dispatches" -f event_type=redeploy
