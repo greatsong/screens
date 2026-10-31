@@ -310,3 +310,18 @@ test('four hours asleep cannot count as four hours of continuous display', () =>
   awake.advance(15000); awake.contBeat();
   assert.equal(awake.state.cont.start, awake.now());
 });
+
+test('meal appears every third card and the school calendar every fifth, meal first when they meet', () => {
+  const env = screen();
+  const base = Array.from({ length: 12 }, (_, i) => ({ id: 'b' + i, a: { title: 'Card ' + i } }));
+  env.applyContent(content({ items: [
+    { id: 'meal', every: 3, a: { auto: 'meal' }, b: { auto: 'mealweek' } },
+    { id: 'schedule', every: 5, a: { auto: 'schedule' }, b: { auto: 'calendar' } },
+    ...base
+  ] }), false);
+  const ids = Array.from(env.state.sched, (e) => e.item && e.item.id);   // VM 쪽 배열을 이 쪽 배열로 옮겨 비교한다
+  const at = (id) => ids.map((x, i) => (x === id ? i : -1)).filter((i) => i >= 0);
+  assert.deepEqual(at('meal').slice(0, 4), [2, 5, 8, 11]);
+  assert.deepEqual(at('schedule').slice(0, 2), [4, 9]);
+  assert.equal(ids.filter((x) => /^b\d+$/.test(x)).length, 12);  // every regular card still appears once per cycle
+});

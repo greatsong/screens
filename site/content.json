@@ -1,7 +1,7 @@
 {
   "version": 26,
   "publishedAt": "2026-10-31T10:53:26+09:00",
-  "appVersion": "0.5.8",
+  "appVersion": "0.5.9",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -33,14 +33,27 @@
   },
   "items": [
     {
-      "id": "lunch",
+      "id": "meal",
+      "every": 3,
       "a": {
         "auto": "meal",
         "tag": "오늘의 급식"
       },
       "b": {
+        "auto": "mealweek",
+        "tag": "다가오는 급식"
+      }
+    },
+    {
+      "id": "schedule",
+      "every": 5,
+      "a": {
         "auto": "schedule",
         "tag": "학사일정"
+      },
+      "b": {
+        "auto": "calendar",
+        "tag": "학사일정 달력"
       }
     }
   ],

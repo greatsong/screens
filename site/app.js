@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.8';
+  const APP_VERSION = '0.5.9';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -551,7 +551,9 @@
     if (t == null) t = now();
     // AI 뉴스(「AI 뉴스」 워크플로가 고른 기사)를 소식 앞에 둔다. 오래된 소식은 내린다
     const news = activeNews(c, t);
-    const items = (news.length > 1 ? [NEWS_DIGEST] : []).concat(news.map(newsItem), c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
+    const live = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
+    const recurring = live.filter((x) => x.every > 1);   // 급식·학사일정: 카드 몇 장마다 한 번
+    const items = (news.length > 1 ? [NEWS_DIGEST] : []).concat(news.map(newsItem), live.filter((x) => !(x.every > 1)));
     const projs = c.projects || [];
     const every = Math.max(1, c.projectEvery || 2);
     const out = [];
@@ -561,7 +563,23 @@
       if (projs.length && (i + 1) % every === 0) out.push({ project: projs[p++ % projs.length] });
     });
     while (p < projs.length) out.push({ project: projs[p++] }); // 모든 작품이 한 바퀴에 한 번은 나오게
-    return insertPromos(out, c, t);
+    return insertRecurring(insertPromos(out, c, t), recurring);
+  }
+
+  // 주기 카드: every 칸마다 한 번(급식 3, 학사일정 5). 같은 칸에 겹치면 content.items 앞쪽(급식)이 먼저 나오고
+  // 뒤쪽은 다음 칸으로 밀린다. 두 화면이 같은 목록에서 같은 순서를 계산한다
+  function insertRecurring(list, rec) {
+    if (!rec.length) return list;
+    if (!list.length) return rec.map((r) => ({ item: r }));
+    const out = [];
+    const since = rec.map(() => 0);
+    for (let i = 0; i < list.length;) {
+      const due = rec.findIndex((r, k) => since[k] >= r.every - 1);
+      if (due >= 0) { out.push({ item: rec[due] }); since.forEach((_, k) => { since[k] = k === due ? 0 : since[k] + 1; }); continue; }
+      out.push(list[i++]);
+      since.forEach((_, k) => { since[k]++; });
+    }
+    return out;
   }
 
   // 홍보 영상 카드: 카드 몇 장마다 한 번, 영상 길이만큼 한 칸을 차지한다(두 화면이 같은 순서를 계산).
@@ -659,12 +677,17 @@
     const card = $('card');
     syncPromo(entry);
     const paint = () => {
-      if (entry.promo) { card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
+      if (entry.promo) { $('screen').classList.remove('theme-bright'); card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
       const side = entrySide(entry);
+      const auto = !entry.project && side && side.auto;
       card.innerHTML = entry.project ? projectHTML(entry.project)
-        : side && side.auto === 'meal' ? mealHTML(side)
-        : side && side.auto === 'newsdigest' ? newsDigestHTML(side)
-        : side && side.auto === 'schedule' ? scheduleHTML(side) : cardHTML(side);
+        : auto === 'meal' ? mealHTML(side)
+        : auto === 'mealweek' ? mealWeekHTML(side)
+        : auto === 'newsdigest' ? newsDigestHTML(side)
+        : auto === 'schedule' ? scheduleHTML(side)
+        : auto === 'calendar' ? calendarHTML(side) : cardHTML(side);
+      // 급식·학사일정 카드는 밝고 따뜻한 화면으로(교사 요청: 너무 어둡지 않게, 밝고 감성적으로)
+      $('screen').classList.toggle('theme-bright', /^(meal|mealweek|schedule|calendar)$/.test(auto || ''));
       drawSlideQR(entry);
       fitCard();
       card.classList.remove('out');
@@ -820,6 +843,75 @@
   // 후식·특식은 칸 테두리를 강조색으로 두르고 반짝이를 지나가게 한다
   const TREAT = ['cake', 'icecream', 'yogurt', 'juice', 'pizza', 'burger', 'chicken', 'tteokbokki', 'hotteok', 'donut', 'cookie', 'apple', 'pear',
     'tangerine', 'banana', 'grape', 'watermelon', 'strawberry', 'peach', 'pineapple', 'kiwi', 'mango', 'cherry', 'melon'];
+  // B 화면: 앞으로 급식 다섯 날(오늘부터). 날마다 주요리 그림을 크게, 메뉴는 작은 그림과 함께
+  const dayOfWeek = (k) => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))).getUTCDay();
+  function mealWeekHTML(s) {
+    const m = state.meal;
+    const today = ymd(now());
+    const days = (m && m.days) || {};
+    const keys = Object.keys(days).filter((k) => k >= today).sort().slice(0, 5);
+    if (!keys.length) {
+      return cardHTML({ tag: s.tag || '다가오는 급식', title: m ? '앞으로 나온 급식 정보가 없습니다' : '급식 정보를 불러오는 중입니다', source: '나이스 교육정보 개방 포털' });
+    }
+    const tomorrow = ymd(now() + 86400000);
+    const cols = keys.map((k, i) => {
+      const d = days[k];
+      const name = k === today ? '오늘' : k === tomorrow ? '내일' : WD[dayOfWeek(k)] + '요일';
+      const list = d.dishes.map((x) => `<li>${icon(mealIcon(x))}<span>${esc(x)}</span></li>`).join('');
+      return `<div class="mw-day${k === today ? ' today' : ''}" style="--i:${i}"><div class="mw-head"><b>${esc(name)}</b><span>${+k.slice(4, 6)}/${+k.slice(6, 8)}</span></div>
+        <div class="mw-main">${icon(mainIcon(d.dishes))}</div><ul>${list}</ul></div>`;
+    }).join('');
+    return `<div class="card-inner mweek"><div class="card-text">
+      <div class="tag">${esc(s.tag || '다가오는 급식')}</div>
+      <h1 class="title">일주일 급식 미리 보기</h1>
+      <div class="mw">${cols}</div>
+      <div class="source">나이스 교육정보 개방 포털</div>
+    </div></div>`;
+  }
+
+  // B 화면: 학사일정 달력. 이번 주 일요일부터 다섯 주(월말에도 앞으로의 날이 보이게). 여러 날 행사는 주말을 빼고 칸마다 표시
+  function calendarHTML(s) {
+    const DAY = 86400000;
+    const today = ymd(now());
+    const t0 = Date.UTC(+today.slice(0, 4), +today.slice(4, 6) - 1, +today.slice(6, 8));
+    const start = t0 - new Date(t0).getUTCDay() * DAY;
+    const key = (ms) => new Date(ms).toISOString().slice(0, 10);
+    const byDay = {};
+    ((state.content && state.content.schedule) || []).forEach((e) => {
+      const a = Date.parse(e.start + 'T00:00:00Z');
+      const z = Date.parse(e.end + 'T00:00:00Z');
+      for (let d = a; d <= z && d - a < 60 * DAY; d += DAY) {
+        const wd = new Date(d).getUTCDay();
+        if (e.start !== e.end && (wd === 0 || wd === 6)) continue;
+        (byDay[key(d)] = byDay[key(d)] || []).push(e);
+      }
+    });
+    const kind = (e) => (e.holiday || /성탄절|신정|설날|추석|광복절|개천절|한글날|어린이날|현충일|삼일절|대체/.test(e.name) ? 'off'
+      : /고사|평가|시험|수능/.test(e.name) ? 'exam' : 'ev');
+    const todayIso = key(t0);
+    const cells = [];
+    for (let i = 0; i < 35; i++) {
+      const d = start + i * DAY;
+      const k = key(d);
+      const dt = new Date(d);
+      const n = dt.getUTCDate();
+      const label = i === 0 || n === 1 ? (dt.getUTCMonth() + 1) + '/' + n : String(n);
+      const evs = (byDay[k] || []).slice(0, 2).map((e) => `<i class="${kind(e)}">${esc(e.name)}${e.grades ? ' <small>' + esc(e.grades.replace('학년', '')) + '</small>' : ''}</i>`).join('');
+      const more = (byDay[k] || []).length > 2 ? `<i class="more">+${byDay[k].length - 2}</i>` : '';
+      const cls = ['cal-d', k === todayIso ? 'today' : '', k < todayIso ? 'past' : '', dt.getUTCDay() === 0 ? 'sun' : '', dt.getUTCDay() === 6 ? 'sat' : '',
+        (byDay[k] || []).some((e) => kind(e) === 'off') ? 'off' : ''].filter(Boolean).join(' ');
+      cells.push(`<div class="${cls}"><b>${label}</b>${evs}${more}</div>`);
+    }
+    const end = new Date(start + 34 * DAY);
+    const range = (new Date(start).getUTCMonth() + 1) + '월 ' + new Date(start).getUTCDate() + '일 ~ ' + (end.getUTCMonth() + 1) + '월 ' + end.getUTCDate() + '일';
+    return `<div class="card-inner cal"><div class="card-text">
+      <div class="tag">${esc(s.tag || '학사일정 달력')}</div>
+      <h1 class="title">학사일정 달력 <small>${esc(range)}</small></h1>
+      <div class="cal-grid">${WD.map((w, i) => `<div class="cal-h${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('')}${cells.join('')}</div>
+      <div class="source">나이스 교육정보 개방 포털 · <span class="lg exam">시험</span> <span class="lg off">휴일·휴업</span> <span class="lg ev">행사</span></div>
+    </div></div>`;
+  }
+
   function mealHTML(s) {
     const m = state.meal;
     const today = ymd(now());
@@ -844,7 +936,7 @@
       next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${icon(mealIcon(d))}${esc(d)}</span>`).join(' · ')}</div>`;
     }
     const stale = m && Date.now() - m.at > 6 * 3600000 ? ' · ' + mdhm(m.at) + ' 기준' : '';
-    return `<div class="card-inner meal"><div class="card-text">
+    return `<img class="bg-ic" src="meal/${mainIcon(meal.dishes)}.webp" alt="" onerror="this.remove()"><div class="card-inner meal"><div class="card-text">
       <div class="tag">${esc(isToday ? (s.tag || '오늘의 급식') : '다음 급식')}</div>
       <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${icon(mainIcon(meal.dishes))}</span></h1>
       <ul class="lines">${chips}</ul>${next}

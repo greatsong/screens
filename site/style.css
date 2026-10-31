@@ -98,6 +98,81 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .qr-caption { margin-top: 1.6vmin; font-size: 3vmin; font-weight: 600; color: var(--soft); }
 .qr-fallback { color: #333; font-size: 2.4vmin; padding: 2vmin 0; }
 
+/* ---------- 밝은 화면: 급식·학사일정 카드(교사 요청: 너무 어둡지 않게, 밝고 감성적으로) ----------
+ * 크림색 바탕에 살구·분홍 빛 번짐. 글자는 진한 남색, 칸은 흰색에 따뜻한 그림자. 긴급 정지 화면은 그대로 어둡게 둔다 */
+.screen.theme-bright:not(.is-stopped) {
+  --text: #2b2f45; --soft: #565d78; --muted: #8a8fa6; --panel: #ffffff; --panel-2: #fff3e3; --line: rgba(43, 47, 69, 0.10); --accent: #ee7d1c;
+  color: var(--text);
+  background:
+    radial-gradient(70% 60% at 92% 0%, rgba(255, 210, 160, 0.75) 0%, rgba(255, 210, 160, 0) 70%),
+    radial-gradient(60% 60% at 0% 100%, rgba(255, 196, 214, 0.65) 0%, rgba(255, 196, 214, 0) 70%),
+    radial-gradient(40% 40% at 30% 20%, rgba(190, 230, 255, 0.45) 0%, rgba(190, 230, 255, 0) 70%),
+    linear-gradient(160deg, #fffaf3 0%, #fff0e0 100%);
+}
+body.role-b .screen.theme-bright:not(.is-stopped) { --accent: #14a08f; }
+.theme-bright .body { color: var(--soft); }
+.theme-bright .lines li { background: #fff; border-color: rgba(238, 125, 28, 0.18); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.13); }
+.theme-bright .meal .lines li.treat { border-color: #ff8fa3; }
+.theme-bright .dots i { background: rgba(43, 47, 69, 0.15); }
+.theme-bright .dots i.on { background: var(--accent); }
+.theme-bright .progress { background: rgba(43, 47, 69, 0.06); }
+.theme-bright .role { color: #fff; }
+.theme-bright .badge, .theme-bright .status { color: var(--muted); }
+.theme-bright .show-btn { background: #fff; color: var(--text); }
+.theme-bright .card-text { position: relative; z-index: 1; }
+/* 급식 카드 뒤 큰 주요리 그림: 흐리게, 천천히 떠다닌다 */
+.bg-ic {
+  position: fixed; right: 3vmin; bottom: 9vmin; width: 46vmin; height: 46vmin; object-fit: contain; z-index: 0;
+  opacity: 0; pointer-events: none; transform: rotate(-8deg);
+}
+.theme-bright .bg-ic { opacity: 0.22; animation: bg-float 7s ease-in-out infinite; }
+@keyframes bg-float { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-2.4vmin) rotate(-4deg); } }
+
+/* ---------- 일주일 급식(B) ---------- */
+.mw { display: flex; margin: calc(var(--f, 1) * 1vmin) -0.9vmin 0; }
+.mw-day {
+  flex: 1; min-width: 0; margin: 0 0.9vmin; background: #fff; border-radius: 2.6vmin; padding: 1.8vmin 1.6vmin 1.4vmin;
+  box-shadow: 0 0.8vmin 2.4vmin rgba(238, 125, 28, 0.14); border: 0.25vmin solid rgba(238, 125, 28, 0.12);
+  opacity: 0; animation: meal-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25) forwards; animation-delay: calc(0.4s + var(--i, 0) * 0.1s);
+}
+.mw-day.today { border-color: var(--accent); background: linear-gradient(180deg, #fff6ec 0%, #fff 60%); }
+.mw-head { display: flex; justify-content: space-between; align-items: baseline; }
+.mw-head b { font-size: calc(var(--f, 1) * 4vmin); font-weight: 800; }
+.mw-day.today .mw-head b { color: var(--accent); }
+.mw-head span { font-size: calc(var(--f, 1) * 3vmin); color: var(--muted); font-weight: 700; }
+.mw-main { text-align: center; margin: 1vmin 0 0.6vmin; }
+.mw-main .ic { width: calc(var(--f, 1) * 13vmin); height: calc(var(--f, 1) * 13vmin); object-fit: contain; animation: meal-bob 3.4s ease-in-out infinite; animation-delay: calc(1.2s + var(--i, 0) * 0.5s); }
+.mw ul { list-style: none; }
+.mw li { display: flex; align-items: center; font-size: calc(var(--f, 1) * 3vmin); font-weight: 700; line-height: 1.25; padding: 0.35vmin 0; color: var(--text); }
+.mw li .ic { flex: none; width: 1.45em; height: 1.45em; object-fit: contain; margin-right: 0.35em; }
+.mw li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mweek .title, .cal .title { font-size: calc(var(--f, 1) * 7.5vmin); margin-bottom: calc(var(--f, 1) * 1.2vmin); }
+.cal .title small { font-size: 0.42em; font-weight: 700; color: var(--muted); margin-left: 1.4vmin; }
+
+/* ---------- 학사일정 달력(B) ---------- */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-gap: 0.8vmin; }
+.cal-h { text-align: center; font-size: calc(var(--f, 1) * 2.8vmin); font-weight: 800; color: var(--muted); padding-bottom: 0.4vmin; }
+.cal-h.sun, .cal-d.sun b { color: #e5484d; }
+.cal-h.sat, .cal-d.sat b { color: #3b82f6; }
+.cal-d {
+  min-height: calc(var(--f, 1) * 11.2vmin); background: #fff; border-radius: 1.6vmin; padding: 0.7vmin 0.8vmin; overflow: hidden;
+  box-shadow: 0 0.4vmin 1.2vmin rgba(43, 47, 69, 0.06); border: 0.2vmin solid rgba(43, 47, 69, 0.06);
+}
+.cal-d b { display: block; font-size: calc(var(--f, 1) * 2.9vmin); font-weight: 800; margin-bottom: 0.3vmin; }
+.cal-d.past { opacity: 0.45; }
+.cal-d.off { background: #fff1f1; }
+.cal-d.today { border: 0.45vmin solid var(--accent); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.25); }
+.cal-d i {
+  display: block; font-style: normal; font-size: calc(var(--f, 1) * 2.4vmin); font-weight: 800; line-height: 1.3; border-radius: 0.8vmin;
+  padding: 0.25vmin 0.6vmin; margin-top: 0.4vmin; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-d i small { font-size: 0.85em; opacity: 0.8; }
+.cal-d i.exam, .lg.exam { background: #ffe8cc; color: #b45309; }
+.cal-d i.off, .lg.off { background: #ffe0e0; color: #c92a2a; }
+.cal-d i.ev, .lg.ev { background: #e3efff; color: #1d4ed8; }
+.cal-d i.more { background: none; color: var(--muted); }
+.lg { display: inline-block; font-size: 0.9em; font-weight: 800; padding: 0 1vmin; border-radius: 0.8vmin; margin-left: 0.6vmin; }
+
 /* ---------- 학사일정 ---------- */
 .sc-list { list-style: none; margin-top: calc(var(--f, 1) * 0.6vmin); }
 .sc-list li { display: flex; align-items: center; padding: calc(var(--f, 1) * 1.2vmin) 0; border-bottom: 0.2vmin solid var(--line); }
@@ -371,6 +446,16 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
   .shot.phone { width: 46%; margin: 0 auto 4vmin; }
   .shot img { max-height: 36vh; }
   .dg-list .chip { width: 8.6em; }
+  /* 세로 화면: 일주일 급식은 날마다 한 줄로 */
+  .mw { flex-direction: column; margin: calc(var(--f, 1) * 1vmin) 0 0; }
+  .mw-day { margin: 0 0 1.4vmin; display: flex; align-items: center; padding: 1.4vmin 2vmin; }
+  .mw-head { flex-direction: column; width: 11vmin; flex: none; }
+  .mw-main { margin: 0 2vmin; }
+  .mw-main .ic { width: 12vmin; height: 12vmin; }
+  .mw ul { display: flex; flex-wrap: wrap; min-width: 0; }
+  .mw li { margin-right: 2vmin; }
+  .cal-d { min-height: calc(var(--f, 1) * 14vmin); }
+  .bg-ic { width: 40vmin; height: 40vmin; bottom: 14vmin; }
   /* 아래 줄: 점·버튼 옆에 상태 글자가 좁게 끼어 여러 줄로 늘어나지 않게 상태 글자를 한 줄 아래로 내린다 */
   .bottom { flex-wrap: wrap; }
   .status { width: 100%; margin-top: 0.6vmin; }
