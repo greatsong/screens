@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.4';
+  const APP_VERSION = '0.6.5';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -119,8 +119,13 @@
     diagTimer: null,
     show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
     meal: store.get('meal', null), mealBusy: false,
-    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0
+    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0,
+    peek: null, press: null
   };
+  // 화면을 누르면 A 는 급식, B 는 학사일정 달력을 잠시 보여 준다(startPeek)
+  const PEEK_MS = 20000;
+  const PEEK_ID = { a: 'meal', b: 'schedule' };
+  const PEEK_HINT = { a: '화면을 누르면 급식이 나옵니다', b: '화면을 누르면 학사일정 달력이 나옵니다' };
 
   // ---------- 기록 ----------
   function logEvent(msg) {
@@ -451,6 +456,11 @@
     if (!c || c.mode === 'stop') return;
     if (!state.sched.length) { showEmptySchedule(); return; }
     state.emptyShown = false;
+    // 화면을 눌러 연 카드(급식·학사일정)가 떠 있는 동안은 칸을 바꾸지 않고, 시간이 지나면 지금 차례의 칸으로 돌아간다
+    if (state.peek) {
+      if (Date.now() < state.peek.until) return;
+      endPeek();
+    }
     const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     // 두 화면이 같은 시각을 기준으로 계산하므로 서버 없이도 같은 순간에 같은 카드를 보여 준다
     const at = locate(t, state.sched, slideMs);
@@ -1067,7 +1077,7 @@
     const el = $('status');
     if (!el) return;
     const c = state.content;
-    const hint = Date.now() - state.startedAt < 180000 ? '화면을 누르면 진단 정보가 표시됩니다 · ' : '';
+    const hint = PEEK_HINT[role] + ' · ';
     let text;
     if (!state.lastOk && !state.lastErr) text = '콘텐츠 확인 중';
     else if (state.lastErr > state.lastOk) text = '<span class="warn">연결 끊김 · 이전 내용 표시 중</span>';
@@ -1243,6 +1253,19 @@
     document.addEventListener('pointerdown', (e) => {
       state.lastInteract = Date.now();
       if (e.pointerType === 'touch') touched();
+      // 3초 동안 누르고 있으면 진단 정보를 연다(관리용). 손가락이 움직이거나 떼면 취소
+      clearTimeout(state.press && state.press.timer);
+      state.press = { x: e.clientX, y: e.clientY, long: false, timer: setTimeout(() => {
+        if (!state.press) return;
+        state.press.long = true;
+        openDiag();
+      }, 3000) };
+    }, true);
+    const cancelPress = () => { if (state.press && !state.press.long) { clearTimeout(state.press.timer); state.press = null; } };
+    document.addEventListener('pointerup', cancelPress, true);
+    document.addEventListener('pointercancel', cancelPress, true);
+    document.addEventListener('pointermove', (e) => {
+      if (state.press && !state.press.long && Math.hypot(e.clientX - state.press.x, e.clientY - state.press.y) > 30) cancelPress();
     }, true);
     document.addEventListener('touchstart', touched, { capture: true, passive: true });
     document.addEventListener('click', onClick);
@@ -1267,9 +1290,38 @@
     if (appEl) { openPlayer(state.content.showcase.apps[+appEl.getAttribute('data-app')], false); return; }
     const voteEl = e.target.closest('[data-vote-dish]');
     if (voteEl) { castVote(voteEl.getAttribute('data-vote-date'), voteEl.getAttribute('data-vote-dish'), voteEl); return; }
+    // 길게 눌러 진단 정보를 연 손가락을 뗄 때 생기는 클릭은 무시한다
+    if (state.press && state.press.long) { state.press = null; return; }
     if (e.target.closest('#player, #gallery, #diag, #promo')) return;
     if (state.sound === 'blocked') state.sound = 'on';
-    toggleDiag();
+    if (!$('diag').hidden) { closeDiag(); return; }
+    startPeek();
+  }
+
+  // ---------- 화면을 누르면: A 는 급식, B 는 학사일정 ----------
+  // 두 화면이 한쪽씩 맡는다. 20초 동안 보여 준 뒤 지금 차례의 칸으로 돌아간다(다른 화면과의 순서는 시계로 다시 맞춰진다)
+  function startPeek() {
+    const c = state.content;
+    if (!c || c.mode === 'stop' || state.show.app) return;
+    const idx = state.sched.findIndex((e) => e.item && e.item.id === PEEK_ID[role]);
+    if (idx < 0) return;
+    const again = !!state.peek;
+    state.peek = { until: Date.now() + PEEK_MS };
+    if (!again || state.idx !== idx) showSlide(idx, false);
+    startBar(0, PEEK_MS);
+    let note = $('peekNote');
+    if (!note) { note = document.createElement('div'); note.id = 'peekNote'; note.className = 'peek-note'; $('screen').appendChild(note); }
+    note.textContent = '20초 뒤 원래 순서로 돌아갑니다';
+    note.hidden = false;
+    $('screen').classList.add('is-peek');
+    logEvent('화면 터치: ' + (role === 'a' ? '급식' : '학사일정') + ' 표시');
+  }
+  function endPeek() {
+    state.peek = null;
+    state.slot = -2; // 다음 tick 에서 지금 차례의 칸을 전환 효과와 함께 다시 그린다
+    const note = $('peekNote');
+    if (note) note.hidden = true;
+    $('screen').classList.remove('is-peek');
   }
 
   function onKey(e) {
@@ -1554,7 +1606,7 @@
           <figure class="frame land" id="fa"><iframe src="?screen=a&amp;embed=1" title="A 화면"></iframe><figcaption>A · 소식</figcaption></figure>
           <figure class="frame land" id="fb"><iframe src="?screen=b&amp;embed=1" title="B 화면"></iframe><figcaption>B · 깊이 보기 · 학생 작품 시연</figcaption></figure>
         </div>
-        <p class="preview-note">각 화면을 누르면 진단 정보가 표시됩니다. 미리보기에서는 실행 기록을 남기지 않습니다.</p>
+        <p class="preview-note">A 화면을 누르면 급식, B 화면을 누르면 학사일정 달력이 20초 동안 나옵니다. 진단 정보는 화면을 3초 동안 누르고 있으면 열립니다. 미리보기에서는 실행 기록을 남기지 않습니다.</p>
       </div>`;
     // 스탠바이미는 두 대 모두 세로로 세울 수 있다. 화면마다 따로 돌려 본다
     ['A', 'B'].forEach((k) => {

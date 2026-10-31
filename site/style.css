@@ -170,6 +170,17 @@ body.role-b .screen:not(.is-stopped) { --accent: #0a7468; }
 .screen .shot img { box-shadow: 0 1vmin 3vmin rgba(43, 47, 69, 0.16); }
 .screen .qr-box { box-shadow: 0 0.6vmin 1.8vmin rgba(43, 47, 69, 0.12); }
 .screen.is-stopped { color: #f3f6fb; }
+/* 화면을 눌러 급식·학사일정을 연 동안 아래쪽 점 표시 자리에 띄우는 안내(점 표시는 잠시 숨긴다) */
+.screen.is-peek .dots { visibility: hidden; }
+.peek-note {
+  position: absolute; left: 4.5vmin; bottom: 5.2vmin; z-index: 6;
+  font-size: 2.8vmin; font-weight: 700; color: #fff; background: rgba(35, 39, 56, 0.82);
+  padding: 0.8vmin 2.6vmin; border-radius: 99px; white-space: nowrap; pointer-events: none;
+}
+.peek-note[hidden] { display: none; }
+.is-stopped .peek-note { display: none; }
+/* 세로에서는 점 표시가 위로 올라간다. B 는 「작품 체험하기」 버튼 위 */
+@media (orientation: portrait) { .peek-note { bottom: 9vmin; } body.role-b .peek-note { bottom: 19.3vmin; } }
 
 /* 급식 카드 뒤 큰 주요리 그림: 흐리게, 천천히 떠다닌다 */
 .bg-ic {
