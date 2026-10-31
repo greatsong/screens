@@ -1,10 +1,11 @@
 {
   "id": "activation-lab",
-  "checkedAt": "2026-10-30T10:05:35+09:00",
+  "target": "wide",
+  "checkedAt": "2026-10-31T10:53:05+09:00",
   "url": "https://activation-lab.vercel.app/",
   "finalUrl": "https://activation-lab.vercel.app/",
   "http": 200,
-  "responseMs": 345,
+  "responseMs": 36,
   "fingerprint": "f779780f0659e550",
   "frame": {
     "allowed": true,
@@ -15,7 +16,7 @@
       "ok": true,
       "image": "wide.jpg",
       "title": "활성화 함수 실험실 — 공간의 휘어짐과 기울기 소실",
-      "loadMs": 2964,
+      "loadMs": 3009,
       "errors": [],
       "stats": {
         "text": 1192,

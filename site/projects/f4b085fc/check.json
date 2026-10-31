@@ -1,10 +1,11 @@
 {
   "id": "f4b085fc",
-  "checkedAt": "2026-10-30T10:48:45+09:00",
+  "target": "mobile",
+  "checkedAt": "2026-10-31T10:53:12+09:00",
   "url": "https://danggok-ai.vercel.app/",
   "finalUrl": "https://danggok-ai.vercel.app/",
   "http": 200,
-  "responseMs": 135,
+  "responseMs": 113,
   "fingerprint": "3b9f21acfb5f0a82",
   "frame": {
     "allowed": true,
@@ -15,7 +16,7 @@
       "ok": true,
       "image": "wide.jpg",
       "title": "당곡고 AI 채팅",
-      "loadMs": 2958,
+      "loadMs": 2813,
       "errors": [],
       "stats": {
         "text": 166,
@@ -26,7 +27,7 @@
       "ok": true,
       "image": "mobile.jpg",
       "title": "당곡고 AI 채팅",
-      "loadMs": 2881,
+      "loadMs": 2714,
       "errors": [],
       "stats": {
         "text": 166,
