@@ -137,8 +137,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
  * 모든 카드를 크림색 바탕에 은은한 빛 번짐으로 그리고, 카드 종류마다 빛 색만 바꾼다(tone-*). 글자는 진한 남색, 칸은 흰색.
  * 긴급 정지 화면과 화면 밖 겹창(작품 시연·목록·진단)은 그대로 어둡게 둔다 */
 .screen:not(.is-stopped) {
-  --text: #2b2f45; --soft: #565d78; --muted: #8a8fa6; --panel: #ffffff; --panel-2: #fff3e3; --line: rgba(43, 47, 69, 0.10); --accent: #ee7d1c;
-  --glow1: rgba(255, 210, 160, 0.7); --glow2: rgba(255, 196, 214, 0.6); --glow3: rgba(190, 230, 255, 0.45); --base1: #fffaf3; --base2: #fff0e0;
+  /* 5 m 거리에서 읽히게: 본문은 가장 짙은 바탕에서도 명암 대비 7:1, 작은 글자·강조색 글자는 4.5:1 안팎 */
+  --text: #232738; --soft: #3d4259; --muted: #585d74; --panel: #ffffff; --panel-2: #fff3e3; --line: rgba(43, 47, 69, 0.12); --accent: #a84b00;
+  --glow1: rgba(255, 210, 160, 0.5); --glow2: rgba(255, 196, 214, 0.45); --glow3: rgba(190, 230, 255, 0.35); --base1: #fffaf3; --base2: #fff0e0;
   color: var(--text);
   background:
     radial-gradient(70% 60% at 92% 0%, var(--glow1) 0%, rgba(255, 255, 255, 0) 70%),
@@ -147,12 +148,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
     linear-gradient(160deg, var(--base1) 0%, var(--base2) 100%);
 }
 /* 뉴스: 하늘·민트 */
-.screen.tone-sky:not(.is-stopped) { --glow1: rgba(160, 215, 255, 0.7); --glow2: rgba(170, 240, 215, 0.55); --glow3: rgba(255, 236, 170, 0.4); --base1: #f6fbff; --base2: #eaf4ff; }
+.screen.tone-sky:not(.is-stopped) { --glow1: rgba(160, 215, 255, 0.5); --glow2: rgba(170, 240, 215, 0.42); --glow3: rgba(255, 236, 170, 0.32); --base1: #f6fbff; --base2: #eaf4ff; }
 /* 작품: 라벤더·하늘 */
-.screen.tone-lilac:not(.is-stopped) { --glow1: rgba(205, 185, 255, 0.7); --glow2: rgba(160, 215, 255, 0.5); --glow3: rgba(255, 200, 230, 0.45); --base1: #fbf8ff; --base2: #f1ecff; }
+.screen.tone-lilac:not(.is-stopped) { --glow1: rgba(205, 185, 255, 0.5); --glow2: rgba(160, 215, 255, 0.4); --glow3: rgba(255, 200, 230, 0.35); --base1: #fbf8ff; --base2: #f1ecff; }
 /* 오늘의 AI 뉴스 목록: 레몬·살구 */
-.screen.tone-sun:not(.is-stopped) { --glow1: rgba(255, 228, 140, 0.75); --glow2: rgba(255, 196, 170, 0.55); --glow3: rgba(180, 230, 255, 0.4); --base1: #fffdf2; --base2: #fff4dc; }
-body.role-b .screen:not(.is-stopped) { --accent: #14a08f; }
+.screen.tone-sun:not(.is-stopped) { --glow1: rgba(255, 228, 140, 0.55); --glow2: rgba(255, 196, 170, 0.42); --glow3: rgba(180, 230, 255, 0.32); --base1: #fffdf2; --base2: #fff4dc; }
+body.role-b .screen:not(.is-stopped) { --accent: #0a7468; }
+/* 강조색 바탕 위 글자는 흰색(진한 강조색과 5:1 이상) */
+.screen:not(.is-stopped) .sc-list .dd, .screen:not(.is-stopped) .meal-next b, .screen:not(.is-stopped) .try-btn { color: #fff; }
 .screen .body { color: var(--soft); }
 .screen .lines li { background: #fff; border-color: rgba(238, 125, 28, 0.18); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.13); }
 .screen .meal .lines li.treat { border-color: #ff8fa3; }
@@ -258,11 +261,11 @@ body.role-b .screen:not(.is-stopped) { --accent: #14a08f; }
 .sched .title { font-size: calc(var(--f, 1) * 8.5vmin); }
 
 /* ---------- AI 뉴스: 분야 색 · 목록 카드 ---------- */
-.cat-tech { --cat: #1f7fd6; }
-.cat-society { --cat: #d6336c; }
-.cat-economy { --cat: #1e9e5a; }
-.cat-science { --cat: #7048e8; }
-.cat-culture { --cat: #c77700; }
+.cat-tech { --cat: #1660ab; }
+.cat-society { --cat: #b0234f; }
+.cat-economy { --cat: #11703f; }
+.cat-science { --cat: #5a36c8; }
+.cat-culture { --cat: #934f00; }
 .tag[class*="cat-"] { color: var(--cat); border-color: var(--cat); }
 .dg-list { list-style: none; margin-top: calc(var(--f, 1) * 0.6vmin); }
 .dg-list li {
@@ -436,10 +439,10 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
 }
 .mb-icon { display: inline-block; flex: none; width: 1.3em; height: 1.3em; margin-right: 0.35em; }
 .mb-icon svg { display: block; width: 100%; height: 100%; }
-.mb-teacher { color: #6d4fd8; background: rgba(124, 92, 255, 0.12); }
-.mb-g1 { color: #178a50; background: rgba(30, 158, 90, 0.12); }
-.mb-g2 { color: #1f6fc4; background: rgba(31, 127, 214, 0.12); }
-.mb-g3 { color: #b36a00; background: rgba(199, 119, 0, 0.12); }
+.mb-teacher { color: #6d4ed8; background: rgba(124, 92, 255, 0.12); }
+.mb-g1 { color: #127a3e; background: rgba(30, 158, 90, 0.12); }
+.mb-g2 { color: #0b6aa8; background: rgba(31, 127, 214, 0.12); }
+.mb-g3 { color: #a65400; background: rgba(199, 119, 0, 0.12); }
 /* 화면 밖 겹창(작품 목록·검토)은 어두운 바탕이라 밝은 배지 색을 그대로 둔다 */
 .gallery .mb-teacher, .review .mb-teacher { color: #b8a5ff; }
 .gallery .mb-g1, .review .mb-g1 { color: #7ee0a1; }
