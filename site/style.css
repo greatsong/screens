@@ -63,8 +63,43 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- 카드 ---------- */
 .stage { flex: 1; display: flex; align-items: center; min-height: 0; padding: 1.5vmin 0; overflow: hidden; }
-.card { --f: 1; width: 100%; transition: opacity 0.45s ease, transform 0.45s ease; }
-.card.out { opacity: 0; transform: translateY(1.5vmin); }
+.card { --f: 1; width: 100%; }
+/* ---------- 카드 전환: 칸 번호마다 효과가 바뀐다(두 화면이 같은 칸 번호라 같은 효과로 함께 바뀐다) ----------
+ * 나가는 카드는 0.42초, 들어오는 카드는 0.65초. 동작 줄이기를 켠 기기에서는 흐려졌다 나타나기만 한다 */
+.card.out { animation: fx-fade-out 0.42s ease-in forwards; }
+@keyframes fx-fade-out { to { opacity: 0; } }
+.card.out.fx-rise { animation-name: fx-rise-out; }   @keyframes fx-rise-out { to { opacity: 0; transform: translateY(-4vmin); } }
+.card.out.fx-slide { animation-name: fx-slide-out; } @keyframes fx-slide-out { to { opacity: 0; transform: translateX(-16vmin); } }
+.card.out.fx-zoom { animation-name: fx-zoom-out; }   @keyframes fx-zoom-out { to { opacity: 0; transform: scale(0.88); } }
+.card.out.fx-flip { animation-name: fx-flip-out; }   @keyframes fx-flip-out { to { opacity: 0; transform: perspective(160vmin) rotateY(70deg); } }
+.card.out.fx-swing { animation-name: fx-swing-out; } @keyframes fx-swing-out { to { opacity: 0; transform: rotate(-4deg) translateY(5vmin); } }
+.card.out.fx-blur { animation-name: fx-blur-out; }   @keyframes fx-blur-out { to { opacity: 0; filter: blur(1.6vmin); } }
+.card.out.fx-drop { animation-name: fx-drop-out; }   @keyframes fx-drop-out { to { opacity: 0; transform: translateY(8vmin) scale(0.96); } }
+.card.in { animation: fx-fade-in 0.65s ease-out both; }
+@keyframes fx-fade-in { from { opacity: 0; } }
+.card.in.fx-rise { animation: fx-rise-in 0.65s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }  @keyframes fx-rise-in { from { opacity: 0; transform: translateY(7vmin) scale(0.97); } }
+.card.in.fx-slide { animation: fx-slide-in 0.65s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; } @keyframes fx-slide-in { from { opacity: 0; transform: translateX(18vmin); } }
+.card.in.fx-zoom { animation: fx-zoom-in 0.65s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }  @keyframes fx-zoom-in { from { opacity: 0; transform: scale(1.14); } }
+.card.in.fx-flip { animation: fx-flip-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }   @keyframes fx-flip-in { from { opacity: 0; transform: perspective(160vmin) rotateY(-75deg); } }
+.card.in.fx-swing { animation: fx-swing-in 0.8s cubic-bezier(0.3, 1.6, 0.5, 1) both; transform-origin: 50% 0; }
+@keyframes fx-swing-in { from { opacity: 0; transform: rotate(5deg) translateY(-6vmin); } 60% { opacity: 1; } }
+.card.in.fx-iris { animation: fx-iris-in 0.75s cubic-bezier(0.3, 0.8, 0.3, 1) both; }   @keyframes fx-iris-in { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(120% at 50% 50%); } }
+.card.in.fx-blur { animation: fx-blur-in 0.7s ease-out both; }                           @keyframes fx-blur-in { from { opacity: 0; filter: blur(1.8vmin); transform: scale(1.03); } }
+.card.in.fx-drop { animation: fx-drop-in 0.85s cubic-bezier(0.3, 1.5, 0.5, 1) both; }   @keyframes fx-drop-in { from { opacity: 0; transform: translateY(-12vmin); } 40% { opacity: 1; } }
+.card.in.fx-sweep { animation: fx-fade-in 0.5s ease-out 0.15s both; }
+/* 파스텔 띠가 화면을 비스듬히 쓸고 지나가는 전환 */
+.sweep {
+  position: absolute; top: -20%; bottom: -20%; left: 0; width: 60%; z-index: 5; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, var(--glow1) 25%, var(--glow3) 50%, var(--glow2) 75%, rgba(255, 255, 255, 0) 100%);
+  transform: translateX(-120%) skewX(-18deg);
+}
+.sweep.go { animation: fx-sweep 1.05s cubic-bezier(0.5, 0, 0.3, 1) forwards; }
+@keyframes fx-sweep { 0% { opacity: 1; transform: translateX(-120%) skewX(-18deg); } 100% { opacity: 1; transform: translateX(230%) skewX(-18deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .card.out, .card.out[class*="fx-"] { animation: fx-fade-out 0.3s forwards; }
+  .card.in, .card.in[class*="fx-"] { animation: fx-fade-in 0.3s both; }
+  .sweep { display: none; }
+}
 .card-inner { display: flex; align-items: center; }
 .card-text { flex: 1; min-width: 0; }
 .tag {
@@ -98,34 +133,47 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .qr-caption { margin-top: 1.6vmin; font-size: 3vmin; font-weight: 600; color: var(--soft); }
 .qr-fallback { color: #333; font-size: 2.4vmin; padding: 2vmin 0; }
 
-/* ---------- 밝은 화면: 급식·학사일정 카드(교사 요청: 너무 어둡지 않게, 밝고 감성적으로) ----------
- * 크림색 바탕에 살구·분홍 빛 번짐. 글자는 진한 남색, 칸은 흰색에 따뜻한 그림자. 긴급 정지 화면은 그대로 어둡게 둔다 */
-.screen.theme-bright:not(.is-stopped) {
+/* ---------- 밝은 화면(교사 요청: 너무 어둡지 않게, 밝고 감성적으로) ----------
+ * 모든 카드를 크림색 바탕에 은은한 빛 번짐으로 그리고, 카드 종류마다 빛 색만 바꾼다(tone-*). 글자는 진한 남색, 칸은 흰색.
+ * 긴급 정지 화면과 화면 밖 겹창(작품 시연·목록·진단)은 그대로 어둡게 둔다 */
+.screen:not(.is-stopped) {
   --text: #2b2f45; --soft: #565d78; --muted: #8a8fa6; --panel: #ffffff; --panel-2: #fff3e3; --line: rgba(43, 47, 69, 0.10); --accent: #ee7d1c;
+  --glow1: rgba(255, 210, 160, 0.7); --glow2: rgba(255, 196, 214, 0.6); --glow3: rgba(190, 230, 255, 0.45); --base1: #fffaf3; --base2: #fff0e0;
   color: var(--text);
   background:
-    radial-gradient(70% 60% at 92% 0%, rgba(255, 210, 160, 0.75) 0%, rgba(255, 210, 160, 0) 70%),
-    radial-gradient(60% 60% at 0% 100%, rgba(255, 196, 214, 0.65) 0%, rgba(255, 196, 214, 0) 70%),
-    radial-gradient(40% 40% at 30% 20%, rgba(190, 230, 255, 0.45) 0%, rgba(190, 230, 255, 0) 70%),
-    linear-gradient(160deg, #fffaf3 0%, #fff0e0 100%);
+    radial-gradient(70% 60% at 92% 0%, var(--glow1) 0%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(60% 60% at 0% 100%, var(--glow2) 0%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(40% 40% at 30% 20%, var(--glow3) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(160deg, var(--base1) 0%, var(--base2) 100%);
 }
-body.role-b .screen.theme-bright:not(.is-stopped) { --accent: #14a08f; }
-.theme-bright .body { color: var(--soft); }
-.theme-bright .lines li { background: #fff; border-color: rgba(238, 125, 28, 0.18); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.13); }
-.theme-bright .meal .lines li.treat { border-color: #ff8fa3; }
-.theme-bright .dots i { background: rgba(43, 47, 69, 0.15); }
-.theme-bright .dots i.on { background: var(--accent); }
-.theme-bright .progress { background: rgba(43, 47, 69, 0.06); }
-.theme-bright .role { color: #fff; }
-.theme-bright .badge, .theme-bright .status { color: var(--muted); }
-.theme-bright .show-btn { background: #fff; color: var(--text); }
-.theme-bright .card-text { position: relative; z-index: 1; }
+/* 뉴스: 하늘·민트 */
+.screen.tone-sky:not(.is-stopped) { --glow1: rgba(160, 215, 255, 0.7); --glow2: rgba(170, 240, 215, 0.55); --glow3: rgba(255, 236, 170, 0.4); --base1: #f6fbff; --base2: #eaf4ff; }
+/* 작품: 라벤더·하늘 */
+.screen.tone-lilac:not(.is-stopped) { --glow1: rgba(205, 185, 255, 0.7); --glow2: rgba(160, 215, 255, 0.5); --glow3: rgba(255, 200, 230, 0.45); --base1: #fbf8ff; --base2: #f1ecff; }
+/* 오늘의 AI 뉴스 목록: 레몬·살구 */
+.screen.tone-sun:not(.is-stopped) { --glow1: rgba(255, 228, 140, 0.75); --glow2: rgba(255, 196, 170, 0.55); --glow3: rgba(180, 230, 255, 0.4); --base1: #fffdf2; --base2: #fff4dc; }
+body.role-b .screen:not(.is-stopped) { --accent: #14a08f; }
+.screen .body { color: var(--soft); }
+.screen .lines li { background: #fff; border-color: rgba(238, 125, 28, 0.18); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.13); }
+.screen .meal .lines li.treat { border-color: #ff8fa3; }
+.screen .question { background: #fff; box-shadow: 0 0.6vmin 1.8vmin rgba(43, 47, 69, 0.07); }
+.screen .dots i { background: rgba(43, 47, 69, 0.15); }
+.screen .dots i.on { background: var(--accent); }
+.screen .progress { background: rgba(43, 47, 69, 0.06); }
+.screen .role { color: #fff; }
+.screen .badge, .screen .status { color: var(--muted); }
+.screen .show-btn { background: #fff; color: var(--text); }
+.screen .card-text { position: relative; z-index: 1; }
+.screen .shot img { box-shadow: 0 1vmin 3vmin rgba(43, 47, 69, 0.16); }
+.screen .qr-box { box-shadow: 0 0.6vmin 1.8vmin rgba(43, 47, 69, 0.12); }
+.screen.is-stopped { color: #f3f6fb; }
+
 /* 급식 카드 뒤 큰 주요리 그림: 흐리게, 천천히 떠다닌다 */
 .bg-ic {
   position: fixed; right: 3vmin; bottom: 9vmin; width: 46vmin; height: 46vmin; object-fit: contain; z-index: 0;
   opacity: 0; pointer-events: none; transform: rotate(-8deg);
 }
-.theme-bright .bg-ic { opacity: 0.22; animation: bg-float 7s ease-in-out infinite; }
+.screen:not(.is-stopped) .bg-ic { opacity: 0.22; animation: bg-float 7s ease-in-out infinite; }
 @keyframes bg-float { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-2.4vmin) rotate(-4deg); } }
 
 /* ---------- 일주일 급식(B) ---------- */
@@ -210,11 +258,11 @@ body.role-b .screen.theme-bright:not(.is-stopped) { --accent: #14a08f; }
 .sched .title { font-size: calc(var(--f, 1) * 8.5vmin); }
 
 /* ---------- AI 뉴스: 분야 색 · 목록 카드 ---------- */
-.cat-tech { --cat: #6cc4ff; }
-.cat-society { --cat: #ff8fb1; }
-.cat-economy { --cat: #7ee0a1; }
-.cat-science { --cat: #b8a5ff; }
-.cat-culture { --cat: #ffc069; }
+.cat-tech { --cat: #1f7fd6; }
+.cat-society { --cat: #d6336c; }
+.cat-economy { --cat: #1e9e5a; }
+.cat-science { --cat: #7048e8; }
+.cat-culture { --cat: #c77700; }
 .tag[class*="cat-"] { color: var(--cat); border-color: var(--cat); }
 .dg-list { list-style: none; margin-top: calc(var(--f, 1) * 0.6vmin); }
 .dg-list li {
@@ -388,10 +436,15 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
 }
 .mb-icon { display: inline-block; flex: none; width: 1.3em; height: 1.3em; margin-right: 0.35em; }
 .mb-icon svg { display: block; width: 100%; height: 100%; }
-.mb-teacher { color: #b8a5ff; background: rgba(184, 165, 255, 0.14); }
-.mb-g1 { color: #7ee0a1; background: rgba(126, 224, 161, 0.14); }
-.mb-g2 { color: #6cc4ff; background: rgba(108, 196, 255, 0.14); }
-.mb-g3 { color: #ffc069; background: rgba(255, 192, 105, 0.14); }
+.mb-teacher { color: #6d4fd8; background: rgba(124, 92, 255, 0.12); }
+.mb-g1 { color: #178a50; background: rgba(30, 158, 90, 0.12); }
+.mb-g2 { color: #1f6fc4; background: rgba(31, 127, 214, 0.12); }
+.mb-g3 { color: #b36a00; background: rgba(199, 119, 0, 0.12); }
+/* 화면 밖 겹창(작품 목록·검토)은 어두운 바탕이라 밝은 배지 색을 그대로 둔다 */
+.gallery .mb-teacher, .review .mb-teacher { color: #b8a5ff; }
+.gallery .mb-g1, .review .mb-g1 { color: #7ee0a1; }
+.gallery .mb-g2, .review .mb-g2 { color: #6cc4ff; }
+.gallery .mb-g3, .review .mb-g3 { color: #ffc069; }
 .app-card .mbadge { align-self: flex-start; margin-bottom: 1.4vmin; }
 .rv-maker .mbadge { font-size: 1.9vmin; }
 

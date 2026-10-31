@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.0';
+  const APP_VERSION = '0.6.1';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -673,6 +673,20 @@
     });
   }
 
+  // 카드 전환 효과(style.css 의 fx-*). 여러 가지를 돌아가며 쓴다
+  const FX = ['rise', 'slide', 'zoom', 'sweep', 'flip', 'swing', 'iris', 'blur', 'drop'];
+  function setTone(t) {
+    const sc = $('screen');
+    ['sky', 'lilac', 'sun'].forEach((k) => sc.classList.toggle('tone-' + k, k === t));
+  }
+  // 파스텔 띠가 화면을 쓸고 지나간다
+  function sweep() {
+    const sc = $('screen');
+    let el = $('sweep');
+    if (!el) { el = document.createElement('div'); el.id = 'sweep'; el.className = 'sweep'; sc.appendChild(el); }
+    el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  }
+
   function showSlide(idx, immediate) {
     state.idx = idx;
     const entry = state.sched[idx];
@@ -680,7 +694,7 @@
     const card = $('card');
     syncPromo(entry);
     const paint = () => {
-      if (entry.promo) { $('screen').classList.remove('theme-bright'); card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); card.classList.remove('out'); return; }
+      if (entry.promo) { setTone(''); card.innerHTML = cardHTML({ tag: '홍보', title: entry.promo.title, body: entry.promo.caption || '' }); enter(); return; }
       const side = entrySide(entry);
       const auto = !entry.project && side && side.auto;
       card.innerHTML = entry.project ? projectHTML(entry.project)
@@ -689,16 +703,21 @@
         : auto === 'newsdigest' ? newsDigestHTML(side)
         : auto === 'schedule' ? scheduleHTML(side)
         : auto === 'calendar' ? calendarHTML(side) : cardHTML(side);
-      // 급식·학사일정 카드는 밝고 따뜻한 화면으로(교사 요청: 너무 어둡지 않게, 밝고 감성적으로)
-      $('screen').classList.toggle('theme-bright', /^(meal|mealweek|schedule|calendar)$/.test(auto || ''));
+      // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
+      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' ? 'sun'
+        : entry.project ? 'lilac' : entry.item && /^news-/.test(entry.item.id) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
-      card.classList.remove('out');
+      enter();
     };
+    // 칸 번호로 전환 효과를 고른다(두 화면이 같은 효과). 첫 그림은 효과 없이
+    const fx = FX[((state.slot % FX.length) + FX.length) % FX.length];
+    const enter = () => { card.className = immediate ? 'card' : 'card in fx-' + fx; };
     clearTimeout(state.fadeTimer);
     if (immediate) { paint(); return; }
-    card.classList.add('out');
-    state.fadeTimer = setTimeout(paint, 450);
+    card.className = 'card out fx-' + fx;
+    if (fx === 'sweep') sweep();
+    state.fadeTimer = setTimeout(paint, fx === 'sweep' ? 380 : 420);
   }
 
   // A 화면은 홍보 영상을 전체 화면으로 소리 없이 재생한다. 슬롯 시각으로 재생 위치를 맞춰 두 화면과 순서가 어긋나지 않게 한다.
