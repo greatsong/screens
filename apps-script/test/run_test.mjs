@@ -101,12 +101,19 @@ function fetch(url, opt = {}) {
   throw new Error('예상하지 못한 요청 ' + url);
 }
 
+// 캐시: 시간이 지나 만료된 것처럼 하려면 cache.clear()
+const cache = new Map();
+const CacheMock = { get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => { cache.set(k, String(v)); }, remove: (k) => { cache.delete(k); } };
 const ctx = vm.createContext({
   console,
+  CacheService: { getScriptCache: () => CacheMock },
+  ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ text: t, setMimeType() { return this; } }) },
   PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) },
   SpreadsheetApp: { openById: () => ss, create: () => ss },
   Utilities: {
     formatDate, getUuid: () => crypto.randomUUID(), sleep: () => {}, Charset: { UTF_8: 'UTF-8' },
+    DigestAlgorithm: { SHA_256: 'sha256' },
+    computeDigest: (alg, s) => [...crypto.createHash('sha256').update(String(s), 'utf8').digest()].map((b) => (b > 127 ? b - 256 : b)),
     base64Encode: (s) => Buffer.from(s, 'utf8').toString('base64'), base64Decode: (b) => [...Buffer.from(b, 'base64')],
     newBlob: (bytes) => ({ getDataAsString: () => Buffer.from(bytes).toString('utf8') }),
   },
@@ -394,6 +401,34 @@ check('예전 배포 파일을 확인해도 중복 요청을 완료로 만들지
 py('build_projects.py');
 poll();
 check('기존 커밋의 실제 배포를 확인한 뒤 중복 요청 완료', duplicatePin()['상태'] === '반영 완료');
+
+console.log('16. 급식 메뉴 투표 (화면 터치·휴대폰)');
+const today = G.fmt_(G.now_(), 'yyyyMMdd');
+const vote = (o) => JSON.parse(G.doPost({ postData: { contents: JSON.stringify({ api: 'vote', date: today, src: 'phone', ...o }) } }).text);
+check('형식이 틀린 투표는 받지 않음', !vote({ dish: '카레', dev: 'short' }).ok && !vote({ dish: '', dev: 'phone-aaaaaaaa' }).ok && !vote({ date: '2026-11-02', dish: '카레', dev: 'phone-aaaaaaaa' }).ok);
+check('너무 먼 날짜는 받지 않음', !vote({ date: '20301231', dish: '카레', dev: 'phone-aaaaaaaa' }).ok);
+check('깨진 JSON은 오류', JSON.parse(G.doPost({ postData: { contents: '{' } }).text).ok === false);
+const v1 = vote({ dish: '단호박카레라이스', dev: 'phone-aaaaaaaa' });
+check('휴대폰 첫 투표가 1표', v1.ok && v1.counts['단호박카레라이스'] === 1, v1);
+const v2 = vote({ dish: '단호박카레라이스', dev: 'phone-aaaaaaaa' });
+check('같은 휴대폰·같은 메뉴는 다시 세지 않음', v2.dup && v2.counts['단호박카레라이스'] === 1, v2);
+check('다른 휴대폰은 따로 셈', vote({ dish: '단호박카레라이스', dev: 'phone-bbbbbbbb' }).counts['단호박카레라이스'] === 2);
+const s1 = vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' });
+const s2 = vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' });
+check('화면 터치는 2초 안에 한 번만', s1.counts['조각케이크'] === 1 && s2.wait && s2.counts['조각케이크'] === 1, [s1, s2]);
+cache.clear();
+check('2초가 지나면 같은 화면에서 다시 투표', vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' }).counts['조각케이크'] === 2);
+vote({ dish: '=HYPERLINK("https://evil.example","x")', dev: 'phone-cccccccc' });
+check('수식처럼 보이는 메뉴 이름은 시트에 문자로 저장', sheets['급식투표'].data.some((r) => String(r[2]).startsWith("'=")));
+check('시트 기록에 기기 번호 원문이 없음', !JSON.stringify(sheets['급식투표'].data).includes('phone-aaaaaaaa'));
+const all = JSON.parse(props.MEAL_VOTES);
+all['20200101'] = { '옛 메뉴': 3 };
+props.MEAL_VOTES = JSON.stringify(all);
+cache.clear();
+vote({ dish: '팽이장국', dev: 'phone-dddddddd' });
+check('3주 지난 집계는 지움', !('20200101' in JSON.parse(props.MEAL_VOTES)));
+const got = JSON.parse(G.doGet({ parameter: { api: 'votes' } }).text);
+check('?api=votes 가 오늘 집계를 돌려줌', got.ok && got.days[today]['단호박카레라이스'] === 2 && got.days[today]['팽이장국'] === 1, got);
 
 console.log(fails ? `\n실패 ${fails}개` : '\n모든 시험 통과');
 console.log(`보낸 메일 ${state.outbox.length}통, GitHub 커밋 ${state.commits.length}번`);

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>급식 메뉴 투표 · 당곡고</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+<style>
+/* 스탠바이미 B 화면의 QR로 여는 휴대폰용 급식 메뉴 투표. 급식은 나이스에서, 하트 수는 Apps Script 웹 앱에서 받는다.
+ * 이름·연락처는 받지 않는다. 이 휴대폰의 무작위 번호로만 같은 메뉴에 하루 한 번(서버 6시간) 투표한다 */
+:root { --bg: #fff8ef; --card: #ffffff; --text: #2b2f45; --soft: #565d78; --muted: #8a8fa6; --line: rgba(43, 47, 69, 0.08); --accent: #ee7d1c; --heart: #f0506e; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; color: var(--text); font-family: Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif; word-break: keep-all;
+  background: radial-gradient(90% 40% at 100% 0%, #ffd8b3 0%, rgba(255, 216, 179, 0) 70%), radial-gradient(80% 40% at 0% 100%, #ffd3e0 0%, rgba(255, 211, 224, 0) 70%), var(--bg);
+  min-height: 100vh;
+}
+main { max-width: 560px; margin: 0 auto; padding: 22px 16px 40px; }
+header p { margin: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+h1 { margin: 4px 0 6px; font-size: 27px; letter-spacing: -0.02em; }
+.lead { color: var(--soft); font-size: 15px; line-height: 1.5; margin: 0 0 14px; }
+.heart { width: 1em; height: 1em; vertical-align: -0.12em; }
+.top { background: var(--card); border-radius: 18px; padding: 14px 16px; box-shadow: 0 6px 18px rgba(238, 125, 28, 0.12); margin-bottom: 16px; }
+.top h2 { margin: 0 0 8px; font-size: 16px; color: var(--accent); }
+.top ol { margin: 0; padding: 0; list-style: none; }
+.top li { display: flex; align-items: center; padding: 5px 0; font-weight: 700; }
+.top li .rk { width: 26px; height: 26px; border-radius: 50%; background: #ffe8cc; color: #b45309; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
+.top li img { width: 30px; height: 30px; object-fit: contain; margin-right: 8px; }
+.top li .n { margin-left: auto; color: var(--heart); font-weight: 800; }
+.top .empty { color: var(--muted); font-size: 14px; }
+section.day { margin-top: 18px; }
+section.day h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 19px; }
+section.day h3 span { color: var(--muted); font-size: 14px; font-weight: 700; }
+section.day.today h3 b { color: var(--accent); }
+.dishes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+button.dish {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; padding: 12px 8px 10px; border: 1.5px solid var(--line);
+  border-radius: 16px; background: var(--card); color: var(--text); font: inherit; font-weight: 700; font-size: 14.5px; line-height: 1.3; text-align: center;
+  box-shadow: 0 4px 12px rgba(43, 47, 69, 0.06); cursor: pointer; transition: transform 0.15s;
+}
+button.dish:active { transform: scale(0.96); }
+button.dish img { width: 64px; height: 64px; object-fit: contain; }
+button.dish .cnt { display: inline-flex; align-items: center; gap: 3px; color: rgba(240, 80, 110, 0.45); font-weight: 800; font-size: 14px; }
+button.dish.on { border-color: var(--heart); background: #fff4f6; }
+button.dish.on .cnt { color: var(--heart); }
+button.dish .pop { position: absolute; top: 6px; right: 10px; width: 26px; height: 26px; color: var(--heart); animation: pop 0.9s ease-out forwards; pointer-events: none; }
+@keyframes pop { 0% { opacity: 0; transform: translateY(6px) scale(0.4); } 30% { opacity: 1; transform: translateY(-6px) scale(1.2); } 100% { opacity: 0; transform: translateY(-34px) scale(0.9); } }
+.msg { margin-top: 30px; color: var(--muted); }
+footer { margin-top: 26px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+#toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(43, 47, 69, 0.88); color: #fff; padding: 10px 18px; border-radius: 99px; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p>당곡고등학교 스탠바이미</p>
+    <h1>급식 메뉴 투표</h1>
+    <p class="lead">좋아하는 메뉴에 하트를 눌러 주세요. 하트가 많은 메뉴는 스탠바이미 화면에 「인기」로 나옵니다.</p>
+  </header>
+  <div class="top" id="top"><h2>이번 주 인기 메뉴</h2><p class="empty">불러오는 중입니다.</p></div>
+  <div id="days"><p class="msg">급식 정보를 불러오는 중입니다.</p></div>
+  <footer>이름이나 연락처는 받지 않습니다. 같은 휴대폰으로는 같은 날 같은 메뉴에 한 번만 투표할 수 있습니다.<br>급식 정보: 나이스 교육정보 개방 포털</footer>
+</main>
+<div id="toast"></div>
+<script src="meal-icons.js"></script>
+<script>
+const HEART = '<svg class="heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.2s-7.6-4.7-9.7-9.4C.8 8.4 2.9 4.4 6.8 4.4c2.2 0 3.9 1.2 5.2 3 1.3-1.8 3-3 5.2-3 3.9 0 6 4 4.5 7.4-2.1 4.7-9.7 9.4-9.7 9.4z" fill="currentColor"/></svg>';
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const p2 = (n) => (n < 10 ? '0' : '') + n;
+const ymd = (ms) => { const d = new Date(ms + 9 * 3600000); return d.getUTCFullYear() + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()); };
+const dow = (k) => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))).getUTCDay();
+const icon = (name) => (window.MEAL ? window.MEAL.icon(name) : 'dish');
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 기록만 생략 */ } } };
+const state = { api: '', days: {}, votes: {}, mine: store.get('dgs.vote.mine', {}) };
+
+function devId() {
+  let id = store.get('dgs.vote.dev', '');
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
+    const b = new Uint8Array(8); crypto.getRandomValues(b);
+    id = 'phone-' + Array.from(b, (x) => (x + 256).toString(16).slice(1)).join('');
+    store.set('dgs.vote.dev', id);
+  }
+  return id;
+}
+function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
+const count = (k, d) => ((state.votes[k] || {})[d] || 0);
+
+function renderTop() {
+  const list = [];
+  Object.keys(state.days).forEach((k) => state.days[k].forEach((d) => { const n = count(k, d); if (n) list.push({ k, d, n }); }));
+  list.sort((a, b) => b.n - a.n);
+  const top = list.slice(0, 3);
+  document.getElementById('top').innerHTML = '<h2>이번 주 인기 메뉴</h2>' + (top.length
+    ? '<ol>' + top.map((x, i) => `<li><span class="rk">${i + 1}</span><img src="meal/${icon(x.d)}.webp" alt=""><span>${esc(x.d)}</span><span class="n">${HEART} ${x.n}</span></li>`).join('') + '</ol>'
+    : '<p class="empty">아직 하트가 없습니다. 첫 하트를 눌러 주세요.</p>');
+}
+function renderDays() {
+  const today = ymd(Date.now()), tomorrow = ymd(Date.now() + 86400000);
+  const keys = Object.keys(state.days).sort();
+  document.getElementById('days').innerHTML = keys.length ? keys.map((k) => `
+    <section class="day${k === today ? ' today' : ''}">
+      <h3><b>${k === today ? '오늘' : k === tomorrow ? '내일' : WD[dow(k)] + '요일'}</b><span>${+k.slice(4, 6)}월 ${+k.slice(6, 8)}일</span></h3>
+      <div class="dishes">${state.days[k].map((d) => `<button class="dish${state.mine[k + '|' + d] ? ' on' : ''}" data-k="${esc(k)}" data-d="${esc(d)}">
+        <img src="meal/${icon(d)}.webp" alt=""><span>${esc(d)}</span><span class="cnt">${HEART} ${count(k, d)}</span></button>`).join('')}</div>
+    </section>`).join('') : '<p class="msg">앞으로 나온 급식 정보가 없습니다.</p>';
+}
+
+document.getElementById('days').addEventListener('click', (e) => {
+  const b = e.target.closest('button.dish');
+  if (!b || !state.api) return;
+  const k = b.getAttribute('data-k'), d = b.getAttribute('data-d'), key = k + '|' + d;
+  if (state.mine[key]) { toast('이미 하트를 보낸 메뉴입니다'); return; }
+  state.mine[key] = 1; store.set('dgs.vote.mine', state.mine);
+  state.votes[k] = state.votes[k] || {}; state.votes[k][d] = count(k, d) + 1;
+  b.classList.add('on'); b.querySelector('.cnt').innerHTML = HEART + ' ' + count(k, d);
+  const pop = document.createElement('span'); pop.className = 'pop'; pop.innerHTML = HEART; b.appendChild(pop); setTimeout(() => pop.remove(), 900);
+  renderTop();
+  fetch(state.api, { method: 'POST', body: JSON.stringify({ api: 'vote', date: k, dish: d, dev: devId(), src: 'phone' }) })
+    .then((r) => r.json()).then((r) => {
+      if (r && r.counts) { state.votes[k] = r.counts; renderDays(); renderTop(); }
+      if (r && !r.ok) toast(r.error || '투표하지 못했습니다');
+      else toast('하트를 보냈어요');
+    }).catch(() => toast('연결이 불안정합니다. 잠시 뒤 다시 눌러 주세요'));
+});
+
+fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => {
+  state.api = (c.vote && c.vote.api) || '';
+  const m = c.meal || {};
+  const today = ymd(Date.now()), to = ymd(Date.now() + 21 * 86400000);
+  const meals = fetch('https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=5&ATPT_OFCDC_SC_CODE=' + encodeURIComponent(m.office) +
+    '&SD_SCHUL_CODE=' + encodeURIComponent(m.school) + '&MLSV_FROM_YMD=' + today + '&MLSV_TO_YMD=' + to).then((r) => r.json()).then((d) => {
+    const box = d.mealServiceDietInfo;
+    ((box && box[1] && box[1].row) || []).forEach((r) => {
+      if (String(r.MMEAL_SC_CODE) !== '2') return;
+      state.days[r.MLSV_YMD] = String(r.DDISH_NM || '').split(/<br\s*\/?>/i)
+        .map((x) => x.replace(/\(\s*[\d.\s]+\s*\)/g, '').replace(/[*#+@]/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+    });
+  });
+  const votes = state.api ? fetch(state.api + '?api=votes').then((r) => r.json()).then((d) => { if (d && d.days) state.votes = d.days; }).catch(() => {}) : Promise.resolve();
+  return Promise.all([meals, votes]);
+}).then(() => { renderDays(); renderTop(); })
+  .catch(() => { document.getElementById('days').innerHTML = '<p class="msg">급식 정보를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>'; });
+</script>
+</body>
+</html>

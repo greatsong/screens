@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.5.9';
+  const APP_VERSION = '0.6.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -118,7 +118,8 @@
     font: '확인 중', qr: '불러오는 중', wake: '확인 전',
     diagTimer: null,
     show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
-    meal: store.get('meal', null), mealBusy: false
+    meal: store.get('meal', null), mealBusy: false,
+    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0
   };
 
   // ---------- 기록 ----------
@@ -379,6 +380,7 @@
     }
     if (!prev || prev.version !== data.version) state.slot = -1;
     maybeLoadMeal();
+    maybeLoadVotes();
     $('school').textContent = data.school || '당곡고등학교';
     const badge = $('badge');
     badge.hidden = !data.badge;
@@ -421,7 +423,7 @@
     store.set('reloadFor', { v: target, t: Date.now() });
     logEvent('앱 ' + target + ' 버전으로 새로 고침');
     // 캐시에 남은 옛 app.js 로 다시 열리면 두 화면이 다른 코드로 칸을 계산해 어긋난다. 새 파일을 먼저 받아 두고 새로 고친다
-    const fresh = ['./', 'app.js', 'style.css'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
+    const fresh = ['./', 'app.js', 'style.css', 'meal-icons.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
     Promise.all(fresh).then(() => setTimeout(() => location.reload(), 300));
   }
 
@@ -439,6 +441,7 @@
       $('stopClock').textContent = time;
       $('stopDate').textContent = date;
       maybeLoadMeal();
+      maybeLoadVotes();
     }
     renderPlayer();
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
@@ -811,38 +814,84 @@
       .map((x) => x.replace(/\(\s*[\d.\s]+\s*\)/g, '').replace(/[*#+@]/g, '').replace(/\s+/g, ' ').trim())
       .filter(Boolean);
   }
-  // 메뉴 이름으로 아이콘을 고른다. 위에서부터 먼저 맞는 것을 쓴다(볶음밥은 밥보다, 국은 그 안의 재료보다 먼저).
-  // 아이콘은 Codex 이미지 생성으로 만든 애니메이션풍 그림(site/meal/<이름>.webp)이다. 기기 이모지 글꼴은 기기마다 깨져 쓰지 않는다
-  const MEAL_ICON = [
-    [/케이크/, 'cake'], [/아이스크림|빙수|샤베트/, 'icecream'], [/요거트|요구르트/, 'yogurt'], [/우유|두유/, 'milk'], [/주스|에이드|스무디|식혜|음료/, 'juice'],
-    [/김밥|주먹밥/, 'kimbap'], [/초밥/, 'sushi'], [/카레/, 'curry'], [/볶음밥|오므라이스/, 'friedrice'], [/스파게티|파스타|그라탕/, 'pasta'],
-    [/짜장/, 'jjajang'], [/짬뽕|라면|국수|우동|냉면|쫄면|소바|면$/, 'noodle'], [/피자/, 'pizza'], [/햄버거|버거/, 'burger'], [/핫도그|소시지|소세지/, 'hotdog'],
-    [/샌드위치/, 'sandwich'], [/타코/, 'taco'], [/부리또|또띠아/, 'burrito'], [/떡볶이/, 'tteokbokki'], [/어묵|오뎅/, 'fishcake'],
-    [/만두/, 'dumpling'], [/치킨|닭|윙|너겟|텐더/, 'chicken'], [/새우|깐쇼/, 'shrimp'], [/오징어|낙지|쭈꾸미|주꾸미|문어/, 'squid'],
-    [/생선|고등어|삼치|갈치|연어|동태|명태|참치|꽁치|가자미|코다리/, 'fish'], [/국$|장국|스프|수프/, 'soup'], [/찌개|전골|탕$/, 'stew'], [/돈가스|돈까스|커틀릿/, 'cutlet'],
-    [/스테이크|함박|불고기|갈비|제육|돈육|쇠고기|소고기|고기|수육|보쌈|족발|목살|삼겹/, 'meat'], [/호떡|와플|팬케이크/, 'hotteok'], [/떡/, 'tteok'],
-    [/완자전|동그랑땡|전$|부침/, 'jeon'], [/도넛/, 'donut'], [/빵|토스트|베이글|크로와상|머핀|파이/, 'bread'], [/쿠키|초코|브라우니|마카롱/, 'cookie'],
-    [/김치|깍두기|겉절이|석박지|섞박지/, 'kimchi'], [/샐러드/, 'salad'], [/브로콜리/, 'broccoli'], [/단호박/, 'pumpkin'], [/애호박|오이/, 'zucchini'],
-    [/감자/, 'potato'], [/고구마/, 'sweetpotato'], [/옥수수/, 'corn'], [/당근/, 'carrot'], [/버섯|팽이/, 'mushroom'], [/치즈/, 'cheese'],
-    [/계란|달걀|에그/, 'egg'], [/나물|무침|쌈|생채/, 'namul'], [/사과/, 'apple'], [/^배$/, 'pear'], [/귤|오렌지|한라봉|천혜향/, 'tangerine'],
-    [/바나나/, 'banana'], [/포도|샤인머스캣/, 'grape'], [/수박/, 'watermelon'], [/딸기/, 'strawberry'], [/복숭아/, 'peach'],
-    [/파인애플/, 'pineapple'], [/키위/, 'kiwi'], [/망고/, 'mango'], [/체리/, 'cherry'], [/멜론/, 'melon'], [/레몬/, 'lemon'],
-    [/밥$|라이스/, 'rice'], [/묵|두부|조림|볶음|구이|찜/, 'side']
-  ];
-  const mealIcon = (name) => { for (const [re, k] of MEAL_ICON) if (re.test(name)) return k; return 'dish'; };
+  // 메뉴 이름 → 음식 그림 열쇠는 site/meal-icons.js(휴대폰 투표 페이지와 함께 쓴다). 없으면 기본 그림만 쓴다
+  const MEAL = window.MEAL || { icon: () => 'dish', main: () => 'rice', treat: () => false };
+  const mealIcon = (name) => MEAL.icon(name);
+  const mainIcon = (dishes) => MEAL.main(dishes);
   const icon = (k) => `<img class="ic" src="meal/${k}.webp" alt="" draggable="false" onerror="this.style.display='none'">`;
-  // 제목 옆에는 그날의 주요리 아이콘 하나를 붙인다. 카레·볶음밥 같은 한 그릇 요리가 있으면 그것을 먼저 고르고,
-  // 없으면 고기·생선 반찬, 그다음 찌개를 고른다(밥·국·김치는 고르지 않는다)
-  const MAIN = ['pizza', 'burger', 'curry', 'pasta', 'jjajang', 'noodle', 'friedrice', 'kimbap', 'tteokbokki', 'chicken', 'cutlet', 'meat',
-    'shrimp', 'squid', 'fish', 'dumpling', 'hotdog', 'stew'];
-  function mainIcon(dishes) {
-    const ks = dishes.map(mealIcon);
-    for (const k of MAIN) if (ks.indexOf(k) >= 0) return k;
-    return 'rice';
+  // ---------- 급식 메뉴 투표 ----------
+  // 화면에서 메뉴를 누르거나 휴대폰(vote.html)으로 하트를 보낸다. 받는 곳은 Apps Script 웹 앱(content.vote.api).
+  // 이 화면은 무작위 기기 번호로만 투표하고(이름·연락처 없음), 서버가 한 화면에서 2초에 한 번만 센다
+  const HEART = '<svg class="heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.2s-7.6-4.7-9.7-9.4C.8 8.4 2.9 4.4 6.8 4.4c2.2 0 3.9 1.2 5.2 3 1.3-1.8 3-3 5.2-3 3.9 0 6 4 4.5 7.4-2.1 4.7-9.7 9.4-9.7 9.4z" fill="currentColor"/></svg>';
+  const voteAttr = (date, dish) => (state.content && state.content.vote ? ` data-vote-date="${esc(date)}" data-vote-dish="${esc(dish)}"` : '');
+  function voteBadge(date, dish) {
+    if (!state.content || !state.content.vote) return '';
+    const n = ((state.votes || {})[date] || {})[dish] || 0;
+    return `<span class="hv${n ? '' : ' zero'}">${HEART}<b>${n}</b></span>`;
   }
-  // 후식·특식은 칸 테두리를 강조색으로 두르고 반짝이를 지나가게 한다
-  const TREAT = ['cake', 'icecream', 'yogurt', 'juice', 'pizza', 'burger', 'chicken', 'tteokbokki', 'hotteok', 'donut', 'cookie', 'apple', 'pear',
-    'tangerine', 'banana', 'grape', 'watermelon', 'strawberry', 'peach', 'pineapple', 'kiwi', 'mango', 'cherry', 'melon'];
+  // 보이는 날들에서 하트가 많은 메뉴 셋
+  function topVotes(keys, days) {
+    const list = [];
+    keys.forEach((k) => (days[k] ? days[k].dishes : []).forEach((d) => {
+      const n = ((state.votes || {})[k] || {})[d] || 0;
+      if (n) list.push({ d, n });
+    }));
+    list.sort((a, b) => b.n - a.n);
+    return list.slice(0, 3).map((x) => `${esc(x.d)} <span class="hv">${HEART}<b>${x.n}</b></span>`).join(' · ');
+  }
+  function devId() {
+    let id = store.get('dev', '');
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
+      const b = new Uint8Array(6);
+      (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(b) : b.forEach((_, i) => { b[i] = Math.floor(Math.random() * 256); });
+      id = 'screen-' + role + '-' + Array.prototype.map.call(b, (x) => (x + 256).toString(16).slice(1)).join('');
+      store.set('dev', id);
+    }
+    return id;
+  }
+  function maybeLoadVotes(force) {
+    const c = state.content;
+    if (!c || !c.vote || !c.vote.api || state.voteBusy) return;
+    if (!force && Date.now() - state.voteAt < 60000) return;
+    state.voteBusy = true;
+    state.voteAt = Date.now();
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
+    fetch(c.vote.api + '?api=votes', ctrl ? { signal: ctrl.signal } : {}).then((r) => r.json()).then((d) => {
+      if (d && d.ok && d.days) { state.votes = d.days; store.set('votes', d.days); refreshVotes(); }
+    }).catch(() => {}).then(() => { clearTimeout(timer); state.voteBusy = false; });
+  }
+  // 카드를 다시 그리지 않고 하트 수만 바꾼다
+  function refreshVotes() {
+    if (!document.querySelectorAll) return;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-vote-dish]'), (el) => {
+      const n = ((state.votes || {})[el.getAttribute('data-vote-date')] || {})[el.getAttribute('data-vote-dish')] || 0;
+      const hv = el.querySelector('.hv');
+      if (!hv) return;
+      hv.classList.toggle('zero', !n);
+      hv.querySelector('b').textContent = n;
+    });
+  }
+  function castVote(date, dish, el) {
+    const c = state.content;
+    if (!c || !c.vote || !c.vote.api || !date || !dish) return;
+    state.lastInteract = Date.now();
+    el.classList.remove('voted'); void el.offsetWidth; el.classList.add('voted');
+    if (Date.now() - state.voteTap < 2000) return;   // 서버와 같은 간격: 한 화면에서 2초에 한 번
+    state.voteTap = Date.now();
+    const day = (state.votes[date] = state.votes[date] || {});
+    day[dish] = (day[dish] || 0) + 1;                 // 먼저 올려 보이고, 서버 답으로 바로잡는다
+    refreshVotes();
+    const burst = document.createElement('span');
+    burst.className = 'burst';
+    burst.innerHTML = HEART;
+    el.appendChild(burst);
+    setTimeout(() => { if (burst.parentNode) burst.parentNode.removeChild(burst); }, 1000);
+    fetch(c.vote.api, { method: 'POST', body: JSON.stringify({ api: 'vote', date: date, dish: dish, dev: devId(), src: 'screen' }) })
+      .then((r) => r.json()).then((d) => { if (d && d.counts) { state.votes[date] = d.counts; store.set('votes', state.votes); refreshVotes(); } })
+      .catch(() => {});
+  }
+
   // B 화면: 앞으로 급식 다섯 날(오늘부터). 날마다 주요리 그림을 크게, 메뉴는 작은 그림과 함께
   const dayOfWeek = (k) => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))).getUTCDay();
   function mealWeekHTML(s) {
@@ -857,13 +906,18 @@
     const cols = keys.map((k, i) => {
       const d = days[k];
       const name = k === today ? '오늘' : k === tomorrow ? '내일' : WD[dayOfWeek(k)] + '요일';
-      const list = d.dishes.map((x) => `<li>${icon(mealIcon(x))}<span>${esc(x)}</span></li>`).join('');
+      const list = d.dishes.map((x) => `<li${voteAttr(k, x)}>${icon(mealIcon(x))}<span>${esc(x)}</span>${voteBadge(k, x)}</li>`).join('');
       return `<div class="mw-day${k === today ? ' today' : ''}" style="--i:${i}"><div class="mw-head"><b>${esc(name)}</b><span>${+k.slice(4, 6)}/${+k.slice(6, 8)}</span></div>
         <div class="mw-main">${icon(mainIcon(d.dishes))}</div><ul>${list}</ul></div>`;
     }).join('');
+    const top = topVotes(keys, days);
+    const qr = s.link ? `<div class="mw-qr"><div class="qr-box" id="qr"></div><span>${esc(s.linkLabel || '휴대폰으로 투표')}</span></div>` : '';
     return `<div class="card-inner mweek"><div class="card-text">
-      <div class="tag">${esc(s.tag || '다가오는 급식')}</div>
-      <h1 class="title">일주일 급식 미리 보기</h1>
+      <div class="mw-top"><div>
+        <div class="tag">${esc(s.tag || '다가오는 급식')}</div>
+        <h1 class="title">일주일 급식 미리 보기</h1>
+        <p class="mw-hint">${HEART}좋아하는 메뉴를 누르면 하트가 올라가요${top ? ` · <b>인기</b> ${top}` : ''}</p>
+      </div>${qr}</div>
       <div class="mw">${cols}</div>
       <div class="source">나이스 교육정보 개방 포털</div>
     </div></div>`;
@@ -926,7 +980,7 @@
     const meal = days[big];
     const isToday = big === today;
     const chips = meal.dishes.map((d, i) =>
-      `<li style="--i:${i}"${TREAT.indexOf(mealIcon(d)) >= 0 ? ' class="treat"' : ''}>${icon(mealIcon(d))}${esc(d)}</li>`).join('');
+      `<li style="--i:${i}"${MEAL.treat(d) ? ' class="treat"' : ''}${voteAttr(big, d)}>${icon(mealIcon(d))}${esc(d)}${voteBadge(big, d)}</li>`).join('');
     let next = '';
     const after = isToday ? nextKey : keys.filter((k) => k > big)[0];
     if (after) {
@@ -1192,6 +1246,8 @@
     if (tryEl) { startExperience(tryEl.getAttribute('data-try')); return; }
     const appEl = e.target.closest('[data-app]');
     if (appEl) { openPlayer(state.content.showcase.apps[+appEl.getAttribute('data-app')], false); return; }
+    const voteEl = e.target.closest('[data-vote-dish]');
+    if (voteEl) { castVote(voteEl.getAttribute('data-vote-date'), voteEl.getAttribute('data-vote-dish'), voteEl); return; }
     if (e.target.closest('#player, #gallery, #diag, #promo')) return;
     if (state.sound === 'blocked') state.sound = 'on';
     toggleDiag();

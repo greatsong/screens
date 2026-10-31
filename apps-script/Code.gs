@@ -9,6 +9,7 @@
  *   10분마다 결과 확인 ←─ GitHub Pages의 projects/index.json, content.json → 상태 갱신, 제작자·교사 메일
  *   관리 화면의 긴급 정지·공지·B 시연 ─→ projects/control.json 바로 커밋
  *   관리 화면의 숨김 ─→ 등록부의 해당 작품만 바로 커밋 (다음 정기 동기화를 기다리지 않는다)
+ *   급식 메뉴 투표(화면 터치·휴대폰 vote.html) ─→ doPost 로 받아 스크립트 속성 MEAL_VOTES·시트 '급식투표'에 쌓고, ?api=votes 로 집계를 돌려준다
  *
  * 스크립트 속성: GITHUB_TOKEN(필수), ADMIN_EMAILS(관리자 추가), REQUIRE_SCHOOL_LOGIN(true면 학교 계정 로그인 설문)
  * 주소: clasp 배포가 Deploy.gs에 적는다(STATUS_URL 학생용, ADMIN_URL 관리용). 스크립트 속성 WEBAPP_URL·ADMIN_URL이 있으면 그 값을 먼저 쓴다.
@@ -399,6 +400,7 @@ function teacherDigest_(waiting, changed) {
 // 제작자 화면 (내 작품 상태) — 메일의 링크로 연다. 토큰을 아는 사람만 볼 수 있다.
 // ======================================================================
 function doGet(e) {
+  if (e && e.parameter && e.parameter.api === 'votes') return json_(mealVotes_());
   const page = (e && e.parameter && e.parameter.page) || 'status';
   if (page === 'admin') {
     if (!isAdmin_()) return HtmlService.createHtmlOutput('<p style="font-family:sans-serif">관리 권한이 없습니다.</p>');
@@ -408,6 +410,81 @@ function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('Status');
   tpl.token = (e && e.parameter && e.parameter.t) || '';
   return tpl.evaluate().setTitle('내 작품 상태').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// ======================================================================
+// 급식 메뉴 투표 — 스탠바이미 화면(메뉴 터치)과 휴대폰(site/vote.html)이 부른다.
+// 이름·이메일은 받지 않는다. 기기마다 무작위 번호(dev)를 만들어 그 해시로만 중복을 막는다.
+//   휴대폰: 같은 기기·같은 날·같은 메뉴는 6시간 안에 한 번  ·  화면: 한 화면에서 2초에 한 번
+//   전체: 1분에 120표까지(웹 앱 실행 할당량 보호)
+// 집계는 스크립트 속성 MEAL_VOTES {yyyyMMdd: {메뉴: 수}}에 두고 3주 지난 날은 지운다. 시트 '급식투표'에는 기록만 남긴다.
+// ======================================================================
+const VOTE = { BACK: 1, AHEAD: 14, KEEP: 21, MAX_DISHES: 24, PHONE_TTL: 21600, SCREEN_GAP: 2, PER_MIN: 120 };
+const V_COLS = ['시각', '날짜', '메뉴', '출처', '기기'];
+
+function doPost(e) {
+  let body;
+  try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return json_({ ok: false, error: '형식 오류' }); }
+  if (body && body.api === 'vote') return json_(mealVote_(body));
+  return json_({ ok: false, error: '알 수 없는 요청' });
+}
+
+function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function hash_(s) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8)
+    .map((b) => ((b + 256) % 256).toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+function dayDiff_(a, b) {
+  const t = (k) => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8));
+  return Math.round((t(b) - t(a)) / 86400000);
+}
+
+function mealVote_(b) {
+  const date = String(b.date || '');
+  const dish = clean_(b.dish, 40);
+  const dev = String(b.dev || '');
+  const src = b.src === 'screen' ? 'screen' : 'phone';
+  if (!/^\d{8}$/.test(date) || !dish || !/^[A-Za-z0-9_-]{8,64}$/.test(dev)) return { ok: false, error: '형식 오류' };
+  const today = fmt_(now_(), 'yyyyMMdd');
+  const diff = dayDiff_(today, date);
+  if (diff < -VOTE.BACK || diff > VOTE.AHEAD) return { ok: false, error: '투표할 수 없는 날짜입니다' };
+  const cache = CacheService.getScriptCache();
+  const minute = 'mvm:' + fmt_(now_(), 'yyyyMMddHHmm');
+  const used = Number(cache.get(minute) || 0);
+  if (used >= VOTE.PER_MIN) return { ok: false, error: '잠시 뒤 다시 눌러 주세요' };
+  cache.put(minute, String(used + 1), 120);
+  const who = hash_(dev);
+  const gate = src === 'phone' ? 'mvp:' + who + ':' + date + ':' + hash_(dish) : 'mvs:' + who;
+  if (cache.get(gate)) return { ok: true, dup: src === 'phone', wait: src === 'screen', counts: dayVotes_(date) };
+  cache.put(gate, '1', src === 'phone' ? VOTE.PHONE_TTL : VOTE.SCREEN_GAP);
+  return withLock_(() => {
+    const all = JSON.parse(prop_('MEAL_VOTES') || '{}');
+    Object.keys(all).forEach((d) => { if (dayDiff_(d, today) > VOTE.KEEP) delete all[d]; });
+    const day = all[date] = all[date] || {};
+    if (!(dish in day) && Object.keys(day).length >= VOTE.MAX_DISHES) return { ok: false, error: '이 날은 더 받을 수 없습니다' };
+    day[dish] = (day[dish] || 0) + 1;
+    setProp_('MEAL_VOTES', JSON.stringify(all));
+    const sh = ensureSheet_(ss_(), '급식투표', V_COLS);
+    sh.appendRow([iso_(now_()), date, sheetValue_(dish), src === 'screen' ? '화면' : '휴대폰', who.slice(0, 8)]);
+    cache.remove('mvj');
+    return { ok: true, counts: day };
+  });
+}
+
+function dayVotes_(date) { return (JSON.parse(prop_('MEAL_VOTES') || '{}'))[date] || {}; }
+
+// 어제부터 앞으로의 집계. 화면 두 대가 1분마다 부르므로 20초 동안 캐시한다
+function mealVotes_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('mvj');
+  if (hit) return JSON.parse(hit);
+  const today = fmt_(now_(), 'yyyyMMdd');
+  const all = JSON.parse(prop_('MEAL_VOTES') || '{}');
+  const days = {};
+  Object.keys(all).forEach((d) => { if (dayDiff_(today, d) >= -VOTE.BACK) days[d] = all[d]; });
+  const out = { ok: true, at: iso_(now_()), days: days };
+  cache.put('mvj', JSON.stringify(out), 20);
+  return out;
 }
 
 function rowByToken_(token) {
@@ -841,7 +918,7 @@ function sheetValue_(value) { return typeof value === 'string' && value.charAt(0
 
 function neutralizeSheetFormulas_() {
   let count = 0;
-  ['작품', '요청'].forEach((name) => {
+  ['작품', '요청', '급식투표'].forEach((name) => {
     const sh = ss_().getSheetByName(name);
     if (!sh || sh.getLastRow() < 2) return;
     const formulas = sh.getDataRange().getFormulas();
