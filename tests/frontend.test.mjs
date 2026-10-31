@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -325,3 +325,18 @@ test('meal appears every third card and the school calendar every fifth, meal fi
   assert.deepEqual(at('schedule').slice(0, 2), [4, 9]);
   assert.equal(ids.filter((x) => /^b\d+$/.test(x)).length, 12);  // every regular card still appears once per cycle
 });
+
+test('all-time meal TOP 3 shows only dishes from the real menu, so a made-up name sent to the vote API never reaches the TV', () => {
+  const env = screen();
+  env.state.meal = { days: { 20261102: { dishes: ['조각케이크', '바지락미역국', '배추김치'] } } };
+  env.state.best = { total: 106, list: [{ k: '선생님 바보', n: 99 }, { k: '조각케이크', n: 4 }, { k: '<img src=x onerror=alert(1)>', n: 3 }, { k: '바지락미역국', n: 2 }] };
+  const html = env.mealRankHTML({ tag: '역대 인기 급식' });
+  assert.match(html, /조각케이크/);
+  assert.match(html, /바지락미역국/);
+  assert.doesNotMatch(html, /선생님 바보|src=x|alert\(1\)/);   // 그림 대체용 onerror 속성은 앱이 넣는 것이라 여기서 보지 않는다
+  assert.match(html, /하트 6개/);                                       // 실제 메뉴의 하트만 더한다
+  assert.ok(html.indexOf('p1') > -1 && html.indexOf('아직 없음') > -1);  // 3위 자리는 비워 둔다
+  env.state.best = null;
+  assert.match(env.mealRankHTML({}), /아직 하트가 모이는 중입니다/);
+});
+

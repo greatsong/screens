@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.6';
+  const APP_VERSION = '0.6.7';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -119,7 +119,7 @@
     diagTimer: null,
     show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
     meal: store.get('meal', null), mealBusy: false,
-    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0,
+    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0, best: store.get('best', null),
     peek: null, press: null
   };
   // 화면을 누르면 A 는 급식, B 는 학사일정 달력을 잠시 보여 준다(startPeek)
@@ -712,9 +712,10 @@
         : auto === 'mealweek' ? mealWeekHTML(side)
         : auto === 'newsdigest' ? newsDigestHTML(side)
         : auto === 'schedule' ? scheduleHTML(side)
-        : auto === 'calendar' ? calendarHTML(side) : cardHTML(side);
+        : auto === 'calendar' ? calendarHTML(side)
+        : auto === 'mealrank' ? mealRankHTML(side) : cardHTML(side);
       // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
-      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' ? 'sun'
+      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' ? 'sun'
         : entry.project ? 'lilac' : entry.item && /^news-/.test(entry.item.id) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
@@ -888,6 +889,7 @@
     const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
     fetch(c.vote.api + '?api=votes', ctrl ? { signal: ctrl.signal } : {}).then((r) => r.json()).then((d) => {
       if (d && d.ok && d.days) { state.votes = d.days; store.set('votes', d.days); refreshVotes(); }
+      if (d && d.ok && d.best) { state.best = d.best; store.set('best', d.best); }
     }).catch(() => {}).then(() => { clearTimeout(timer); state.voteBusy = false; });
   }
   // 카드를 다시 그리지 않고 하트 수만 바꾼다
@@ -949,6 +951,40 @@
       </div>${qr}</div>
       <div class="mw">${cols}</div>
       <div class="source">나이스 교육정보 개방 포털</div>
+    </div></div>`;
+  }
+
+  // 역대 인기 급식 TOP 3(교사 요청: 재미로). 서버는 메뉴 열쇠별 하트 합계를 준다(시트 '급식투표' 전체).
+  // 아무 이름이나 보내도 TV 에 나오지 않게, 실제 식단에 있는 메뉴(요리별 그림 목록·지금 받은 급식)만 남기고 열쇠 이름으로 보여 준다
+  function bestDishes() {
+    const real = {};
+    Object.keys(window.MEAL_DISH || {}).forEach((k) => { real[k] = 1; });
+    const days = (state.meal && state.meal.days) || {};
+    Object.keys(days).forEach((k) => (days[k].dishes || []).forEach((d) => { real[MEAL.norm ? MEAL.norm(d) : d] = 1; }));
+    return ((state.best && state.best.list) || []).filter((x) => x && real[x.k] && x.n > 0);
+  }
+  const CROWN = '<svg class="crown" viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14.5 3.6 4l5.2 5.2L12 1.5l3.2 7.7L20.4 4 22 14.5z" fill="#ffc531" stroke="#b77d00" stroke-width="1.2" stroke-linejoin="round"/><circle cx="12" cy="1.8" r="1.4" fill="#ff6b8b"/></svg>';
+  function mealRankHTML(s) {
+    const real = bestDishes();
+    const top = real.slice(0, 3);
+    const total = real.reduce((t, x) => t + x.n, 0);
+    // 시상대는 2위·1위·3위 순서로 놓는다
+    const place = (i, at) => {
+      const x = top[i];
+      return `<div class="pod p${i + 1}" style="--i:${at}">
+        <div class="pod-dish">${i === 0 ? CROWN : ''}${x ? icon(x.k) : '<span class="pod-q">?</span>'}</div>
+        <div class="pod-name">${x ? esc(x.k) : '아직 없음'}</div>
+        <div class="pod-n">${x ? HEART + '<b>' + x.n + '</b>' : '&nbsp;'}</div>
+        <div class="pod-block"><b>${i + 1}</b><span>위</span></div></div>`;
+    };
+    const qr = s.link ? `<div class="mw-qr"><div class="qr-box" id="qr"></div><span>${esc(s.linkLabel || '휴대폰으로 투표')}</span></div>` : '';
+    return `<div class="card-inner mrank"><div class="card-text">
+      <div class="mw-top"><div>
+        <div class="tag">${esc(s.tag || '역대 인기 급식')}</div>
+        <h1 class="title">역대 인기 급식 <span class="nw">TOP 3</span></h1>
+        <p class="mw-hint">${HEART}${top.length ? '지금까지 받은 하트 ' + total + '개를 메뉴별로 더했습니다' : '아직 하트가 모이는 중입니다. 급식 메뉴를 눌러 하트를 보내 주세요'}</p>
+      </div>${qr}</div>
+      <div class="podium">${place(1, 1)}${place(0, 2)}${place(2, 0)}</div>
     </div></div>`;
   }
 

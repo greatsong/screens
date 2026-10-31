@@ -1,7 +1,7 @@
 {
   "version": 27,
   "publishedAt": "2026-10-31T12:40:05+09:00",
-  "appVersion": "0.6.6",
+  "appVersion": "0.6.7",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -56,6 +56,20 @@
       "b": {
         "auto": "calendar",
         "tag": "학사일정 달력"
+      }
+    },
+    {
+      "id": "mealrank",
+      "every": 10,
+      "a": {
+        "auto": "mealrank",
+        "tag": "역대 인기 급식"
+      },
+      "b": {
+        "auto": "mealrank",
+        "tag": "역대 인기 급식",
+        "link": "https://greatsong.github.io/screens/vote.html",
+        "linkLabel": "휴대폰 투표"
       }
     }
   ],

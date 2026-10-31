@@ -28,6 +28,12 @@ h1 { margin: 4px 0 6px; font-size: 27px; letter-spacing: -0.02em; }
 .top li img { width: 30px; height: 30px; object-fit: contain; margin-right: 8px; }
 .top li .n { margin-left: auto; color: var(--heart); font-weight: 800; }
 .top .empty { color: var(--muted); font-size: 14px; }
+/* 역대 인기 급식: 1·2·3위를 금·은·동 빛으로 */
+.best { background: linear-gradient(160deg, #fffaf0 0%, #ffffff 60%); }
+.best h2 { color: #a16207; }
+.best li .rk.r1 { background: #ffe17a; color: #6b4a00; }
+.best li .rk.r2 { background: #e5e9f0; color: #3f4a5e; }
+.best li .rk.r3 { background: #ffd6b0; color: #7c3a10; }
 section.day { margin-top: 18px; }
 section.day h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 19px; }
 section.day h3 span { color: var(--muted); font-size: 14px; font-weight: 700; }
@@ -58,6 +64,7 @@ footer { margin-top: 26px; color: var(--muted); font-size: 12.5px; line-height: 
     <h1>급식 메뉴 투표</h1>
     <p class="lead">좋아하는 메뉴에 하트를 눌러 주세요. 하트가 많은 메뉴는 스탠바이미 화면에 「인기」로 나옵니다.</p>
   </header>
+  <div class="top best" id="best" hidden></div>
   <div class="top" id="top"><h2>이번 주 인기 메뉴</h2><p class="empty">불러오는 중입니다.</p></div>
   <div id="days"><p class="msg">급식 정보를 불러오는 중입니다.</p></div>
   <footer>이름이나 연락처는 받지 않습니다. 같은 휴대폰으로는 같은 날 같은 메뉴에 한 번만 투표할 수 있습니다.<br>급식 정보: 나이스 교육정보 개방 포털</footer>
@@ -77,7 +84,7 @@ const fb = (name) => (window.MEAL ? window.MEAL.fallback(name) : '');
 const img = (name) => `<img src="${src(name)}" data-fb="${fb(name)}" alt="" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb=''}else{this.style.visibility='hidden'}">`;
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 기록만 생략 */ } } };
-const state = { api: '', days: {}, votes: {}, mine: store.get('dgs.vote.mine', {}) };
+const state = { api: '', days: {}, votes: {}, best: null, mine: store.get('dgs.vote.mine', {}) };
 
 function devId() {
   let id = store.get('dgs.vote.dev', '');
@@ -99,6 +106,17 @@ function renderTop() {
   document.getElementById('top').innerHTML = '<h2>이번 주 인기 메뉴</h2>' + (top.length
     ? '<ol>' + top.map((x, i) => `<li><span class="rk">${i + 1}</span>${img(x.d)}<span>${esc(x.d)}</span><span class="n">${HEART} ${x.n}</span></li>`).join('') + '</ol>'
     : '<p class="empty">아직 하트가 없습니다. 첫 하트를 눌러 주세요.</p>');
+}
+// 역대 인기 급식 TOP 3: 서버가 준 메뉴 열쇠 가운데 실제 식단에 있는 메뉴만 보여 준다(스탠바이미 화면과 같은 규칙)
+function renderBest() {
+  const real = {};
+  Object.keys(window.MEAL_DISH || {}).forEach((k) => { real[k] = 1; });
+  Object.keys(state.days).forEach((k) => state.days[k].forEach((d) => { real[window.MEAL ? window.MEAL.norm(d) : d] = 1; }));
+  const list = ((state.best && state.best.list) || []).filter((x) => x && real[x.k] && x.n > 0).slice(0, 3);
+  const el = document.getElementById('best');
+  el.hidden = !list.length;
+  el.innerHTML = '<h2>역대 인기 급식 TOP 3</h2><ol>' + list.map((x, i) =>
+    `<li><span class="rk r${i + 1}">${i + 1}</span>${img(x.k)}<span>${esc(x.k)}</span><span class="n">${HEART} ${x.n}</span></li>`).join('') + '</ol>';
 }
 function renderDays() {
   const today = ymd(Date.now()), tomorrow = ymd(Date.now() + 86400000);
@@ -142,9 +160,9 @@ fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => {
         .map((x) => x.replace(/\(\s*[\d.\s]+\s*\)/g, '').replace(/[*#+@]/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
     });
   });
-  const votes = state.api ? fetch(state.api + '?api=votes').then((r) => r.json()).then((d) => { if (d && d.days) state.votes = d.days; }).catch(() => {}) : Promise.resolve();
+  const votes = state.api ? fetch(state.api + '?api=votes').then((r) => r.json()).then((d) => { if (d && d.days) state.votes = d.days; if (d && d.best) state.best = d.best; }).catch(() => {}) : Promise.resolve();
   return Promise.all([meals, votes]);
-}).then(() => { renderDays(); renderTop(); })
+}).then(() => { renderDays(); renderTop(); renderBest(); })
   .catch(() => { document.getElementById('days').innerHTML = '<p class="msg">급식 정보를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>'; });
 </script>
 </body>

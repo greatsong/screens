@@ -9,7 +9,7 @@
  *   10분마다 결과 확인 ←─ GitHub Pages의 projects/index.json, content.json → 상태 갱신, 제작자·교사 메일
  *   관리 화면의 긴급 정지·공지·B 시연 ─→ projects/control.json 바로 커밋
  *   관리 화면의 숨김 ─→ 등록부의 해당 작품만 바로 커밋 (다음 정기 동기화를 기다리지 않는다)
- *   급식 메뉴 투표(화면 터치·휴대폰 vote.html) ─→ doPost 로 받아 스크립트 속성 MEAL_VOTES·시트 '급식투표'에 쌓고, ?api=votes 로 집계를 돌려준다
+ *   급식 메뉴 투표(화면 터치·휴대폰 vote.html) ─→ doPost 로 받아 스크립트 속성 MEAL_VOTES·시트 '급식투표'에 쌓고, ?api=votes 로 날짜별 집계와 역대 인기 메뉴를 돌려준다
  *
  * 스크립트 속성: GITHUB_TOKEN(필수), ADMIN_EMAILS(관리자 추가), REQUIRE_SCHOOL_LOGIN(true면 학교 계정 로그인 설문)
  * 주소: clasp 배포가 Deploy.gs에 적는다(STATUS_URL 학생용, ADMIN_URL 관리용). 스크립트 속성 WEBAPP_URL·ADMIN_URL이 있으면 그 값을 먼저 쓴다.
@@ -473,7 +473,40 @@ function mealVote_(b) {
 
 function dayVotes_(date) { return (JSON.parse(prop_('MEAL_VOTES') || '{}'))[date] || {}; }
 
-// 어제부터 앞으로의 집계. 화면 두 대가 1분마다 부르므로 20초 동안 캐시한다
+// 역대 인기 메뉴: 시트 '급식투표'의 모든 기록을 메뉴 열쇠로 합친다(표기가 달라도 같은 음식은 한 메뉴: 친환경칼슘기장밥 = 칼슘기장밥).
+// 화면은 열쇠(k)만 보여 주고, 실제 식단에 있는 메뉴인지 화면 쪽에서 한 번 더 거른다(아무 이름이나 보내도 TV 에 나오지 않게).
+// 열쇠 규칙은 site/meal-icons.js 의 norm 과 같다. 1분 동안 캐시한다
+const VOTE_TEST = ['연결 시험'];   // 배포 때 연결 시험으로 남은 기록은 세지 않는다
+function dishKey_(name) {
+  let s = String(name || '').trim();
+  s = s.replace(/_[가-힣A-Za-z]+$/, '').replace(/\([^)]*\)/g, '').replace(/(?:\d{1,2}\.)+$/, '');
+  s = s.replace(/^(친환경|유기농|무농약|수제|국내산)\s*/, '')
+    .replace(/&(?:[가-힣A-Za-z]*(?:소스|양념장|드레싱|초장|케찹|케첩|머스터드|마요|간장)|[가-힣]*[DS])$/, '').replace(/[\s·]/g, '');
+  return s === '섞박지' ? '석박지' : s;
+}
+function bestVotes_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('mvbest');
+  if (hit) return JSON.parse(hit);
+  const out = { total: 0, list: [] };
+  const sh = ss_().getSheetByName('급식투표');
+  if (sh && sh.getLastRow() > 1) {
+    const by = {};
+    sh.getRange(2, 1, sh.getLastRow() - 1, V_COLS.length).getValues().forEach((r) => {
+      const dish = String(r[2] || '').replace(/^'/, '');
+      if (!dish || VOTE_TEST.indexOf(dish) >= 0 || /[=<>]|https?:/.test(dish)) return;
+      const k = dishKey_(dish);
+      if (!k || k.length > 30) return;
+      by[k] = (by[k] || 0) + 1;
+      out.total++;
+    });
+    out.list = Object.keys(by).map((k) => ({ k: k, n: by[k] })).sort((a, b) => b.n - a.n || (a.k < b.k ? -1 : 1)).slice(0, 40);
+  }
+  cache.put('mvbest', JSON.stringify(out), 60);
+  return out;
+}
+
+// 어제부터 앞으로의 날짜별 집계와 역대 인기 메뉴(best). 화면 두 대가 1분마다 부르므로 20초 동안 캐시한다
 function mealVotes_() {
   const cache = CacheService.getScriptCache();
   const hit = cache.get('mvj');
@@ -482,7 +515,7 @@ function mealVotes_() {
   const all = JSON.parse(prop_('MEAL_VOTES') || '{}');
   const days = {};
   Object.keys(all).forEach((d) => { if (dayDiff_(today, d) >= -VOTE.BACK) days[d] = all[d]; });
-  const out = { ok: true, at: iso_(now_()), days: days };
+  const out = { ok: true, at: iso_(now_()), days: days, best: bestVotes_() };
   cache.put('mvj', JSON.stringify(out), 20);
   return out;
 }
