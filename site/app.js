@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.1';
+  const APP_VERSION = '0.6.2';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -423,7 +423,7 @@
     store.set('reloadFor', { v: target, t: Date.now() });
     logEvent('앱 ' + target + ' 버전으로 새로 고침');
     // 캐시에 남은 옛 app.js 로 다시 열리면 두 화면이 다른 코드로 칸을 계산해 어긋난다. 새 파일을 먼저 받아 두고 새로 고친다
-    const fresh = ['./', 'app.js', 'style.css', 'meal-icons.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
+    const fresh = ['./', 'app.js', 'style.css', 'meal-icons.js', 'meal-dishes.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
     Promise.all(fresh).then(() => setTimeout(() => location.reload(), 300));
   }
 
@@ -834,10 +834,10 @@
       .filter(Boolean);
   }
   // 메뉴 이름 → 음식 그림 열쇠는 site/meal-icons.js(휴대폰 투표 페이지와 함께 쓴다). 없으면 기본 그림만 쓴다
-  const MEAL = window.MEAL || { icon: () => 'dish', main: () => 'rice', treat: () => false };
-  const mealIcon = (name) => MEAL.icon(name);
-  const mainIcon = (dishes) => MEAL.main(dishes);
-  const icon = (k) => `<img class="ic" src="meal/${k}.webp" alt="" draggable="false" onerror="this.style.display='none'">`;
+  const MEAL = window.MEAL || { icon: () => 'dish', src: () => 'meal/dish.webp', fallback: () => 'meal/dish.webp', mainDish: (d) => d[0] || '', treat: () => false };
+  // 요리별 그림이 없거나 못 받으면 분류 그림으로, 그것도 없으면 숨긴다
+  const ONERR = "if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb=''}else{this.style.display='none'}";
+  const icon = (name) => `<img class="ic" src="${MEAL.src(name)}" data-fb="${MEAL.fallback(name)}" alt="" draggable="false" onerror="${ONERR}">`;
   // ---------- 급식 메뉴 투표 ----------
   // 화면에서 메뉴를 누르거나 휴대폰(vote.html)으로 하트를 보낸다. 받는 곳은 Apps Script 웹 앱(content.vote.api).
   // 이 화면은 무작위 기기 번호로만 투표하고(이름·연락처 없음), 서버가 한 화면에서 2초에 한 번만 센다
@@ -925,9 +925,9 @@
     const cols = keys.map((k, i) => {
       const d = days[k];
       const name = k === today ? '오늘' : k === tomorrow ? '내일' : WD[dayOfWeek(k)] + '요일';
-      const list = d.dishes.map((x) => `<li${voteAttr(k, x)}>${icon(mealIcon(x))}<span>${esc(x)}</span>${voteBadge(k, x)}</li>`).join('');
+      const list = d.dishes.map((x) => `<li${voteAttr(k, x)}>${icon(x)}<span>${esc(x)}</span>${voteBadge(k, x)}</li>`).join('');
       return `<div class="mw-day${k === today ? ' today' : ''}" style="--i:${i}"><div class="mw-head"><b>${esc(name)}</b><span>${+k.slice(4, 6)}/${+k.slice(6, 8)}</span></div>
-        <div class="mw-main">${icon(mainIcon(d.dishes))}</div><ul>${list}</ul></div>`;
+        <div class="mw-main">${icon(MEAL.mainDish(d.dishes))}</div><ul>${list}</ul></div>`;
     }).join('');
     const top = topVotes(keys, days);
     const qr = s.link ? `<div class="mw-qr"><div class="qr-box" id="qr"></div><span>${esc(s.linkLabel || '휴대폰으로 투표')}</span></div>` : '';
@@ -999,19 +999,19 @@
     const meal = days[big];
     const isToday = big === today;
     const chips = meal.dishes.map((d, i) =>
-      `<li style="--i:${i}"${MEAL.treat(d) ? ' class="treat"' : ''}${voteAttr(big, d)}>${icon(mealIcon(d))}${esc(d)}${voteBadge(big, d)}</li>`).join('');
+      `<li style="--i:${i}"${MEAL.treat(d) ? ' class="treat"' : ''}${voteAttr(big, d)}>${icon(d)}${esc(d)}${voteBadge(big, d)}</li>`).join('');
     let next = '';
     const after = isToday ? nextKey : keys.filter((k) => k > big)[0];
     if (after) {
       const tomorrow = ymd(now() + 86400000);
       const label = after === tomorrow ? '내일' : ymdLabel(after);
       // 줄이 바뀌어도 이모지와 메뉴 이름이 떨어지지 않게 한 덩어리로 묶는다
-      next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${icon(mealIcon(d))}${esc(d)}</span>`).join(' · ')}</div>`;
+      next = `<div class="meal-next"><b>${esc(label)}</b>${days[after].dishes.map((d) => `<span class="nw">${icon(d)}${esc(d)}</span>`).join(' · ')}</div>`;
     }
     const stale = m && Date.now() - m.at > 6 * 3600000 ? ' · ' + mdhm(m.at) + ' 기준' : '';
-    return `<img class="bg-ic" src="meal/${mainIcon(meal.dishes)}.webp" alt="" onerror="this.remove()"><div class="card-inner meal"><div class="card-text">
+    return `<img class="bg-ic" src="${MEAL.src(MEAL.mainDish(meal.dishes))}" alt="" onerror="this.remove()"><div class="card-inner meal"><div class="card-text">
       <div class="tag">${esc(isToday ? (s.tag || '오늘의 급식') : '다음 급식')}</div>
-      <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${icon(mainIcon(meal.dishes))}</span></h1>
+      <h1 class="title">${esc(ymdLabel(big))} <span class="nw">점심 ${icon(MEAL.mainDish(meal.dishes))}</span></h1>
       <ul class="lines">${chips}</ul>${next}
       <div class="source">나이스 교육정보 개방 포털${meal.cal ? ' · ' + esc(meal.cal.replace(/\s*Kcal/i, ' kcal')) : ''}${stale}</div>
     </div></div>`;

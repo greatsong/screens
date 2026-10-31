@@ -1,4 +1,4 @@
-/* 급식 메뉴 이름 → 음식 그림 열쇠(site/meal/<열쇠>.webp).
+/* 급식 메뉴 이름 → 음식 그림(요리별 site/meal/d/<번호>.webp, 없으면 분류별 site/meal/<열쇠>.webp).
  * 화면(app.js)과 휴대폰 투표 페이지(vote.html)가 함께 쓴다. 그림은 Codex 이미지 생성으로 만든 애니메이션풍(site/meal/README.md) */
 (function () {
   // 위에서부터 먼저 맞는 것을 쓴다(볶음밥은 밥보다, 국은 그 안의 재료보다 먼저). 맞는 것이 없으면 dish(급식 식판)
@@ -25,9 +25,30 @@
   const TREAT = ['cake', 'icecream', 'yogurt', 'juice', 'pizza', 'burger', 'chicken', 'tteokbokki', 'hotteok', 'donut', 'cookie', 'apple', 'pear',
     'tangerine', 'banana', 'grape', 'watermelon', 'strawberry', 'peach', 'pineapple', 'kiwi', 'mango', 'cherry', 'melon'];
   const icon = (name) => { for (const [re, k] of MEAL_ICON) if (re.test(name)) return k; return 'dish'; };
+  // 메뉴 이름 → 요리별 그림 열쇠. meal-icons/dish_key.py 의 norm 과 같은 규칙이다(친환경 같은 앞말, 괄호, 곁들임 소스, 띄어쓰기를 뺀다)
+  const SAUCE = /&(?:[가-힣A-Za-z]*(?:소스|양념장|드레싱|초장|케찹|케첩|머스터드|마요|간장)|[가-힣]*[DS])$/;
+  const ALIAS = { '섞박지': '석박지' };
+  function norm(name) {
+    let s = String(name || '').trim();
+    s = s.replace(/_[가-힣A-Za-z]+$/, '').replace(/\([^)]*\)/g, '').replace(/(?:\d{1,2}\.)+$/, '');
+    s = s.replace(/^(친환경|유기농|무농약|수제|국내산)\s*/, '').replace(SAUCE, '').replace(/[\s·]/g, '');
+    return ALIAS[s] || s;
+  }
+  // 요리별 그림(site/meal/d, 목록은 meal-dishes.js)이 있으면 그것을, 없으면 분류 그림(site/meal/<열쇠>.webp)을 쓴다
+  const DISH = window.MEAL_DISH || {};
+  const fallback = (name) => 'meal/' + icon(name) + '.webp';
+  const src = (name) => { const id = DISH[norm(name)]; return id ? 'meal/d/' + id + '.webp' : fallback(name); };
   window.MEAL = {
     icon: icon,
+    norm: norm,
+    src: src,
+    fallback: fallback,
     main(dishes) { const ks = dishes.map(icon); for (const k of MAIN) if (ks.indexOf(k) >= 0) return k; return 'rice'; },
+    // 제목·하루 칸에 붙일 주요리 이름
+    mainDish(dishes) {
+      for (const k of MAIN) { const d = dishes.find((x) => icon(x) === k); if (d) return d; }
+      return dishes.find((x) => icon(x) === 'rice') || dishes[0] || '';
+    },
     treat(name) { return TREAT.indexOf(icon(name)) >= 0; },
   };
 })();
