@@ -1,6 +1,6 @@
 {
-  "version": 25,
-  "publishedAt": "2026-10-31T10:50:58+09:00",
+  "version": 26,
+  "publishedAt": "2026-10-31T10:53:26+09:00",
   "appVersion": "0.5.8",
   "mode": "normal",
   "notice": "",
@@ -59,7 +59,7 @@
       "short": "greatsong.github.io/screens/p/2",
       "shortUrl": "https://greatsong.github.io/screens/p/2/",
       "images": {
-        "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-30T100526"
+        "wide": "projects/commit-galaxy/wide.jpg?v=2026-10-31T105257"
       },
       "pinned": true
     },
@@ -77,8 +77,8 @@
       "short": "greatsong.github.io/screens/p/3",
       "shortUrl": "https://greatsong.github.io/screens/p/3/",
       "images": {
-        "wide": "projects/neural-explorer/wide.jpg?v=2026-10-30T100531",
-        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-30T100531"
+        "wide": "projects/neural-explorer/wide.jpg?v=2026-10-31T105302",
+        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-10-31T105302"
       },
       "pinned": false
     },
@@ -96,7 +96,7 @@
       "short": "greatsong.github.io/screens/p/4",
       "shortUrl": "https://greatsong.github.io/screens/p/4/",
       "images": {
-        "wide": "projects/activation-lab/wide.jpg?v=2026-10-30T100535"
+        "wide": "projects/activation-lab/wide.jpg?v=2026-10-31T105305"
       },
       "pinned": false
     },
@@ -114,8 +114,8 @@
       "short": "greatsong.github.io/screens/p/5",
       "shortUrl": "https://greatsong.github.io/screens/p/5/",
       "images": {
-        "wide": "projects/f4b085fc/wide.jpg?v=2026-10-30T104845",
-        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-10-30T104845"
+        "wide": "projects/f4b085fc/wide.jpg?v=2026-10-31T105312",
+        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-10-31T105312"
       },
       "pinned": false
     }
