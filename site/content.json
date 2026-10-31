@@ -1,6 +1,6 @@
 {
-  "version": 26,
-  "publishedAt": "2026-10-31T10:53:26+09:00",
+  "version": 27,
+  "publishedAt": "2026-10-31T12:40:05+09:00",
   "appVersion": "0.6.0",
   "mode": "normal",
   "notice": "",
@@ -167,7 +167,7 @@
       "source": "AI타임스",
       "date": "2026-10-29",
       "link": "https://www.aitimes.com/news/articleView.html?idxno=216779",
-      "until": "2026-11-01T00:00:00+09:00"
+      "until": "2026-11-01T17:50:00+09:00"
     },
     {
       "id": "50083dae4c",
@@ -177,58 +177,51 @@
       "source": "AI타임스",
       "date": "2026-10-30",
       "link": "https://www.aitimes.com/news/articleView.html?idxno=216821",
-      "until": "2026-11-02T00:00:00+09:00"
+      "until": "2026-11-02T06:16:00+09:00"
     },
     {
-      "id": "f0fdb2aa11",
+      "id": "5004665b6a",
       "cat": "society",
-      "title": "이진숙 의원, 원전 AI 개발·안전관리 특별법 발의",
-      "summary": "원자력발전소에 적용되는 AI 기술 개발을 지원하고 안전관리 기준을 마련하는 법안이 발의됐다.",
-      "source": "ZDNet Korea",
-      "date": "2026-10-30",
-      "link": "https://zdnet.co.kr/view/?no=20261030165121",
-      "until": "2026-11-02T00:00:00+09:00"
+      "title": "[게임위드인] AI가 인터넷을 장악한다면…'사이버펑크 2077'의 경고",
+      "summary": "인공지능이 인간의 통제를 벗어나 인터넷을 장악한다면 어떤 일이 벌어질까.",
+      "source": "연합뉴스",
+      "date": "2026-10-31",
+      "link": "https://www.yna.co.kr/view/AKR20261030165900017",
+      "until": "2026-11-03T11:00:00+09:00"
     },
     {
-      "id": "256dcb6f04",
+      "id": "ea323ac911",
       "cat": "economy",
-      "title": "[영상] AI가 추적하고 원격으로 쏜다…이스라엘 대드론 무기 亞 수출",
-      "summary": "이스라엘 방산업체가 개발한 인공지능 기반 대드론 '원격 무기 관제 시스템'이 처음으로 아시아 국가의 군대에 전격 ...",
-      "source": "연합뉴스",
-      "date": "2026-10-30",
-      "link": "https://www.yna.co.kr/view/AKR20261030162500704",
-      "until": "2026-11-02T00:00:00+09:00"
+      "title": "[경제뭔데] 애순이도 ‘이장’ 됐는데 “드라마에 폭싹 속았수다?”···현실은 아직도 농촌엔 남성 이장 90%",
+      "summary": "경향신문 경제부 기자들이 쓰는 [경제뭔데] 코너입니다.",
+      "source": "경향신문",
+      "date": "2026-10-31",
+      "link": "https://www.khan.co.kr/article/202610310800001/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
+      "until": "2026-11-03T08:00:00+09:00"
     },
     {
-      "id": "e08b11072c",
+      "id": "fd29373caa",
       "cat": "science",
-      "title": "'AI 특공대' 100인으로 연구행정 바꾼다…KIST, 성과공유회 개최",
-      "summary": "한국과학기술연구원은 29일 서울 성북구 본원에서 연구행정 전반 인공지능 전환을 촉진하고 AI...",
-      "source": "연합뉴스",
-      "date": "2026-10-30",
-      "link": "https://www.yna.co.kr/view/AKR20261030136600017",
-      "until": "2026-11-02T00:00:00+09:00"
+      "title": "“AI 때문에 인류 멸종할 수도”… 퇴직연금 저축 멈췄다는 구글 출신 연구자",
+      "summary": "구글 출신의 인공지능 전문가가 향후 10년 안에 AI로 인해 인류가 멸종할 가능성이 50%를 넘는다며 퇴직연금 저축까지 중단했다고 밝혀 화제다.",
+      "source": "전자신문",
+      "date": "2026-10-31",
+      "link": "https://www.etnews.com/20261031000012",
+      "until": "2026-11-03T10:30:00+09:00"
     },
     {
-      "id": "b15b2ed81c",
+      "id": "07f1b37474",
       "cat": "culture",
-      "title": "구글, 2026 MAMA 유튜브 글로벌 생중계 나서…‘제미나이로 무대 꾸민다’",
-      "summary": "구글이 K팝 시상식 ‘2026 MAMA AWARDS’와 손잡고 유튜브 글로벌 생중계와 구글의 AI 제미나이를 활용한 협업에 나선다고 30일 밝혔다.",
-      "source": "동아일보",
-      "date": "2026-10-30",
-      "link": "https://www.donga.com/news/It/article/all/20261030/134940687/1",
-      "until": "2026-11-02T00:00:00+09:00"
+      "title": "쇼비, AI 숏드라마 공모전 개최...참가작 모두 수익화 지원",
+      "summary": "글로벌 AI 숏드라마 플랫폼 쇼비가 AI 영상 창작자를 대상으로 공모전 'SHOWVY NEXT'를 개최한다.",
+      "source": "ZDNet Korea",
+      "date": "2026-10-31",
+      "link": "https://zdnet.co.kr/view/?no=20261031072415",
+      "until": "2026-11-03T07:24:15+09:00"
     }
   ],
   "promoSound": true,
   "schedule": [
-    {
-      "name": "수련활동",
-      "start": "2026-10-30",
-      "end": "2026-10-30",
-      "grades": "1·2학년",
-      "holiday": false
-    },
     {
       "name": "재량휴업일",
       "start": "2026-11-19",
