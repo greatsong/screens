@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.5';
+  const APP_VERSION = '0.6.6';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1295,6 +1295,8 @@
     if (e.target.closest('#player, #gallery, #diag, #promo')) return;
     if (state.sound === 'blocked') state.sound = 'on';
     if (!$('diag').hidden) { closeDiag(); return; }
+    // QR 을 누르면 그대로 둔다(휴대폰으로 찍으려던 QR 이 사라지지 않게)
+    if (e.target.closest('.qr, .qr-box, .mw-qr, a')) return;
     startPeek();
   }
 
