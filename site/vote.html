@@ -84,7 +84,7 @@ const fb = (name) => (window.MEAL ? window.MEAL.fallback(name) : '');
 const img = (name) => `<img src="${src(name)}" data-fb="${fb(name)}" alt="" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb=''}else{this.style.visibility='hidden'}">`;
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 기록만 생략 */ } } };
-const state = { api: '', days: {}, votes: {}, best: null, mine: store.get('dgs.vote.mine', {}) };
+const state = { api: '', days: {}, votes: {}, best: null, rankOn: false, mine: store.get('dgs.vote.mine', {}) };
 
 function devId() {
   let id = store.get('dgs.vote.dev', '');
@@ -107,8 +107,10 @@ function renderTop() {
     ? '<ol>' + top.map((x, i) => `<li><span class="rk">${i + 1}</span>${img(x.d)}<span>${esc(x.d)}</span><span class="n">${HEART} ${x.n}</span></li>`).join('') + '</ol>'
     : '<p class="empty">아직 하트가 없습니다. 첫 하트를 눌러 주세요.</p>');
 }
-// 역대 인기 급식 TOP 3: 서버가 준 메뉴 열쇠 가운데 실제 식단에 있는 메뉴만 보여 준다(스탠바이미 화면과 같은 규칙)
+// 역대 인기 급식 TOP 3: 서버가 준 메뉴 열쇠 가운데 실제 식단에 있는 메뉴만 보여 준다(스탠바이미 화면과 같은 규칙).
+// 화면 순서(content.json items)에 'mealrank' 카드가 있을 때만 켠다. 하나의 스위치로 화면과 휴대폰을 함께 켜고 끈다
 function renderBest() {
+  if (!state.rankOn) { document.getElementById('best').hidden = true; return; }
   const real = {};
   Object.keys(window.MEAL_DISH || {}).forEach((k) => { real[k] = 1; });
   Object.keys(state.days).forEach((k) => state.days[k].forEach((d) => { real[window.MEAL ? window.MEAL.norm(d) : d] = 1; }));
@@ -149,6 +151,7 @@ document.getElementById('days').addEventListener('click', (e) => {
 
 fetch('content.json?t=' + Date.now()).then((r) => r.json()).then((c) => {
   state.api = (c.vote && c.vote.api) || '';
+  state.rankOn = (c.items || []).some((i) => i && i.id === 'mealrank');
   const m = c.meal || {};
   const today = ymd(Date.now()), to = ymd(Date.now() + 21 * 86400000);
   const meals = fetch('https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=5&ATPT_OFCDC_SC_CODE=' + encodeURIComponent(m.office) +
