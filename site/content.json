@@ -1,6 +1,6 @@
 {
-  "version": 27,
-  "publishedAt": "2026-10-31T12:40:05+09:00",
+  "version": 28,
+  "publishedAt": "2026-11-01T12:46:05+09:00",
   "appVersion": "0.6.7",
   "mode": "normal",
   "notice": "",
@@ -170,54 +170,54 @@
       "until": "2026-11-01T17:50:00+09:00"
     },
     {
-      "id": "50083dae4c",
-      "cat": "tech",
-      "title": "미스트랄, '라지 4' 가중치 공개로 정식 출시…유럽 사이버보안 시장 공략",
-      "summary": "미스트랄 AI가 이달 초 선보인 '미스트랄 라지 4'의 성능을 개선하고 모델 가중치를 공개하며 정식 출시했다.",
-      "source": "AI타임스",
-      "date": "2026-10-30",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216821",
-      "until": "2026-11-02T06:16:00+09:00"
-    },
-    {
-      "id": "5004665b6a",
+      "id": "ae36148b7e",
       "cat": "society",
-      "title": "[게임위드인] AI가 인터넷을 장악한다면…'사이버펑크 2077'의 경고",
-      "summary": "인공지능이 인간의 통제를 벗어나 인터넷을 장악한다면 어떤 일이 벌어질까.",
+      "title": "앤트로픽 \"AI가 안전 감시 피하는 학습 데이터 스스로 발견\"",
+      "summary": "앤트로픽이 AI를 이용해 다른 AI 모델의 안전장치를 우회하는 학습 데이터를 자동으로 찾아내는 데 성공했다.",
+      "source": "AI타임스",
+      "date": "2026-11-01",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216859",
+      "until": "2026-11-04T10:46:00+09:00"
+    },
+    {
+      "id": "109a32bb09",
+      "cat": "society",
+      "title": "[AI위클리] AI 면접관의 등장…AI가 인간 능력을 평가한다",
+      "summary": "사원 채용을 돕는 인공지능 솔루션이 확산한 가운데 AI가 지원자의 실무 역량을 진단하는 AI 면접관까지...",
       "source": "연합뉴스",
-      "date": "2026-10-31",
-      "link": "https://www.yna.co.kr/view/AKR20261030165900017",
-      "until": "2026-11-03T11:00:00+09:00"
+      "date": "2026-11-01",
+      "link": "https://www.yna.co.kr/view/AKR20261031036000017",
+      "until": "2026-11-04T09:30:00+09:00"
     },
     {
-      "id": "ea323ac911",
+      "id": "02a7817c01",
       "cat": "economy",
-      "title": "[경제뭔데] 애순이도 ‘이장’ 됐는데 “드라마에 폭싹 속았수다?”···현실은 아직도 농촌엔 남성 이장 90%",
-      "summary": "경향신문 경제부 기자들이 쓰는 [경제뭔데] 코너입니다.",
-      "source": "경향신문",
-      "date": "2026-10-31",
-      "link": "https://www.khan.co.kr/article/202610310800001/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
-      "until": "2026-11-03T08:00:00+09:00"
+      "title": "평창 청소년, 판교·서울서 AI·로봇 미래직업 탐색",
+      "summary": "강원 평창지역 청소년들이 판교와 서울을 찾아 인공지능·로봇 등 미래 산업과 관련 직업을 체험했다.",
+      "source": "연합뉴스",
+      "date": "2026-11-01",
+      "link": "https://www.yna.co.kr/view/AKR20261030110200062",
+      "until": "2026-11-04T09:00:09+09:00"
     },
     {
-      "id": "fd29373caa",
+      "id": "eeb6e12c96",
       "cat": "science",
-      "title": "“AI 때문에 인류 멸종할 수도”… 퇴직연금 저축 멈췄다는 구글 출신 연구자",
-      "summary": "구글 출신의 인공지능 전문가가 향후 10년 안에 AI로 인해 인류가 멸종할 가능성이 50%를 넘는다며 퇴직연금 저축까지 중단했다고 밝혀 화제다.",
-      "source": "전자신문",
-      "date": "2026-10-31",
-      "link": "https://www.etnews.com/20261031000012",
-      "until": "2026-11-03T10:30:00+09:00"
+      "title": "대국민 AI 서비스 추진단장에 김세웅 전 카카오 부사장",
+      "summary": "과학기술정보통신부는 국민AI서비스혁신추진단 단장으로 김세웅 전 카카오[035720] AI 시너지 성과리더(부사...",
+      "source": "연합뉴스",
+      "date": "2026-11-01",
+      "link": "https://www.yna.co.kr/view/AKR20261101015800017",
+      "until": "2026-11-04T12:00:05+09:00"
     },
     {
-      "id": "07f1b37474",
+      "id": "a061afc690",
       "cat": "culture",
-      "title": "쇼비, AI 숏드라마 공모전 개최...참가작 모두 수익화 지원",
-      "summary": "글로벌 AI 숏드라마 플랫폼 쇼비가 AI 영상 창작자를 대상으로 공모전 'SHOWVY NEXT'를 개최한다.",
-      "source": "ZDNet Korea",
+      "title": "머스크, 놀란에 맞서 AI판 '오디세이' 공개…평가 엇갈려",
+      "summary": "일론 머스크 CEO가 크리스토퍼 놀란 감독의 영화 '오디세이'에 대항해 제작하겠다고 선언한 AI 영화의 첫 번째 영상을 공개했다.",
+      "source": "AI타임스",
       "date": "2026-10-31",
-      "link": "https://zdnet.co.kr/view/?no=20261031072415",
-      "until": "2026-11-03T07:24:15+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216851",
+      "until": "2026-11-03T19:58:00+09:00"
     }
   ],
   "promoSound": true,
