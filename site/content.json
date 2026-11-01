@@ -1,6 +1,6 @@
 {
-  "version": 28,
-  "publishedAt": "2026-11-01T12:46:05+09:00",
+  "version": 29,
+  "publishedAt": "2026-11-01T20:44:31+09:00",
   "appVersion": "0.7.0",
   "mode": "normal",
   "notice": "",
@@ -159,16 +159,6 @@
     "school": "7010073"
   },
   "news": [
-    {
-      "id": "50f9f80af8",
-      "cat": "tech",
-      "title": "엔비디아, 40개 언어 지원하는 음성 인식 AI 공개…오픈 모델 최고 정확도 달성",
-      "summary": "엔비디아가 40개 언어의 음성을 텍스트로 변환하고 여러 사람이 겹쳐 말하는 상황에서도 화자를 구분하는 오픈웨이트 AI 모델을 공개했다.",
-      "source": "AI타임스",
-      "date": "2026-10-29",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216779",
-      "until": "2026-11-01T17:50:00+09:00"
-    },
     {
       "id": "ae36148b7e",
       "cat": "society",
