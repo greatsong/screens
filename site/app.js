@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.6.7';
+  const APP_VERSION = '0.7.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -428,7 +428,7 @@
     store.set('reloadFor', { v: target, t: Date.now() });
     logEvent('앱 ' + target + ' 버전으로 새로 고침');
     // 캐시에 남은 옛 app.js 로 다시 열리면 두 화면이 다른 코드로 칸을 계산해 어긋난다. 새 파일을 먼저 받아 두고 새로 고친다
-    const fresh = ['./', 'app.js', 'style.css', 'meal-icons.js', 'meal-dishes.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
+    const fresh = ['./', 'app.js', 'style.css', 'meal-icons.js', 'meal-dishes.js', 'vendor/qrcode.min.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null));
     Promise.all(fresh).then(() => setTimeout(() => location.reload(), 300));
   }
 
@@ -536,6 +536,7 @@
     const boundary = (ms) => { if (ms > t && ms < next) next = ms; };
     boundary(Date.parse(c.noticeUntil || ''));
     (c.items || []).forEach((it) => boundary(Date.parse(it.until || '')));
+    (c.events || []).forEach((event) => boundary(Date.parse(event.until || '')));
     (c.news || []).forEach((n) => boundary(newsExpiry(n)));
     (c.promos || []).forEach((p) => { boundary(Date.parse(p.from || '')); boundary(Date.parse(p.until || '')); });
     state.nextContentAt = next;
@@ -559,6 +560,16 @@
   }
 
   // 소식 카드 사이에 작품 카드를 끼워 넣는다. 두 화면이 같은 순서를 계산해야 같은 작품을 함께 보여 준다.
+  function eventItem(event) {
+    const lines = [event.grades ? '대상: ' + event.grades : '',
+      event.start ? '일정: ' + event.start + (event.end && event.end !== event.start ? ' ~ ' + event.end : '') : ''].filter(Boolean);
+    const side = { tag: '학교 행사 · 모집 중', title: event.title,
+      body: (event.summary || '').slice(0, 280), lines,
+      link: event.signupUrl || '', linkLabel: '휴대폰으로 신청', source: '당곡고 프로그램 안내' };
+    return { id: 'event-' + event.id, until: event.until, a: side, b: { ...side,
+      body: event.signupUrl ? 'QR을 찍고 신청 안내를 확인합니다.' : '신청 안내를 준비하고 있습니다.' } };
+  }
+
   function buildSchedule(c, t) {
     if (state.only) return [{ project: state.only }];
     if (t == null) t = now();
@@ -566,7 +577,8 @@
     const news = activeNews(c, t);
     const live = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     const recurring = live.filter((x) => x.every > 1);   // 급식·학사일정: 카드 몇 장마다 한 번
-    const items = (news.length > 1 ? [NEWS_DIGEST] : []).concat(news.map(newsItem), live.filter((x) => !(x.every > 1)));
+    const events = (c.events || []).filter((event) => Date.parse(event.until) > t).map(eventItem);
+    const items = events.concat(news.length > 1 ? [NEWS_DIGEST] : [], news.map(newsItem), live.filter((x) => !(x.every > 1)));
     const projs = c.projects || [];
     const every = Math.max(1, c.projectEvery || 2);
     const out = [];

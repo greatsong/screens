@@ -22,6 +22,7 @@ import pathlib
 import shutil
 
 from news_policy import apply_news_policy
+from event_feed import load_events
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REG = ROOT / "projects" / "registry.json"
@@ -164,6 +165,7 @@ def main():
     content["news"] = apply_news_policy((load(NEWS, {}) or {}).get("items", []), news_control)
     content["newsControlRequestId"] = news_control.get("requestId", "")
     content["schedule"] = (load(SCHEDULE, {}) or {}).get("events", [])
+    content["events"] = load_events(ROOT / "projects" / "integrations")
     # B 화면 「작품 체험하기」 목록: 이 화면에서 바로 실행할 수 있는 게시 작품
     content.setdefault("showcase", {})["apps"] = [{"title": e["title"], "by": e["maker"], "url": e["run"]} for e in published if e.get("embed")]
     if without(content, {"version", "publishedAt"}) != before:

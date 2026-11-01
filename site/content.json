@@ -1,7 +1,7 @@
 {
   "version": 28,
   "publishedAt": "2026-11-01T12:46:05+09:00",
-  "appVersion": "0.6.7",
+  "appVersion": "0.7.0",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -296,5 +296,6 @@
   "newsControlRequestId": "",
   "vote": {
     "api": "https://script.google.com/macros/s/AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA/exec"
-  }
+  },
+  "events": []
 }

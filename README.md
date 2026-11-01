@@ -153,3 +153,7 @@
 - 로컬에서 작품을 검사하려면 Playwright(파이썬)가 필요합니다. `python3 scripts/check_projects.py --all`
 - 회귀 검사: `node --test tests/frontend.test.mjs`, `python3 -m unittest discover -s tests -v`
 - Apps Script 흐름은 구글 서비스를 흉내 낸 오프라인 시험으로 확인합니다. `node apps-script/test/run_test.mjs <임시 폴더>` (실제 작품 네트워크 검사를 포함하려면 `--network-checks`). 모의 시험의 메일·커밋은 실제로 발송하거나 저장소에 쓰지 않습니다.
+
+## 다른 학교 프로젝트의 행사 안내
+
+배움이음 v3에서 개설한 행사의 학생 안내와 Google 신청 설문 QR을 자동 반영합니다. 새 프로젝트 연결·운영 조건·장애 처리와 Google 작업 연결 방법은 [행사 프로젝트 연동](docs/행사_프로젝트_연동.md)을 확인합니다.

@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -340,3 +340,29 @@ test('all-time meal TOP 3 shows only dishes from the real menu, so a made-up nam
   assert.match(env.mealRankHTML({}), /아직 하트가 모이는 중입니다/);
 });
 
+
+
+test('public events join both screens, use the signup QR and expire without polling', () => {
+  for (const role of ['a', 'b']) {
+    const env = screen({ role });
+    const until = new Date(env.now() + SECOND).toISOString();
+    const event = { id: 'source:event', title: '새 행사 <script>', summary: '참여 안내', grades: '2학년',
+      start: '2026-11-01', end: '2026-11-03', until, signupUrl: 'https://docs.google.com/forms/d/e/example/viewform' };
+    env.applyContent(content({ events: [event] }), false);
+    const entry = env.state.sched.find((e) => e.item?.id === 'event-source:event');
+    assert.ok(entry);
+    assert.equal(env.slideQR(entry), event.signupUrl);
+    const html = env.cardHTML(entry.item[role]);
+    assert.match(html, /휴대폰으로 신청/);
+    assert.match(html, /새 행사 &lt;script&gt;/);
+    assert.match(html, /2026-11-01 ~ 2026-11-03/);
+    env.advance(SECOND); env.tick();
+    assert.equal(env.state.sched.some((e) => e.item?.id === 'event-source:event'), false);
+    env.applyContent(content({ events: [{ ...event, until: new Date(env.now() + SECOND).toISOString(), signupUrl: '' }] }), false);
+    const pending = env.state.sched.find((e) => e.item?.id === 'event-source:event');
+    assert.equal(env.slideQR(pending), '');
+    assert.doesNotMatch(env.cardHTML(pending.item[role]), /qr-box/);
+    env.applyContent(content({ events: [] }), false);
+    assert.equal(env.state.sched.some((e) => e.item?.id === 'event-source:event'), false);
+  }
+});

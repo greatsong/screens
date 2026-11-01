@@ -1,0 +1,12 @@
+{
+  "repository": "greatsong/screens",
+  "sources": [
+    {
+      "id": "danggok-program-v3",
+      "project": "danggok-program-v3",
+      "adapter": "danggok-program-v3",
+      "enabled": true,
+      "database": "data/demo.sqlite3"
+    }
+  ]
+}
