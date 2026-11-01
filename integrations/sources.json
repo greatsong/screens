@@ -6,7 +6,7 @@
       "project": "danggok-program-v3",
       "adapter": "danggok-program-v3",
       "enabled": true,
-      "database": "data/demo.sqlite3"
+      "database": "data/live.sqlite3"
     }
   ]
 }
