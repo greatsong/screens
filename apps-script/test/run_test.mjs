@@ -442,6 +442,33 @@ check('역대 인기 메뉴에 연결 시험·수식 이름은 넣지 않음', !
 check('역대 인기 메뉴는 열쇠와 수만 돌려줌(기기 정보 없음)', best.list.every((x) => Object.keys(x).join() === 'k,n') && best.total === best.list.reduce((t, x) => t + x.n, 0), best);
 check('메뉴 열쇠 규칙이 화면(meal-icons.js)과 같음', ['친환경칼슘기장밥', '돈육김치찌개(1.5.)', '배추김치9.13.', '수제돈가스&소스', '섞박지', '닭다리살구이_정육'].map(G.dishKey_).join() === '칼슘기장밥,돈육김치찌개,배추김치,돈가스,석박지,닭다리살구이');
 
+console.log('17. 학사일정 행사 (관리 화면 붙여 넣기·엑셀)');
+const oldNow17 = G.now_;
+G.now_ = () => new Date('2026-11-02T09:00:00+09:00');
+const parsed = G.parseSchoolEvents_(['날짜\t행사\t학년', '11/11, 11/12 : AI쩜SW교육의 날', '11월 23일(월)~27일(금) 기말고사 3학년',
+  '2026-12-01\t2026-12-02\t학년말 행사\t1,2학년\t휴업', '3/2 입학식', '메모만 있는 줄'].join('\n'), '2026-11-02');
+const pe = (n) => parsed.events.find((e) => e.name === n) || {};
+check('붙여 넣기: 쉼표로 이은 이틀은 한 기간, 쩜은 가운뎃점', pe('AI·SW교육의 날').start === '2026-11-11' && pe('AI·SW교육의 날').end === '2026-11-12', parsed);
+check('붙여 넣기: 끝 날짜에 일만 쓴 기간과 학년', pe('기말고사').start === '2026-11-23' && pe('기말고사').end === '2026-11-27' && pe('기말고사').grades === '3학년', parsed);
+check('엑셀 칸: 시작일·끝일·학년(1,2 → 1·2)·휴업', pe('학년말 행사').end === '2026-12-02' && pe('학년말 행사').grades === '1·2학년' && pe('학년말 행사').holiday === true, parsed);
+check('연도가 없으면 앞으로 올 날짜로(3월 → 다음 해)', pe('입학식').start === '2027-03-02', parsed);
+check('머리줄은 조용히 넘기고, 날짜 없는 줄은 알려 줌', parsed.events.length === 4 && parsed.skipped.length === 1 && parsed.skipped[0] === '메모만 있는 줄', parsed);
+state.active = 'student@school.kr';
+denied = false;
+try { G.adminSchoolEventsAdd([{ name: '몰래', start: '2026-11-20', end: '2026-11-20' }]); } catch (e) { denied = /권한/.test(e.message); }
+check('학생은 행사를 넣을 수 없음', denied);
+state.active = TEACHER;
+fs.writeFileSync(path.join(TMP, 'projects/schedule-extra.json'), JSON.stringify({ _설명: '설명', events: [{ name: '지난 행사', start: '2026-10-01', end: '2026-10-01', grades: '', holiday: false }] }));
+const sxBefore = state.commits.length;
+const addMsg = G.adminSchoolEventsAdd(parsed.events.concat([{ name: ' ', start: '2026-11-20', end: '2026-11-20' }, { name: '거꾸로', start: '2026-11-21', end: '2026-11-20' }]));
+const sx = json('projects/schedule-extra.json');
+check('행사 넣기: 올바른 4건만, 지난 행사 정리, 설명 유지, 커밋 1번', /4건/.test(addMsg) && sx.events.length === 4 && !sx.events.some((e) => e.name === '지난 행사') &&
+  sx._설명 === '설명' && state.commits.length === sxBefore + 1, [addMsg, sx]);
+check('같은 행사를 다시 넣으면 그대로', /이미/.test(G.adminSchoolEventsAdd([parsed.events[0]])) && json('projects/schedule-extra.json').events.length === 4);
+const rmKey = G.adminSchoolEvents().find((e) => e.name === '입학식').key;
+check('행사 지우기', /입학식/.test(G.adminSchoolEventsRemove(rmKey)) && !json('projects/schedule-extra.json').events.some((e) => e.name === '입학식'));
+G.now_ = oldNow17;
+
 console.log(fails ? `\n실패 ${fails}개` : '\n모든 시험 통과');
 console.log(`보낸 메일 ${state.outbox.length}통, GitHub 커밋 ${state.commits.length}번`);
 process.exit(fails ? 1 : 0);

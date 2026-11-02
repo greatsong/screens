@@ -34,6 +34,8 @@
     .mbadge svg { width: 16px; height: 16px; margin-right: 4px; }
     .mb-teacher { color: #6d4ed8; background: #efeaff; } .mb-g1 { color: #127a3e; background: #e6f6ec; }
     .mb-g2 { color: #0b6aa8; background: #e5f2fb; } .mb-g3 { color: #a65400; background: #fdf0de; }
+    textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; margin-top: 10px; }
+    .ev-name { width: 100%; padding: 5px 8px; }
     @media (max-width: 520px) { .proj { grid-template-columns: 1fr; } .proj img { width: 100%; } }
   </style>
 </head>
@@ -41,6 +43,7 @@
 <main>
   <h1>스탠바이미 관리</h1>
   <div id="screen" class="card">불러오는 중입니다.</div>
+  <div id="events" class="card"><h2>학사일정 행사</h2><p class="muted">불러오는 중입니다.</p></div>
   <div id="sync" class="card"></div>
   <div id="news" class="card"></div>
   <div id="projects"></div>
@@ -161,7 +164,94 @@
       '<div class="row" style="margin:6px 0"><a class="btn" href="' + esc(p.previewA) + '" target="_blank">A 미리보기</a><a class="btn" href="' + esc(p.previewB) + '" target="_blank">B 미리보기</a></div>' +
       '<div class="row">' + btns.join('') + '</div></div></div>';
   }
+  // ---------- 학사일정 행사: 나이스에 없는 학교 행사를 넣고 지운다 ----------
+  // 붙여 넣은 글(엑셀 표는 칸 사이가 탭)과 엑셀 파일을 서버의 같은 해석기로 풀어 미리 보여 준 뒤, 고른 것만 넣는다
+  var EV = { list: [], preview: null, text: '' };
+  function loadEvents() {
+    google.script.run.withSuccessHandler(function (l) { EV.list = l || []; renderEvents(); })
+      .withFailureHandler(function (e) { document.getElementById('events').innerHTML = '<h2>학사일정 행사</h2><p class="pending">불러오지 못했습니다. ' + esc(e.message || e) + '</p>'; })
+      .adminSchoolEvents();
+  }
+  function dspan(e) {
+    var md = function (d) { return (+d.slice(5, 7)) + '/' + (+d.slice(8, 10)); };
+    return e.start === e.end ? md(e.start) : md(e.start) + '~' + md(e.end);
+  }
+  function renderEvents() {
+    var p = EV.preview;
+    document.getElementById('events').innerHTML = '<h2>학사일정 행사</h2>' +
+      '<p class="muted">나이스 학사일정에 없는 학교 행사를 화면(A 학사일정·B 달력)에 더합니다. 끝난 행사는 저절로 빠집니다.</p>' +
+      (EV.list.length ? '<table>' + EV.list.map(function (e, i) {
+        return '<tr><td style="white-space:nowrap">' + esc(dspan(e)) + '</td><td><b>' + esc(e.name) + '</b>' +
+          (e.grades ? ' <span class="muted">' + esc(e.grades) + '</span>' : '') + (e.holiday ? ' <span class="chip s-보완필요">휴업</span>' : '') +
+          '</td><td style="text-align:right"><button class="btn" onclick="removeEvent(' + i + ')">지우기</button></td></tr>';
+      }).join('') + '</table>' : '<p class="muted">직접 넣은 행사가 없습니다.</p>') +
+      '<textarea id="evText" rows="4" placeholder="엑셀에서 표를 복사해 붙여 넣거나, 한 줄에 행사 하나씩 적습니다.&#10;11/13 컴퓨팅 사고력 페스티벌&#10;11/11~11/12 AI·SW교육의 날&#10;12/11~12/17 기말고사 1·2학년">' + esc(EV.text) + '</textarea>' +
+      '<div class="row" style="margin-top:6px"><button class="btn primary" onclick="previewEvents()">미리 보기</button>' +
+      '<label class="btn">엑셀 파일 열기<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="readEventFile(this.files[0])"></label>' +
+      '<span class="muted">한 줄에 날짜와 행사 이름이 있으면 됩니다. 학년(3학년)·휴업도 알아봅니다.</span></div>' +
+      (p ? previewHTML(p) : '');
+  }
+  function previewHTML(p) {
+    return '<div style="margin-top:12px"><b>이렇게 넣습니다</b> <span class="muted">이름은 고칠 수 있고, 빼려면 체크를 끕니다.</span>' +
+      (p.events.length ? '<table>' + p.events.map(function (e, i) {
+        return '<tr><td><input type="checkbox" id="evOn' + i + '" checked></td><td style="white-space:nowrap">' + esc(dspan(e)) +
+          '</td><td><input class="ev-name" id="evName' + i + '" value="' + esc(e.name) + '"></td><td class="muted" style="white-space:nowrap">' +
+          esc(e.grades || '전 학년') + (e.holiday ? ' · 휴업' : '') + '</td></tr>';
+      }).join('') + '</table>' : '<p class="pending">날짜가 있는 행사를 찾지 못했습니다.</p>') +
+      (p.skipped.length ? '<p class="muted">날짜를 찾지 못해 뺀 줄: ' + p.skipped.map(esc).join(' / ') + '</p>' : '') +
+      (p.events.length ? '<div class="row" style="margin-top:8px"><button class="btn primary" onclick="addEvents()">고른 행사 넣기</button>' +
+        '<button class="btn" onclick="EV.preview=null;renderEvents()">취소</button></div>' : '') + '</div>';
+  }
+  function previewEvents() {
+    EV.text = document.getElementById('evText').value;
+    if (!EV.text.trim()) { toast('넣을 내용을 붙여 넣거나 적어 주세요.'); return; }
+    google.script.run.withSuccessHandler(function (p) { EV.preview = p; renderEvents(); }).withFailureHandler(fail).adminSchoolEventsPreview(EV.text);
+  }
+  function addEvents() {
+    var list = EV.preview.events.map(function (e, i) {
+      return document.getElementById('evOn' + i).checked
+        ? { name: document.getElementById('evName' + i).value, start: e.start, end: e.end, grades: e.grades, holiday: e.holiday } : null;
+    }).filter(Boolean);
+    if (!list.length) { toast('넣을 행사를 하나 이상 고릅니다.'); return; }
+    google.script.run.withSuccessHandler(function (msg) { toast(msg); EV.preview = null; EV.text = ''; loadEvents(); load(); }).withFailureHandler(fail).adminSchoolEventsAdd(list);
+  }
+  function removeEvent(i) {
+    var e = EV.list[i];
+    if (!confirm('「' + e.name + '」(' + dspan(e) + ')를 학사일정에서 지웁니다.')) return;
+    google.script.run.withSuccessHandler(function (msg) { toast(msg); loadEvents(); load(); }).withFailureHandler(fail).adminSchoolEventsRemove(e.key);
+  }
+  // 엑셀 파일: 브라우저에서 표를 읽어 칸을 탭으로 이은 글로 바꾼 뒤, 붙여 넣기와 같은 방법으로 미리 본다
+  function ymdOf(d) {
+    var t = new Date(d.getTime() + 12 * 3600000);   // 엑셀 날짜의 시간대 어긋남(전날 23시)을 피한다
+    return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
+  }
+  function readEventFile(file) {
+    if (!file) return;
+    var go = function () {
+      var fr = new FileReader();
+      fr.onload = function () {
+        try {
+          var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array', cellDates: true });
+          var rows = [];
+          wb.SheetNames.slice(0, 3).forEach(function (n) { rows = rows.concat(XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' })); });
+          var text = rows.map(function (r) {
+            return r.map(function (c) { return c instanceof Date ? ymdOf(c) : String(c).replace(/[\t\r\n]+/g, ' '); }).join('\t');
+          }).filter(function (l) { return l.replace(/\t/g, '').trim(); }).join('\n');
+          document.getElementById('evText').value = text;
+          previewEvents();
+        } catch (e) { toast('엑셀 파일을 읽지 못했습니다: ' + e.message); }
+      };
+      fr.readAsArrayBuffer(file);
+    };
+    if (window.XLSX) { go(); return; }
+    var sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload = go;
+    sc.onerror = function () { toast('엑셀 읽기 도구를 불러오지 못했습니다. 표를 복사해 붙여 넣어 주세요.'); };
+    document.head.appendChild(sc);
+  }
   load();
+  loadEvents();
 </script>
 </body>
 </html>

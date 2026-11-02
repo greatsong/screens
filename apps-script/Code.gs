@@ -829,6 +829,150 @@ function closeRequests_(projectId, types, note) {
 function deployed_(key) { return typeof DEPLOY !== 'undefined' && DEPLOY[key] ? DEPLOY[key] : ''; }
 function webappUrl_() { return prop_('WEBAPP_URL') || deployed_('STATUS_URL') || ScriptApp.getService().getUrl() || ''; }
 // 관리 화면은 스크립트 주인만 열 수 있는 테스트 배포(/dev) 주소를 쓴다
+// ======================================================================
+// 학사일정 행사 — 나이스에 없는 학교 행사를 관리 화면에서 넣고 지운다.
+// projects/schedule-extra.json 에 쓰면 편성(build_projects.py)이 나이스 일정과 합쳐 화면(A 목록·B 달력)에 낸다. 끝난 행사는 저절로 빠진다.
+// 엑셀에서 복사한 내용·.xlsx 파일(관리 화면이 칸을 탭으로 이어 보낸다)·한 줄짜리 글을 모두 같은 해석기로 푼다.
+// ======================================================================
+const SX_PATH = 'projects/schedule-extra.json';
+
+// 한 줄에 행사 하나. 날짜가 없는 줄은 건너뛴다(표 머리줄 포함).
+//   11/13 컴퓨팅 사고력 페스티벌 · 11/11~11/12 AI·SW교육의 날 · 11/11, 11/12 : AI·SW교육의 날 · 11월 23일(월)~27일(금) 기말고사 3학년
+//   2026-12-01⇥2026-12-02⇥학년말 행사⇥1·2학년⇥휴업 (엑셀 칸: 시작일·끝일·이름·학년·휴업)
+// 연도가 없으면 오늘에서 두 달 전부터 열 달 뒤 사이가 되는 해로 고른다. 학년(3학년, 1·2학년)과 휴업 표시는 이름에서 떼어 낸다.
+function parseSchoolEvents_(text, today) {
+  const t0 = Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10));
+  const iso = (y, m, d) => {
+    if (m < 1 || m > 12 || d < 1 || d > 31) return '';
+    const v = new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
+    return +v.slice(5, 7) === m && +v.slice(8, 10) === d ? v : '';
+  };
+  const year = (m, d) => {
+    const y = +today.slice(0, 4);
+    for (const c of [y, y + 1, y - 1]) {
+      const v = iso(c, m, d);
+      const diff = v ? (Date.parse(v) - t0) / 864e5 : NaN;
+      if (diff >= -60 && diff <= 305) return c;
+    }
+    return y;
+  };
+  const DATE = /(?:(\d{4})\s*(?:[-./]|년)\s*)?(\d{1,2})\s*(?:[-./]|월)\s*(\d{1,2})(?!\d)\s*일?\.?(?:\s*\(\s*[월화수목금토일]\s*\))?/g;
+  const SHORT = /^\s*(?:~|–|부터)\s*(\d{1,2})\s*일?(?:\s*\(\s*[월화수목금토일]\s*\))?(?![\d./\-월])/;
+  const out = [], skipped = [];
+  String(text || '').replace(/\r/g, '').split('\n').forEach((raw) => {
+    const line = raw.replace(/([A-Za-z0-9])\s*쩜\s*([A-Za-z0-9])/g, '$1·$2');
+    if (!line.trim()) return;
+    const cells = line.split('\t').map((c) => c.trim());
+    const dates = [];
+    cells.forEach((cell, ci) => {
+      let m;
+      DATE.lastIndex = 0;
+      while ((m = DATE.exec(cell))) {
+        const mo = +m[2], d = +m[3];
+        const y = m[1] ? +m[1] : year(mo, d);
+        const v = iso(y, mo, d);
+        if (!v) continue;
+        const after = cell.slice(m.index + m[0].length);
+        const before = dates.length && dates[dates.length - 1].cell === ci ? cell.slice(dates[dates.length - 1].end, m.index) : '';
+        dates.push({ v: v, cell: ci, start: m.index, end: m.index + m[0].length, range: /~|–|부터/.test(before) });
+        const sh = SHORT.exec(after);   // 11/23~27 처럼 끝 날짜에 일만 쓴 경우
+        if (sh) {
+          let e = iso(y, mo, +sh[1]);
+          if (e && e < v) e = iso(mo === 12 ? y + 1 : y, mo === 12 ? 1 : mo + 1, +sh[1]);
+          if (e) dates.push({ v: e, cell: ci, start: m.index, end: m.index + m[0].length + sh[0].length, range: true });
+          DATE.lastIndex = m.index + m[0].length + sh[0].length;
+        }
+      }
+    });
+    if (!dates.length) {
+      if (!/날짜|일자|행사|일정|시작|종료/.test(line)) skipped.push(clean_(line.replace(/\t/g, ' '), 60));
+      return;
+    }
+    // 이름·학년·휴업: 날짜를 지운 나머지에서 찾는다
+    let grades = '', holiday = false;
+    const rest = cells.map((cell, ci) => {
+      let c = cell;
+      const cut = Array.from(c, () => false);   // 날짜가 차지한 글자를 표시해 한 번에 지운다(겹쳐도 안전)
+      dates.filter((x) => x.cell === ci).forEach((x) => { for (let i = x.start; i < x.end && i < cut.length; i++) cut[i] = true; });
+      c = Array.from(c).map((ch, i) => (cut[i] ? ' ' : ch)).join('');
+      c = c.replace(/(?:^|\s|\()((?:[1-3]\s*[,·・및/]\s*)*[1-3])\s*학년\s*\)?/g, (all, g) => { grades = g.replace(/\s*[,・및/]\s*|\s*·\s*/g, '·') + '학년'; return ' '; });
+      c = c.replace(/전\s*학년|전체\s*학년/g, ' ');
+      if (/^\s*(휴업|휴교|휴무|휴일|Y|O|예)\s*$/i.test(c)) { if (ci > 0) { holiday = true; return ''; } }
+      return c.replace(/[~–:|,]+/g, ' ').replace(/\s+/g, ' ').trim();
+    }).filter((c) => /[가-힣A-Za-z]/.test(c));
+    const name = clean_(rest[0] || '', 40);
+    if (/휴업|휴교/.test(name)) holiday = true;
+    if (!name) { skipped.push(clean_(line.replace(/\t/g, ' '), 60)); return; }
+    // 날짜 둘이 ~ 로 이어지거나 서로 다른 칸(시작일·끝일)이면 기간, 쉼표로 나열하면 이어진 날끼리 묶는다
+    const vs = dates.map((x) => x.v);
+    const isRange = dates.length === 2 && (dates[1].range || dates[0].cell !== dates[1].cell);
+    let spans = [];
+    if (isRange) spans = [[vs[0] <= vs[1] ? vs[0] : vs[1], vs[0] <= vs[1] ? vs[1] : vs[0]]];
+    else {
+      Array.from(new Set(vs)).sort().forEach((v) => {
+        const last = spans[spans.length - 1];
+        if (last && (Date.parse(v) - Date.parse(last[1])) / 864e5 === 1) last[1] = v; else spans.push([v, v]);
+      });
+    }
+    spans.forEach((sp) => out.push({ name: name, start: sp[0], end: sp[1], grades: grades, holiday: holiday }));
+  });
+  return { events: out.slice(0, 100), skipped: skipped.slice(0, 30) };
+}
+
+function schoolEvent_(e) {
+  const ok = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d + 'T00:00:00Z')) && new Date(d + 'T00:00:00Z').toISOString().slice(0, 10) === d;
+  const name = clean_(e && e.name, 40), start = String((e && e.start) || ''), end = String((e && e.end) || start);
+  if (!name || !ok(start) || !ok(end) || end < start || (Date.parse(end) - Date.parse(start)) / 864e5 > 60) return null;
+  return { name: name, start: start, end: end, grades: clean_(e.grades, 20), holiday: !!e.holiday };
+}
+const sxKey_ = (e) => e.start + '|' + e.end + '|' + e.name;
+
+function adminSchoolEvents() {
+  requireAdmin_();
+  const today = fmt_(now_(), 'yyyy-MM-dd');
+  return (readRepoJson_(SX_PATH).data.events || []).filter((e) => e.end >= today).map((e) => Object.assign({ key: sxKey_(e) }, e));
+}
+
+// 붙여 넣은 글을 행사로 풀어 미리 보여 준다(저장하지 않는다)
+function adminSchoolEventsPreview(text) {
+  requireAdmin_();
+  return parseSchoolEvents_(String(text || '').slice(0, 20000), fmt_(now_(), 'yyyy-MM-dd'));
+}
+
+function adminSchoolEventsAdd(list) {
+  requireAdmin_();
+  const add = (Array.isArray(list) ? list : []).slice(0, 100).map(schoolEvent_).filter(Boolean);
+  if (!add.length) throw new Error('넣을 행사가 없습니다. 날짜와 행사 이름을 확인해 주세요.');
+  return withLock_(() => {
+    let added = 0;
+    const today = fmt_(now_(), 'yyyy-MM-dd');
+    updateRepoJson_(SX_PATH, (c) => {
+      added = 0;
+      const keep = (c.events || []).filter((e) => e.end >= today);   // 끝난 행사는 정리한다
+      add.forEach((a) => { if (!keep.some((e) => sxKey_(e) === sxKey_(a))) { keep.push(a); added++; } });
+      keep.sort((x, y) => (x.start + x.end).localeCompare(y.start + y.end));
+      c.events = keep;
+    }, '학사일정 행사 추가 (관리 화면) ' + add.length + '건');
+    addRequest_('학사일정 행사 추가', '', add.map((a) => a.start.slice(5) + ' ' + a.name).join(', ').slice(0, 300), RS.DONE, 'GitHub 반영 · 화면은 1~2분 뒤');
+    return added ? '행사 ' + added + '건을 넣었습니다. 1~2분 안에 화면 학사일정에 나옵니다.' : '이미 들어 있는 행사입니다.';
+  });
+}
+
+function adminSchoolEventsRemove(key) {
+  requireAdmin_();
+  const k = String(key || '');
+  return withLock_(() => {
+    let removed = '';
+    updateRepoJson_(SX_PATH, (c) => {
+      removed = '';
+      c.events = (c.events || []).filter((e) => { if (sxKey_(e) === k) { removed = e.name; return false; } return true; });
+    }, '학사일정 행사 삭제 (관리 화면)');
+    if (!removed) return '이미 지워진 행사입니다.';
+    addRequest_('학사일정 행사 삭제', '', k, RS.DONE, 'GitHub 반영 · 화면은 1~2분 뒤');
+    return '「' + removed + '」를 지웠습니다. 1~2분 안에 화면에서 빠집니다.';
+  });
+}
+
 function adminUrl_() { return prop_('ADMIN_URL') || deployed_('ADMIN_URL') || (webappUrl_() ? webappUrl_() + '?page=admin' : ''); }
 
 function statusUrl_(r) {
