@@ -1,6 +1,6 @@
 {
-  "version": 29,
-  "publishedAt": "2026-11-01T20:44:31+09:00",
+  "version": 30,
+  "publishedAt": "2026-11-02T10:09:01+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -212,6 +212,20 @@
   ],
   "promoSound": true,
   "schedule": [
+    {
+      "name": "AI·SW교육의 날",
+      "start": "2026-11-11",
+      "end": "2026-11-12",
+      "grades": "",
+      "holiday": false
+    },
+    {
+      "name": "컴퓨팅 사고력 페스티벌",
+      "start": "2026-11-13",
+      "end": "2026-11-13",
+      "grades": "",
+      "holiday": false
+    },
     {
       "name": "재량휴업일",
       "start": "2026-11-19",

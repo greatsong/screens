@@ -30,6 +30,7 @@ CONTROL = ROOT / "projects" / "control.json"
 NEWS = ROOT / "projects" / "news.json"
 NEWS_CONTROL = ROOT / "projects" / "news-control.json"
 SCHEDULE = ROOT / "projects" / "schedule.json"
+SCHEDULE_EXTRA = ROOT / "projects" / "schedule-extra.json"   # 나이스에 없는 학교 행사(교사가 관리 화면에서 넣는다)
 ASSIGNED = ROOT / "projects" / "assigned.json"
 SITE = ROOT / "site"
 CONTENT = SITE / "content.json"
@@ -40,6 +41,25 @@ BASE = os.environ.get("SITE_BASE", "https://greatsong.github.io/screens").rstrip
 
 def run_url(p):
     return p.get("pinnedUrl") or p.get("tryUrl") or p["url"]
+
+
+def merged_schedule(today):
+    """나이스 학사일정(schedule.json)에 교사가 넣은 행사(schedule-extra.json)를 더해 시작일 순으로 돌려준다.
+    교사 행사는 형식이 맞는 것만, 끝난 것은 뺀다. 나이스 일정은 fetch_schedule.py 가 이미 거른 그대로 둔다."""
+    neis = (load(SCHEDULE, {}) or {}).get("events", [])
+    extra = []
+    for e in (load(SCHEDULE_EXTRA, {}) or {}).get("events", []):
+        try:
+            start = datetime.date.fromisoformat(str(e["start"]))
+            end = datetime.date.fromisoformat(str(e.get("end") or e["start"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+        name = " ".join(str(e.get("name", "")).split())[:40]
+        if not name or end < start or end < today or (end - start).days > 60:
+            continue
+        extra.append({"name": name, "start": start.isoformat(), "end": end.isoformat(),
+                      "grades": str(e.get("grades", ""))[:20], "holiday": bool(e.get("holiday", False))})
+    return sorted(neis + extra, key=lambda e: (e["start"], e["end"]))   # 같은 날은 나이스 순서 그대로, 교사 행사는 그 뒤
 
 
 def load(path, default=None):
@@ -164,7 +184,7 @@ def main():
     content["requestedAt"] = control.get("updatedAt", "")
     content["news"] = apply_news_policy((load(NEWS, {}) or {}).get("items", []), news_control)
     content["newsControlRequestId"] = news_control.get("requestId", "")
-    content["schedule"] = (load(SCHEDULE, {}) or {}).get("events", [])
+    content["schedule"] = merged_schedule(datetime.datetime.now(KST).date())
     content["events"] = load_events(ROOT / "projects" / "integrations")
     # B 화면 「작품 체험하기」 목록: 이 화면에서 바로 실행할 수 있는 게시 작품
     content.setdefault("showcase", {})["apps"] = [{"title": e["title"], "by": e["maker"], "url": e["run"]} for e in published if e.get("embed")]

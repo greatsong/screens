@@ -82,6 +82,7 @@ class BuilderTests(unittest.TestCase):
         paths = {"ROOT": root, "SITE": root / "site", "REG": root / "projects" / "registry.json",
                  "CONTROL": root / "projects" / "control.json", "NEWS": root / "projects" / "news.json",
                  "NEWS_CONTROL": root / "projects" / "news-control.json", "SCHEDULE": root / "projects" / "schedule.json",
+                 "SCHEDULE_EXTRA": root / "projects" / "schedule-extra.json",
                  "ASSIGNED": root / "projects" / "assigned.json", "CONTENT": root / "site" / "content.json",
                  "INDEX": root / "site" / "projects" / "index.json"}
         patcher = mock.patch.multiple(builder, **paths)
@@ -96,6 +97,19 @@ class BuilderTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             builder.main()
         return json.loads(builder.CONTENT.read_text(encoding="utf-8"))
+
+    def test_teacher_events_join_the_neis_schedule_in_date_order(self):
+        save(builder.SCHEDULE, {"events": [{"name": "기말고사", "start": "2099-11-23", "end": "2099-11-27", "grades": "3학년", "holiday": False}]})
+        save(builder.SCHEDULE_EXTRA, {"events": [
+            {"name": "AI·SW교육의 날", "start": "2099-11-11", "end": "2099-11-12"},
+            {"name": "끝난 행사", "start": "2000-01-01", "end": "2000-01-01"},
+            {"name": "  ", "start": "2099-11-13", "end": "2099-11-13"},
+            {"name": "날짜 틀림", "start": "2099-13-01"},
+            {"name": "거꾸로", "start": "2099-11-20", "end": "2099-11-19"},
+        ]})
+        schedule = self.build()["schedule"]
+        self.assertEqual([e["name"] for e in schedule], ["AI·SW교육의 날", "기말고사"])
+        self.assertEqual(schedule[0], {"name": "AI·SW교육의 날", "start": "2099-11-11", "end": "2099-11-12", "grades": "", "holiday": False})
 
     def test_target_mismatch_is_unchecked(self):
         save(self.check_file, result(target="mobile"))
