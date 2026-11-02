@@ -1,6 +1,6 @@
 {
-  "version": 31,
-  "publishedAt": "2026-11-02T10:18:56+09:00",
+  "version": 32,
+  "publishedAt": "2026-11-02T10:42:46+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -160,44 +160,44 @@
   },
   "news": [
     {
-      "id": "ae36148b7e",
-      "cat": "society",
-      "title": "앤트로픽 \"AI가 안전 감시 피하는 학습 데이터 스스로 발견\"",
-      "summary": "앤트로픽이 AI를 이용해 다른 AI 모델의 안전장치를 우회하는 학습 데이터를 자동으로 찾아내는 데 성공했다.",
+      "id": "fe31d62acf",
+      "cat": "tech",
+      "title": "딥시크, 코딩 '슈퍼 에이전트' 공개…6개월 만에 추격 기반 구축",
+      "summary": "딥시크가 여러 코딩 작업을 자동으로 관리하는 '슈퍼 에이전트'를 공개하며 앤트로픽의 '클로드 코드'와 오픈AI의 '코덱스' 추격에 나섰다.",
       "source": "AI타임스",
       "date": "2026-11-01",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216859",
-      "until": "2026-11-04T10:46:00+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216865",
+      "until": "2026-11-04T20:11:00+09:00"
     },
     {
-      "id": "109a32bb09",
+      "id": "e832b81288",
       "cat": "society",
-      "title": "[AI위클리] AI 면접관의 등장…AI가 인간 능력을 평가한다",
-      "summary": "사원 채용을 돕는 인공지능 솔루션이 확산한 가운데 AI가 지원자의 실무 역량을 진단하는 AI 면접관까지...",
-      "source": "연합뉴스",
+      "title": "AI 시대 개인정보 미래는…\"수집·제공 체계 '처리'로 묶자\"",
+      "summary": "인공지능 시대에 개인정보 활용 동의 중심 체계라는 한계를 극복하기 위해서는 법적 근거와 보호조치를 손질해야 한다는 의견이 쏟아졌다.",
+      "source": "ZDNet Korea",
       "date": "2026-11-01",
-      "link": "https://www.yna.co.kr/view/AKR20261031036000017",
-      "until": "2026-11-04T09:30:00+09:00"
+      "link": "https://zdnet.co.kr/view/?no=20261101160224",
+      "until": "2026-11-04T17:08:46+09:00"
     },
     {
-      "id": "02a7817c01",
+      "id": "074eadf2af",
       "cat": "economy",
-      "title": "평창 청소년, 판교·서울서 AI·로봇 미래직업 탐색",
-      "summary": "강원 평창지역 청소년들이 판교와 서울을 찾아 인공지능·로봇 등 미래 산업과 관련 직업을 체험했다.",
-      "source": "연합뉴스",
-      "date": "2026-11-01",
-      "link": "https://www.yna.co.kr/view/AKR20261030110200062",
-      "until": "2026-11-04T09:00:09+09:00"
+      "title": "구글, 우주 데이터센터 위성에서 첫 AI 추론 성공…시 생성해 지구 전송",
+      "summary": "구글이 지구 궤도에 발사한 위성에서 데이터센터급 AI 반도체인 TPU를 가동하고, AI 모델의 추론 결과를 지상으로 전송하는 데 성공했다.",
+      "source": "AI타임스",
+      "date": "2026-10-31",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=216837",
+      "until": "2026-11-03T18:05:00+09:00"
     },
     {
-      "id": "eeb6e12c96",
+      "id": "8310475973",
       "cat": "science",
-      "title": "대국민 AI 서비스 추진단장에 김세웅 전 카카오 부사장",
-      "summary": "과학기술정보통신부는 국민AI서비스혁신추진단 단장으로 김세웅 전 카카오[035720] AI 시너지 성과리더(부사...",
+      "title": "[AI픽] 크래프톤, 사람 의도 읽는 로봇 AI '루디 0.2' 공개",
+      "summary": "크래프톤[259960]은 로보틱스 연구 법인 루도 로보틱스가 사람과 소통하며 협력하는 로봇용 인공지능 ...",
       "source": "연합뉴스",
-      "date": "2026-11-01",
-      "link": "https://www.yna.co.kr/view/AKR20261101015800017",
-      "until": "2026-11-04T12:00:05+09:00"
+      "date": "2026-11-02",
+      "link": "https://www.yna.co.kr/view/AKR20261102056500017",
+      "until": "2026-11-05T10:21:15+09:00"
     },
     {
       "id": "a061afc690",
@@ -208,6 +208,16 @@
       "date": "2026-10-31",
       "link": "https://www.aitimes.com/news/articleView.html?idxno=216851",
       "until": "2026-11-03T19:58:00+09:00"
+    },
+    {
+      "id": "9731dd4066",
+      "cat": "culture",
+      "title": "AI가 만든 '임권택 스타일' 영화 공개…대한민국예술원 영화전",
+      "summary": "대한민국예술원은 5∼6일 서울 중구 서울영화센터에서 '2026년 대한민국예술원 영화전'을 개최한다.",
+      "source": "연합뉴스",
+      "date": "2026-11-02",
+      "link": "https://www.yna.co.kr/view/AKR20261102043400005",
+      "until": "2026-11-05T09:44:03+09:00"
     }
   ],
   "promoSound": true,
@@ -290,18 +300,18 @@
       "holiday": false
     },
     {
-      "name": "겨울방학",
-      "start": "2027-01-01",
-      "end": "2027-01-01",
-      "grades": "",
-      "holiday": true
-    },
-    {
       "name": "신정",
       "start": "2027-01-01",
       "end": "2027-01-01",
       "grades": "",
       "holiday": false
+    },
+    {
+      "name": "겨울방학",
+      "start": "2027-01-01",
+      "end": "2027-01-08",
+      "grades": "",
+      "holiday": true
     }
   ],
   "newsControlRequestId": "",
