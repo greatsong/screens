@@ -465,6 +465,22 @@ const sx = json('projects/schedule-extra.json');
 check('행사 넣기: 올바른 4건만, 지난 행사 정리, 설명 유지, 커밋 1번', /4건/.test(addMsg) && sx.events.length === 4 && !sx.events.some((e) => e.name === '지난 행사') &&
   sx._설명 === '설명' && state.commits.length === sxBefore + 1, [addMsg, sx]);
 check('같은 행사를 다시 넣으면 그대로', /이미/.test(G.adminSchoolEventsAdd([parsed.events[0]])) && json('projects/schedule-extra.json').events.length === 4);
+const edKey = G.adminSchoolEvents().find((e) => e.name === '기말고사').key;
+const edMsg = G.adminSchoolEventsUpdate(edKey, { name: '2학기 기말고사', start: '2026-11-24', end: '2026-11-27', grades: '3학년', holiday: false });
+const edited = json('projects/schedule-extra.json').events;
+check('일정 고치기: 이름·날짜가 바뀌고 개수는 그대로', /고쳤습니다/.test(edMsg) && edited.length === 4 && !edited.some((e) => e.name === '기말고사') &&
+  edited.some((e) => e.name === '2학기 기말고사' && e.start === '2026-11-24' && e.grades === '3학년'), [edMsg, edited]);
+denied = false;
+try { G.adminSchoolEventsUpdate(G.adminSchoolEvents()[0].key, { name: '거꾸로', start: '2026-11-25', end: '2026-11-24' }); } catch (e) { denied = /날짜/.test(e.message); }
+check('일정 고치기: 끝 날짜가 앞서면 막음', denied);
+const twin = G.adminSchoolEvents();
+check('일정 고치기: 다른 일정과 똑같아지면 막고, 없는 일정은 알려 줌',
+  /이미/.test(G.adminSchoolEventsUpdate(twin[0].key, { name: twin[1].name, start: twin[1].start, end: twin[1].end })) && /찾지 못했/.test(G.adminSchoolEventsUpdate('2026-01-01|2026-01-01|없음', twin[0])));
+state.active = 'student@school.kr';
+denied = false;
+try { G.adminSchoolEventsUpdate(twin[0].key, twin[0]); } catch (e) { denied = /권한/.test(e.message); }
+check('학생은 일정을 고칠 수 없음', denied);
+state.active = TEACHER;
 const rmKey = G.adminSchoolEvents().find((e) => e.name === '입학식').key;
 check('행사 지우기', /입학식/.test(G.adminSchoolEventsRemove(rmKey)) && !json('projects/schedule-extra.json').events.some((e) => e.name === '입학식'));
 G.now_ = oldNow17;

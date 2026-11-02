@@ -166,7 +166,7 @@
   }
   // ---------- 학사일정 행사: 나이스에 없는 학교 행사를 넣고 지운다 ----------
   // 붙여 넣은 글(엑셀 표는 칸 사이가 탭)과 엑셀 파일을 서버의 같은 해석기로 풀어 미리 보여 준 뒤, 고른 것만 넣는다
-  var EV = { list: [], preview: null, text: '' };
+  var EV = { list: [], preview: null, text: '', editing: -1 };
   function loadEvents() {
     google.script.run.withSuccessHandler(function (l) { EV.list = l || []; renderEvents(); })
       .withFailureHandler(function (e) { document.getElementById('events').innerHTML = '<h2>학사일정 행사</h2><p class="pending">불러오지 못했습니다. ' + esc(e.message || e) + '</p>'; })
@@ -181,25 +181,27 @@
     document.getElementById('events').innerHTML = '<h2>학사일정 행사</h2>' +
       '<p class="muted">나이스 학사일정에 없는 학교 행사를 화면(A 학사일정·B 달력)에 더합니다. 끝난 행사는 저절로 빠집니다.</p>' +
       (EV.list.length ? '<table>' + EV.list.map(function (e, i) {
+        if (i === EV.editing) return editRowHTML(e, i);
         return '<tr><td style="white-space:nowrap">' + esc(dspan(e)) + '</td><td><b>' + esc(e.name) + '</b>' +
           (e.grades ? ' <span class="muted">' + esc(e.grades) + '</span>' : '') + (e.holiday ? ' <span class="chip s-보완필요">휴업</span>' : '') +
-          '</td><td style="text-align:right"><button class="btn" onclick="removeEvent(' + i + ')">지우기</button></td></tr>';
+          '</td><td style="text-align:right;white-space:nowrap"><button class="btn" onclick="EV.editing=' + i + ';renderEvents()">수정</button> ' +
+          '<button class="btn" onclick="removeEvent(' + i + ')">지우기</button></td></tr>';
       }).join('') + '</table>' : '<p class="muted">직접 넣은 행사가 없습니다.</p>') +
       '<textarea id="evText" rows="4" placeholder="엑셀에서 표를 복사해 붙여 넣거나, 한 줄에 행사 하나씩 적습니다.&#10;11/13 컴퓨팅 사고력 페스티벌&#10;11/11~11/12 AI·SW교육의 날&#10;12/11~12/17 기말고사 1·2학년">' + esc(EV.text) + '</textarea>' +
-      '<div class="row" style="margin-top:6px"><button class="btn primary" onclick="previewEvents()">미리 보기</button>' +
+      '<div class="row" style="margin-top:6px"><button class="btn primary" onclick="previewEvents()">일정 추가하기</button>' +
       '<label class="btn">엑셀 파일 열기<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="readEventFile(this.files[0])"></label>' +
       '<span class="muted">한 줄에 날짜와 행사 이름이 있으면 됩니다. 학년(3학년)·휴업도 알아봅니다.</span></div>' +
       (p ? previewHTML(p) : '');
   }
   function previewHTML(p) {
-    return '<div style="margin-top:12px"><b>이렇게 넣습니다</b> <span class="muted">이름은 고칠 수 있고, 빼려면 체크를 끕니다.</span>' +
+    return '<div style="margin-top:12px"><b>이렇게 추가합니다</b> <span class="muted">맞으면 「이대로 추가」를 누릅니다. 이름은 고칠 수 있고, 빼려면 체크를 끕니다.</span>' +
       (p.events.length ? '<table>' + p.events.map(function (e, i) {
         return '<tr><td><input type="checkbox" id="evOn' + i + '" checked></td><td style="white-space:nowrap">' + esc(dspan(e)) +
           '</td><td><input class="ev-name" id="evName' + i + '" value="' + esc(e.name) + '"></td><td class="muted" style="white-space:nowrap">' +
           esc(e.grades || '전 학년') + (e.holiday ? ' · 휴업' : '') + '</td></tr>';
       }).join('') + '</table>' : '<p class="pending">날짜가 있는 행사를 찾지 못했습니다.</p>') +
       (p.skipped.length ? '<p class="muted">날짜를 찾지 못해 뺀 줄: ' + p.skipped.map(esc).join(' / ') + '</p>' : '') +
-      (p.events.length ? '<div class="row" style="margin-top:8px"><button class="btn primary" onclick="addEvents()">고른 행사 넣기</button>' +
+      (p.events.length ? '<div class="row" style="margin-top:8px"><button class="btn primary" onclick="addEvents()">이대로 추가</button>' +
         '<button class="btn" onclick="EV.preview=null;renderEvents()">취소</button></div>' : '') + '</div>';
   }
   function previewEvents() {
@@ -212,8 +214,25 @@
       return document.getElementById('evOn' + i).checked
         ? { name: document.getElementById('evName' + i).value, start: e.start, end: e.end, grades: e.grades, holiday: e.holiday } : null;
     }).filter(Boolean);
-    if (!list.length) { toast('넣을 행사를 하나 이상 고릅니다.'); return; }
+    if (!list.length) { toast('추가할 일정을 하나 이상 고릅니다.'); return; }
     google.script.run.withSuccessHandler(function (msg) { toast(msg); EV.preview = null; EV.text = ''; loadEvents(); load(); }).withFailureHandler(fail).adminSchoolEventsAdd(list);
+  }
+  // 이미 넣은 일정 고치기: 그 줄을 입력 칸으로 바꾼다
+  function editRowHTML(e, i) {
+    return '<tr><td colspan="3" style="background:#f8fafc"><div class="row">' +
+      '<input type="date" id="edS" value="' + esc(e.start) + '"> ~ <input type="date" id="edE" value="' + esc(e.end) + '">' +
+      '<input class="ev-name" id="edN" value="' + esc(e.name) + '" placeholder="행사 이름" style="flex:1;min-width:160px">' +
+      '<input id="edG" value="' + esc(e.grades) + '" placeholder="학년 (비우면 전 학년)" style="width:150px">' +
+      '<label><input type="checkbox" id="edH"' + (e.holiday ? ' checked' : '') + '> 휴업</label></div>' +
+      '<div class="row" style="margin-top:6px"><button class="btn primary" onclick="saveEdit(' + i + ')">저장</button>' +
+      '<button class="btn" onclick="EV.editing=-1;renderEvents()">취소</button></div></td></tr>';
+  }
+  function saveEdit(i) {
+    var e = EV.list[i], v = function (id) { return document.getElementById(id).value; };
+    var next = { name: v('edN'), start: v('edS'), end: v('edE') || v('edS'), grades: v('edG'), holiday: document.getElementById('edH').checked };
+    if (!next.name.trim() || !next.start) { toast('날짜와 행사 이름을 적어 주세요.'); return; }
+    if (next.end < next.start) { toast('끝 날짜는 시작 날짜와 같거나 뒤여야 합니다.'); return; }
+    google.script.run.withSuccessHandler(function (msg) { toast(msg); EV.editing = -1; loadEvents(); load(); }).withFailureHandler(fail).adminSchoolEventsUpdate(e.key, next);
   }
   function removeEvent(i) {
     var e = EV.list[i];

@@ -832,7 +832,7 @@ function webappUrl_() { return prop_('WEBAPP_URL') || deployed_('STATUS_URL') ||
 // ======================================================================
 // 학사일정 행사 — 나이스에 없는 학교 행사를 관리 화면에서 넣고 지운다.
 // projects/schedule-extra.json 에 쓰면 편성(build_projects.py)이 나이스 일정과 합쳐 화면(A 목록·B 달력)에 낸다. 끝난 행사는 저절로 빠진다.
-// 엑셀에서 복사한 내용·.xlsx 파일(관리 화면이 칸을 탭으로 이어 보낸다)·한 줄짜리 글을 모두 같은 해석기로 푼다.
+// 엑셀에서 복사한 내용·.xlsx 파일(관리 화면이 칸을 탭으로 이어 보낸다)·한 줄짜리 글을 모두 같은 해석기로 푼다. 넣은 일정은 고치거나 지울 수 있다.
 // ======================================================================
 const SX_PATH = 'projects/schedule-extra.json';
 
@@ -954,7 +954,33 @@ function adminSchoolEventsAdd(list) {
       c.events = keep;
     }, '학사일정 행사 추가 (관리 화면) ' + add.length + '건');
     addRequest_('학사일정 행사 추가', '', add.map((a) => a.start.slice(5) + ' ' + a.name).join(', ').slice(0, 300), RS.DONE, 'GitHub 반영 · 화면은 1~2분 뒤');
-    return added ? '행사 ' + added + '건을 넣었습니다. 1~2분 안에 화면 학사일정에 나옵니다.' : '이미 들어 있는 행사입니다.';
+    return added ? '일정 ' + added + '건을 추가했습니다. 1~2분 안에 화면 학사일정에 나옵니다.' : '이미 들어 있는 일정입니다.';
+  });
+}
+
+// 이미 넣은 행사의 날짜·이름·학년·휴업을 고친다. key 는 고치기 전의 '시작|끝|이름'
+function adminSchoolEventsUpdate(key, ev) {
+  requireAdmin_();
+  const k = String(key || ''), next = schoolEvent_(ev);
+  if (!next) throw new Error('날짜와 행사 이름을 확인해 주세요. 끝 날짜는 시작 날짜와 같거나 뒤여야 합니다.');
+  return withLock_(() => {
+    let found = false, clash = false;
+    updateRepoJson_(SX_PATH, (c) => {
+      found = false;
+      clash = false;
+      const list = c.events || [];
+      const i = list.findIndex((e) => sxKey_(e) === k);
+      if (i < 0) return;
+      found = true;
+      if (sxKey_(next) !== k && list.some((e) => sxKey_(e) === sxKey_(next))) { clash = true; return; }
+      list[i] = next;
+      list.sort((x, y) => (x.start + x.end).localeCompare(y.start + y.end));
+      c.events = list;
+    }, '학사일정 행사 수정 (관리 화면)');
+    if (!found) return '고칠 일정을 찾지 못했습니다. 새로 고친 뒤 다시 해 주세요.';
+    if (clash) return '같은 날짜에 같은 이름의 일정이 이미 있습니다.';
+    addRequest_('학사일정 행사 수정', '', (k + ' → ' + sxKey_(next)).slice(0, 300), RS.DONE, 'GitHub 반영 · 화면은 1~2분 뒤');
+    return '「' + next.name + '」 일정을 고쳤습니다. 1~2분 안에 화면에 반영됩니다.';
   });
 }
 
