@@ -250,6 +250,7 @@ body.role-b .screen:not(.is-stopped) { --accent: #0a7468; }
   padding: 0.25vmin 0.6vmin; margin-top: 0.4vmin; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cal-d i small { font-size: 0.85em; opacity: 0.8; }
+.cal-d i .gy { display: none; }  /* 가로 달력은 칸이 좁지 않아 숫자만(3), 세로에서는 '3학년'으로 */
 .cal-d i.exam, .lg.exam { background: #ffe8cc; color: #b45309; }
 .cal-d i.off, .lg.off { background: #ffe0e0; color: #c92a2a; }
 .cal-d i.ev, .lg.ev { background: #e3efff; color: #1d4ed8; }
@@ -579,7 +580,15 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
   .mw-main .ic { width: 12vmin; height: 12vmin; }
   .mw ul { display: flex; flex-wrap: wrap; min-width: 0; }
   .mw li { margin-right: 2vmin; }
-  .cal-d { min-height: calc(var(--f, 1) * 14vmin); }
+  /* 세로 화면: 칸이 좁아 행사 이름이 잘리므로 줄을 바꿔 다 보이게 하고 칸을 높인다 */
+  .cal-grid { grid-gap: 0.6vmin; }
+  .cal-d { min-height: calc(var(--f, 1) * 19vmin); padding: 0.6vmin 0.45vmin; }
+  .cal-d i {
+    white-space: normal; overflow: visible; text-overflow: clip; word-break: keep-all; overflow-wrap: anywhere;
+    font-size: calc(var(--f, 1) * 2.45vmin); line-height: 1.18; padding: 0.35vmin 0.4vmin; letter-spacing: -0.03em;
+  }
+  .cal-d i small { display: block; }
+  .cal-d i .gy { display: inline; }
   .bg-ic { width: 40vmin; height: 40vmin; bottom: 14vmin; }
   /* 아래 줄: 점·버튼 옆에 상태 글자가 좁게 끼어 여러 줄로 늘어나지 않게 상태 글자를 한 줄 아래로 내린다 */
   .bottom { flex-wrap: wrap; }

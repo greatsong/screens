@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.0';
+  const APP_VERSION = '0.7.1';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1027,7 +1027,7 @@
       const dt = new Date(d);
       const n = dt.getUTCDate();
       const label = i === 0 || n === 1 ? (dt.getUTCMonth() + 1) + '/' + n : String(n);
-      const evs = (byDay[k] || []).slice(0, 2).map((e) => `<i class="${kind(e)}">${esc(e.name)}${e.grades ? ' <small>' + esc(e.grades.replace('학년', '')) + '</small>' : ''}</i>`).join('');
+      const evs = (byDay[k] || []).slice(0, 2).map((e) => `<i class="${kind(e)}">${esc(e.name)}${e.grades ? ' <small>' + esc(e.grades.replace('학년', '')) + '<span class="gy">학년</span></small>' : ''}</i>`).join('');
       const more = (byDay[k] || []).length > 2 ? `<i class="more">+${byDay[k].length - 2}</i>` : '';
       const cls = ['cal-d', k === todayIso ? 'today' : '', k < todayIso ? 'past' : '', dt.getUTCDay() === 0 ? 'sun' : '', dt.getUTCDay() === 6 ? 'sat' : '',
         (byDay[k] || []).some((e) => kind(e) === 'off') ? 'off' : ''].filter(Boolean).join(' ');
