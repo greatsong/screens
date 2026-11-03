@@ -1,6 +1,6 @@
 {
-  "version": 39,
-  "publishedAt": "2026-11-03T23:32:21+09:00",
+  "version": 40,
+  "publishedAt": "2026-11-04T02:48:15+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -222,13 +222,6 @@
   ],
   "promoSound": true,
   "schedule": [
-    {
-      "name": "학생행복주간",
-      "start": "2026-11-02",
-      "end": "2026-11-03",
-      "grades": "",
-      "holiday": false
-    },
     {
       "name": "AI·SW교육의 날",
       "start": "2026-11-11",
