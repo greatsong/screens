@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>두더지 잡기 · 당곡고</title>
+<title>두더지 잡기 챌린지 · AI중점학교 당곡고</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
 <style>
 /* 스탠바이미 화면 안에서 실행하는 두더지 잡기(30초). 점수가 TOP 10 안이면 QR을 띄워 휴대폰으로 닉네임을 받는다.
@@ -34,6 +34,14 @@ button { font: inherit; cursor: pointer; }
 .hud { display: flex; align-items: center; }
 .hud .title { font-size: 5.2vmin; font-weight: 900; letter-spacing: -0.03em; color: #23412a; text-shadow: 0 0.4vmin 0 rgba(255, 255, 255, 0.7); }
 .hud .title small { display: block; font-size: 2.4vmin; font-weight: 700; color: #3d6b46; letter-spacing: 0; text-shadow: none; }
+.kicker { display: inline-block; font-size: 2.3vmin; font-weight: 800; letter-spacing: 0; color: #fff; text-shadow: none; padding: 0.5vmin 1.8vmin; margin-bottom: 0.8vmin; border-radius: 99px;
+  background: linear-gradient(90deg, #7c5cff, #3fa9ff); box-shadow: 0 0.6vmin 1.6vmin rgba(92, 110, 255, 0.3); }
+.hud .title .wob { display: inline-block; animation: wob 2.4s ease-in-out infinite; transform-origin: 70% 80%; }
+@keyframes wob { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-18deg); } 86% { transform: rotate(10deg); } }
+/* 풀밭의 꽃과 하늘의 반짝이(장식) */
+.deco { position: absolute; pointer-events: none; font-size: 4vmin; line-height: 1; opacity: 0.9; }
+.deco.tw { animation: twinkle 3s ease-in-out infinite; }
+@keyframes twinkle { 50% { opacity: 0.35; transform: scale(0.8); } }
 .hud .score { margin-left: auto; text-align: right; }
 .hud .score b { display: block; font-size: 9vmin; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; color: #23412a; }
 .hud .score span { font-size: 2.4vmin; font-weight: 800; color: #3d6b46; }
@@ -83,6 +91,7 @@ button { font: inherit; cursor: pointer; }
 .fame li.r2 .rk { background: linear-gradient(160deg, #f1f4f8, #c4ccd8); color: #3f4a5e; }
 .fame li.r3 .rk { background: linear-gradient(160deg, #ffd9b8, #e8955a); color: #6d3412; }
 .fame li.r1 { font-size: 3.4vmin; }
+.fame .rk.md { background: none !important; font-size: 3.8vmin; }
 .fame .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fame .nm.wait { color: var(--muted); font-weight: 700; font-size: 0.82em; }
 .fame .sc { font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 1.4vmin; }
@@ -97,7 +106,9 @@ button { font: inherit; cursor: pointer; }
 .sheet { background: #fff; border-radius: 4vmin; padding: 4.4vmin 5.4vmin; text-align: center; box-shadow: 0 2vmin 6vmin rgba(0, 0, 0, 0.22); max-width: 86vmin; animation: in 0.35s cubic-bezier(0.2, 1.3, 0.4, 1); }
 @keyframes in { from { opacity: 0; transform: translateY(4vmin) scale(0.92); } }
 .sheet .hero { width: 26vmin; height: 26vmin; margin: -14vmin auto 0; }
-.sheet h1 { margin: 1vmin 0 0.6vmin; font-size: 7vmin; font-weight: 900; letter-spacing: -0.03em; }
+.sheet h1 { margin: 1vmin 0 0.6vmin; font-size: 7vmin; font-weight: 900; letter-spacing: -0.03em; color: #2b2f45; text-shadow: 0 0.6vmin 0 #ffe29a; }
+.sheet { border: 0.6vmin solid #fff3c4; max-width: 100vmin; }
+.sheet .kicker { margin-top: 2vmin; }
 .sheet p { margin: 0; font-size: 2.8vmin; color: var(--soft); font-weight: 600; line-height: 1.5; }
 .rules { display: flex; justify-content: center; margin: 2.6vmin 0 3vmin; }
 .rules div { margin: 0 1.4vmin; width: 17vmin; font-size: 2.4vmin; font-weight: 800; color: var(--soft); }
@@ -111,6 +122,7 @@ button { font: inherit; cursor: pointer; }
 @keyframes tick { 0% { opacity: 0; transform: scale(1.8); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0.2; transform: scale(0.8); } }
 .result .final { font-size: 16vmin; font-weight: 900; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; margin: 1vmin 0; }
 .result .final small { font-size: 5vmin; color: var(--soft); }
+.result #rTitle { font-size: 4.4vmin; font-weight: 900; color: #2b2f45; }
 .result .rank { font-size: 4vmin; font-weight: 900; margin: 0.6vmin 0 1.6vmin; }
 .claim { display: flex; align-items: center; text-align: left; background: #fff7e6; border-radius: 2.6vmin; padding: 2vmin 2.6vmin; margin: 1vmin 0 3vmin; }
 .claim .qr { width: 24vmin; height: 24vmin; flex: none; background: #fff; border-radius: 1.6vmin; padding: 1.2vmin; margin-right: 2.6vmin; }
@@ -125,16 +137,21 @@ button { font: inherit; cursor: pointer; }
   .side { width: auto; max-width: none; margin: 2vmin 0 0; height: 36%; }
   .grid { grid-gap: 2vmin 3vmin; }
 }
+.music { position: absolute; left: 2vmin; bottom: 2vmin; z-index: 20; border: 0; border-radius: 99px; padding: 1vmin 2.2vmin; font-size: 2.4vmin; font-weight: 800;
+  color: #2b2f45; background: rgba(255, 255, 255, 0.92); box-shadow: 0 0.6vmin 1.6vmin rgba(35, 65, 42, 0.2); }
+.music.off { color: var(--muted); background: rgba(255, 255, 255, 0.7); }
 @media (prefers-reduced-motion: reduce) { .cloud { animation: none; } }
 </style>
 </head>
 <body>
 <div class="cloud c1"></div><div class="cloud c2"></div>
+<span class="deco tw" style="top:4vmin;left:38vw">✨</span><span class="deco tw" style="top:20vmin;left:70vw;animation-delay:-1.5s">✨</span>
+<span class="deco" style="bottom:2vmin;left:2vmin">🌼</span><span class="deco" style="bottom:3vmin;left:30vw;font-size:3vmin">🌷</span><span class="deco" style="bottom:1.5vmin;left:58vw;font-size:3.4vmin">🍀</span>
 <div class="app" id="app">
   <section class="field">
     <div class="hud">
-      <div class="title">두더지 잡기<small>30초 동안 올라오는 두더지를 톡 누릅니다</small></div>
-      <div class="score"><span>점수</span><b id="score">0</b></div>
+      <div class="title"><span class="kicker">🤖 AI중점학교 당곡고등학교</span><br><span class="wob">🔨</span> 두더지 잡기 챌린지<small>30초 동안 올라오는 두더지를 톡 누릅니다&nbsp;🐾</small></div>
+      <div class="score"><span>⭐ 점수</span><b id="score">0</b></div>
     </div>
     <div class="timer" id="timer"><i id="bar"></i></div>
     <div class="combo" id="combo"></div>
@@ -142,7 +159,7 @@ button { font: inherit; cursor: pointer; }
   </section>
   <aside class="side">
     <div class="fame">
-      <h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z" fill="#f5b700"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5" fill="none" stroke="#f5b700" stroke-width="1.6"/><path d="M10 12.5h4l-.6 3.5h-2.8z" fill="#e0a400"/><rect x="8" y="16" width="8" height="3.2" rx="1" fill="#c48a00"/></svg>명예의 전당</h2>
+      <h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z" fill="#f5b700"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5" fill="none" stroke="#f5b700" stroke-width="1.6"/><path d="M10 12.5h4l-.6 3.5h-2.8z" fill="#e0a400"/><rect x="8" y="16" width="8" height="3.2" rx="1" fill="#c48a00"/></svg>명예의 전당 ✨</h2>
       <div class="sub" id="plays">TOP 10 · 불러오는 중</div>
       <ol id="fame"><li class="empty">기록을 불러오는 중입니다.</li></ol>
     </div>
@@ -152,31 +169,34 @@ button { font: inherit; cursor: pointer; }
 <div class="overlay" id="ready">
   <div class="sheet">
     <div class="hero" id="hero"></div>
-    <h1>두더지 잡기</h1>
-    <p>30초 동안 구멍에서 올라오는 두더지를 손가락으로 누릅니다.</p>
+    <span class="kicker">🤖 AI중점학교 당곡고등학교</span>
+    <h1>🔨 두더지 잡기 챌린지</h1>
+    <p>30초 동안 구멍에서 올라오는 두더지를 손가락으로 톡톡 누릅니다&nbsp;🐾</p>
     <div class="rules">
       <div class="n" id="rN"><b>+1점</b>두더지</div>
       <div class="g" id="rG"><b>+3점</b>황금 두더지</div>
       <div class="x" id="rX"><b>−3점</b>폭탄</div>
     </div>
-    <button class="big" id="start">▶ 시작</button>
-    <p class="note">10번 연속으로 잡으면 점수가 두 배가 됩니다.</p>
+    <button class="big" id="start">🎮 시작!</button>
+    <p class="note">🔥 10번 연속이면 점수 두 배! · 🏆 TOP 10은 명예의 전당에</p>
   </div>
 </div>
 <div class="overlay" id="countdown" hidden><div class="count" id="count">3</div></div>
 <div class="overlay" id="result" hidden>
   <div class="sheet result">
-    <p id="rTitle">끝!</p>
+    <p id="rTitle">⏰ 끝!</p>
     <div class="final"><span id="final">0</span><small>점</small></div>
     <div class="rank" id="rRank"></div>
     <div class="claim" id="claim" hidden>
       <div class="qr" id="qr"></div>
-      <div><b>휴대폰으로 닉네임 적기</b><span>QR을 찍으면 명예의 전당에 내 이름을 올릴 수 있습니다. 15분 안에 한 번만 적을 수 있습니다.</span></div>
+      <div><b>📱 휴대폰으로 닉네임 적기</b><span>QR을 찍으면 명예의 전당에 내 이름을 올릴 수 있습니다. 15분 안에 한 번만 적을 수 있습니다.</span></div>
     </div>
-    <button class="big again" id="again">다시 하기</button>
+    <button class="big again" id="again">🔁 다시 하기</button>
     <p class="note" id="rNote"></p>
   </div>
 </div>
+
+<button class="music" id="music">🎵 음악 켜짐</button>
 
 <script src="../../vendor/qrcode.min.js"></script>
 <script>
@@ -226,25 +246,69 @@ button { font: inherit; cursor: pointer; }
   $('rG').insertAdjacentHTML('afterbegin', moleSVG('gold'));
   $('rX').insertAdjacentHTML('afterbegin', bombSVG());
 
-  // ---------- 소리(짧은 합성음). 첫 터치에서 켠다 ----------
+  // ---------- 소리: 짧은 합성음을 귀엽게(뿅·뽁·반짝). 첫 터치에서 켠다 ----------
   let audio = null;
-  function tone(f1, f2, ms, type, vol) {
+  // f1→f2로 미끄러지는 소리. wob 을 주면 떨림(비브라토)이 생겨 캐릭터 목소리처럼 들린다
+  function tone(f1, f2, ms, type, vol, delay, wob) {
     try {
       if (!audio) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return; audio = new A(); }
-      const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
-      o.type = type || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + ms / 1000);
-      g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
-      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + ms / 1000 + 0.02);
+      const t = audio.currentTime + (delay || 0) / 1000, end = t + ms / 1000, o = audio.createOscillator(), g = audio.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, end);
+      if (wob) {
+        const l = audio.createOscillator(), lg = audio.createGain();
+        l.frequency.value = 28; lg.gain.value = wob; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(end + 0.02);
+      }
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, end);
+      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(end + 0.02);
     } catch (e) { /* 소리가 안 나도 게임은 된다 */ }
   }
+  const notes = (list, gap, ms, type, vol) => list.forEach((f, i) => tone(f, f * 1.01, ms, type || 'triangle', vol || 0.09, i * gap));
   const sfx = {
-    hit: () => tone(520, 1040, 120, 'triangle'),
-    gold: () => { tone(880, 1760, 160, 'triangle'); setTimeout(() => tone(1320, 2200, 180, 'sine', 0.08), 90); },
-    bomb: () => tone(180, 50, 380, 'sawtooth', 0.16),
-    tick: () => tone(660, 660, 90, 'square', 0.05),
-    go: () => tone(880, 1320, 220, 'triangle'),
-    end: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, f, 160, 'triangle', 0.1), i * 120)); }
+    peek: () => tone(380, 760, 70, 'sine', 0.035),                                   // 두더지가 올라올 때 '뽁'
+    hit: () => { tone(900, 1700, 90, 'sine', 0.13, 0, 40); tone(1500, 2100, 70, 'sine', 0.06, 70); },  // 잡을 때 '뿅!'
+    gold: () => notes([1319, 1568, 2093, 2637], 55, 140, 'triangle', 0.08),         // 반짝반짝
+    bomb: () => { tone(420, 110, 340, 'square', 0.07, 0, 30); tone(160, 60, 300, 'sine', 0.16); },      // '뿌웅'
+    combo: (n) => tone(700 + Math.min(n, 12) * 60, 1100 + Math.min(n, 12) * 80, 80, 'triangle', 0.05, 60),
+    tick: () => tone(1200, 1180, 60, 'sine', 0.07),                                  // 실로폰 '똑'
+    go: () => notes([784, 1047, 1568], 70, 160),
+    end: () => notes([1047, 880, 784, 1047, 1319], 110, 170),
+    fanfare: () => notes([784, 988, 1175, 1568, 1976], 80, 200, 'triangle', 0.08)
   };
+
+  // ---------- 배경 음악: 직접 만든 짧은 멜로디를 합성해 반복한다(음원 파일 없음). 게임하는 동안에만, 남은 시간이 줄수록 빨라진다 ----------
+  const TUNE = [72, 76, 79, 76, 74, 77, 81, 77, 72, 76, 79, 84, 83, 79, 76, 74, 69, 72, 76, 72, 71, 74, 77, 74, 72, 74, 76, 79, 77, 74, 72, 0];
+  const BASS = [48, 55, 53, 57, 45, 52, 43, 50];
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const bgm = { on: store.get('mole.music', '1') === '1', timer: null, next: 0, i: 0 };
+  function noteAt(t, f, ms, type, vol) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+    o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + ms / 1000 + 0.02);
+  }
+  function bgmStart() {
+    bgmStop();
+    if (!bgm.on || !audio) return;
+    bgm.i = 0; bgm.next = audio.currentTime + 0.05;
+    bgm.timer = setInterval(() => {
+      const p = S.playing ? Math.min(1, (Date.now() - S.start) / ROUND_MS) : 0;
+      const step = 60 / (138 + 46 * p) / 2;   // 8분음표 길이(초)
+      while (bgm.next < audio.currentTime + 0.25) {
+        const k = bgm.i % TUNE.length;
+        if (TUNE[k]) noteAt(bgm.next, hz(TUNE[k]), step * 900, 'triangle', 0.035);
+        if (k % 4 === 0) noteAt(bgm.next, hz(BASS[(k / 4) % BASS.length]), step * 1700, 'sine', 0.05);
+        bgm.next += step; bgm.i++;
+      }
+    }, 60);
+  }
+  function bgmStop() { clearInterval(bgm.timer); bgm.timer = null; }
+  function setMusic(on) {
+    bgm.on = on; store.set('mole.music', on ? '1' : '0');
+    $('music').textContent = on ? '🎵 음악 켜짐' : '🔇 음악 꺼짐';
+    $('music').classList.toggle('off', !on);
+    if (on && S.playing) { tone(1, 1, 1, 'sine', 0.0001); bgmStart(); } else if (!on) bgmStop();
+  }
+  $('music').addEventListener('click', () => setMusic(!bgm.on));
 
   // ---------- 구멍 9개 ----------
   const holes = [];
@@ -259,6 +323,7 @@ button { font: inherit; cursor: pointer; }
   }
 
   const S = { playing: false, score: 0, combo: 0, start: 0, spawnTimer: null, frame: 0, api: '', board: null, lastCode: '' };
+  setMusic(bgm.on);
 
   function show(h, kind, stay) {
     h.kind = kind; h.busy = true;
@@ -266,6 +331,7 @@ button { font: inherit; cursor: pointer; }
     h.el.classList.remove('hit', 'gone');
     void h.el.offsetWidth;
     h.el.classList.add('up');
+    if (S.playing) sfx.peek();
     h.timer = setTimeout(() => hide(h, false), stay);
   }
   function hide(h, wasHit) {
@@ -299,7 +365,7 @@ button { font: inherit; cursor: pointer; }
     $('score').textContent = S.score;
     const pop = document.createElement('div');
     pop.className = 'pop' + (kind === 'gold' ? ' gold' : kind === 'bomb' ? ' bad' : '');
-    pop.textContent = (pts > 0 ? '+' : '−') + Math.abs(pts);
+    pop.textContent = (kind === 'bomb' ? '💥 ' : '') + (pts > 0 ? '+' : '−') + Math.abs(pts) + (kind === 'gold' ? ' ✨' : '');
     h.el.appendChild(pop);
     setTimeout(() => pop.remove(), 800);
     setTimeout(() => hide(h, true), 220);
@@ -307,7 +373,8 @@ button { font: inherit; cursor: pointer; }
   function setCombo(n) {
     S.combo = n;
     const el = $('combo');
-    if (n >= 3) { el.textContent = n >= 10 ? '연속 ' + n + '! 점수 두 배' : '연속 ' + n + '!'; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
+    if (n >= 3) { el.textContent = n >= 10 ? '🔥 연속 ' + n + '! 점수 ×2 ✨' : '🔥 연속 ' + n + '!';
+      if (n === 10) sfx.fanfare(); else if (n >= 3) sfx.combo(n); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
     else el.classList.remove('on');
   }
 
@@ -343,7 +410,7 @@ button { font: inherit; cursor: pointer; }
     let n = 3;
     $('countdown').hidden = false;
     const step = () => {
-      if (n === 0) { $('countdown').hidden = true; sfx.go(); S.playing = true; S.start = Date.now(); S.sec = 30; spawn(); frame(); return; }
+      if (n === 0) { $('countdown').hidden = true; sfx.go(); S.playing = true; S.start = Date.now(); S.sec = 30; bgmStart(); spawn(); frame(); return; }
       $('count').textContent = n; $('count').style.animation = 'none'; void $('count').offsetWidth; $('count').style.animation = '';
       sfx.tick(); n--; setTimeout(step, 800);
     };
@@ -351,7 +418,7 @@ button { font: inherit; cursor: pointer; }
   }
   function finish() {
     S.playing = false;
-    clearTimeout(S.spawnTimer); cancelAnimationFrame(S.frame);
+    clearTimeout(S.spawnTimer); cancelAnimationFrame(S.frame); bgmStop();
     holes.forEach((h) => { if (h.el.classList.contains('up')) hide(h, true); });
     $('bar').style.transform = 'scaleX(0)';
     sfx.end();
@@ -369,13 +436,14 @@ button { font: inherit; cursor: pointer; }
     }
     return id;
   }
+  const MEDAL = ['🥇', '🥈', '🥉'];
   function renderFame(top, mineIdx) {
     const list = top || [];
-    $('fame').innerHTML = list.length ? list.map((r, i) => `<li class="r${i + 1}${i === mineIdx ? ' me' : ''}"><span class="rk">${i + 1}</span>` +
-      `<span class="nm${r.n ? '' : ' wait'}">${r.n ? esc(r.n) : '닉네임 적는 중'}</span><span class="sc">${esc(r.s)}점</span></li>`).join('')
-      : '<li class="empty">아직 기록이 없습니다. 첫 기록의 주인공이 되어 보세요.</li>';
+    $('fame').innerHTML = list.length ? list.map((r, i) => `<li class="r${i + 1}${i === mineIdx ? ' me' : ''}">${i < 3 ? '<span class="rk md">' + MEDAL[i] + '</span>' : '<span class="rk">' + (i + 1) + '</span>'}` +
+      `<span class="nm${r.n ? '' : ' wait'}">${r.n ? esc(r.n) : '✏️ 닉네임 적는 중'}</span><span class="sc">${esc(r.s)}점</span></li>`).join('')
+      : '<li class="empty">아직 기록이 없습니다. 첫 기록을 남겨 보세요 🐣</li>';
   }
-  function setPlays(n) { $('plays').textContent = 'TOP 10' + (n ? ' · 지금까지 ' + n + '판' : ''); }
+  function setPlays(n) { $('plays').textContent = '👑 TOP 10' + (n ? ' · 지금까지 ' + n + '판 🎮' : ''); }
   function loadBoard() {
     if (!S.api) return;
     fetch(S.api + '?api=games&game=mole&t=' + Date.now()).then((r) => r.json()).then((d) => {
@@ -390,7 +458,7 @@ button { font: inherit; cursor: pointer; }
   function showResult() {
     const score = S.score;
     $('result').hidden = false; $('claim').hidden = true; $('rNote').textContent = '';
-    $('rTitle').textContent = score >= 60 ? '대단해요!' : score >= 30 ? '잘했어요!' : '끝!';
+    $('rTitle').textContent = score >= 60 ? '🎉 대단해요!' : score >= 30 ? '👏 잘했어요!' : '⏰ 끝!';
     $('rRank').textContent = S.api && score > 0 ? '기록을 확인하는 중입니다' : '';
     countUp(score);
     if (!S.api || score <= 0) return;
@@ -399,7 +467,7 @@ button { font: inherit; cursor: pointer; }
         if (!d || !d.ok) { $('rRank').textContent = (d && d.error) || '기록을 저장하지 못했습니다'; return; }
         if (d.board) { S.board = d.board; setPlays(d.plays); }
         if (d.top && d.code) {
-          $('rRank').textContent = '🏆 명예의 전당 ' + d.rank + '위!';
+          $('rRank').textContent = '🏆 명예의 전당 ' + d.rank + '위! 🎉'; sfx.fanfare();
           const idx = (d.board || []).findIndex((r) => !r.n && r.s === score);
           renderFame(d.board, idx);
           const url = new URL('../name.html?g=mole&c=' + d.code, location.href).href;

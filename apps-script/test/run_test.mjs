@@ -478,7 +478,7 @@ const ag = G.adminGames()[0];
 const top1 = ag.rows[0];
 G.adminGameHide(top1.row, true);
 const after = JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text);
-check('관리 화면에서 숨긴 기록은 순위에서 빠짐', ag.title === '두더지 잡기' && after.top[0].s !== 100 && G.adminGames()[0].rows[0].hidden, after.top[0]);
+check('관리 화면에서 숨긴 기록은 순위에서 빠짐', ag.title === '두더지 잡기 챌린지' && after.top[0].s !== 100 && G.adminGames()[0].rows[0].hidden, after.top[0]);
 G.adminGameHide(top1.row, false);
 check('다시 보이게 하면 돌아옴', JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text).top[0].s === 100);
 

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>명예의 전당 닉네임 · 당곡고</title>
+<title>명예의 전당 닉네임 · AI중점학교 당곡고</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
 <style>
-/* 스탠바이미 게임이 끝난 뒤 화면의 QR로 여는 휴대폰 닉네임 등록. 주소의 일회용 코드(c)로 그 기록 하나에만 이름을 적는다(15분 안, 한 번).
+/* 학교 화면(스탠바이미) 게임이 끝난 뒤 화면의 QR로 여는 휴대폰 닉네임 등록. 주소의 일회용 코드(c)로 그 기록 하나에만 이름을 적는다(15분 안, 한 번).
  * 이름·연락처는 받지 않는다. 닉네임은 서버(Apps Script)가 금칙어를 거르고, 선생님이 관리 화면에서 숨길 수 있다 */
 :root { --bg: #f3fbe9; --card: #ffffff; --text: #2b2f45; --soft: #565d78; --muted: #8a8fa6; --line: rgba(43, 47, 69, 0.1); --accent: #ff7a1a; --ok: #2f8a3d; --bad: #e5484d; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -16,6 +16,9 @@ body {
 }
 main { max-width: 520px; margin: 0 auto; padding: 24px 18px 40px; }
 header p { margin: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+.kicker { display: inline-block; color: #fff; font-size: 13px; font-weight: 800; padding: 5px 12px; border-radius: 99px; background: linear-gradient(90deg, #7c5cff, #3fa9ff); }
+.fame-tag { margin: 2px 0 10px; font-size: 16px; font-weight: 800; color: #a16207; }
+.rk.md { background: none !important; font-size: 20px; }
 h1 { margin: 4px 0 4px; font-size: 27px; letter-spacing: -0.02em; }
 .lead { color: var(--soft); font-size: 15px; line-height: 1.5; margin: 0 0 16px; }
 .card { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: 0 8px 22px rgba(47, 138, 61, 0.12); margin-bottom: 16px; }
@@ -46,18 +49,19 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
 <body>
 <main>
   <header>
-    <p>당곡고등학교 스탠바이미</p>
-    <h1 id="title">명예의 전당</h1>
-    <p class="lead">축하합니다. 화면 게임에서 TOP 10에 들었습니다. 명예의 전당에 올릴 닉네임을 적습니다.</p>
+    <span class="kicker">🤖 AI중점학교 당곡고등학교</span>
+    <h1 id="title">🔨 두더지 잡기 챌린지</h1>
+    <p class="fame-tag">🏆 명예의 전당</p>
+    <p class="lead">🎉 축하합니다! TOP 10에 들었습니다. 명예의 전당에 올릴 닉네임을 적습니다.</p>
   </header>
   <div class="card" id="form">
-    <label for="nick">닉네임 (8글자까지)</label>
-    <div class="row"><input id="nick" maxlength="8" autocomplete="off" placeholder="예: 두더지왕"><button id="send">올리기</button></div>
+    <label for="nick">✏️ 닉네임 (8글자까지)</label>
+    <div class="row"><input id="nick" maxlength="8" autocomplete="off" placeholder="예: 두더지왕"><button id="send">올리기 🚀</button></div>
     <div class="hint">실명 대신 닉네임을 적습니다. 욕설이나 다른 사람을 흉내 낸 이름은 올라가지 않거나 선생님이 숨길 수 있습니다. 한 기록에 한 번만, 15분 안에 적을 수 있습니다.</div>
     <div class="msg" id="msg"></div>
   </div>
-  <div class="card" id="board" hidden><h2>명예의 전당 TOP 10</h2><ol id="list"></ol></div>
-  <footer>이름·연락처는 받지 않습니다. 닉네임과 점수는 학교 스탠바이미 화면에 나옵니다.</footer>
+  <div class="card" id="board" hidden><h2>👑 명예의 전당 TOP 10</h2><ol id="list"></ol></div>
+  <footer>이름·연락처는 받지 않습니다. 닉네임과 점수는 학교 화면에 나옵니다.</footer>
 </main>
 <script>
 (function () {
@@ -66,13 +70,14 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const q = new URLSearchParams(location.search);
   const code = q.get('c') || '', game = q.get('g') || 'mole';
-  const TITLE = { mole: '두더지 잡기' };
+  const TITLE = { mole: '🔨 두더지 잡기 챌린지' };
+  const MEDAL = ['🥇', '🥈', '🥉'];
   let api = '';
-  $('title').textContent = (TITLE[game] || '게임') + ' 명예의 전당';
+  $('title').textContent = TITLE[game] || '🎮 게임 챌린지';
   function board(top, meName) {
     $('board').hidden = false;
-    $('list').innerHTML = (top || []).map((r, i) => `<li class="r${i + 1}${meName && r.n === meName ? ' me' : ''}"><span class="rk">${i + 1}</span>` +
-      `<span class="nm${r.n ? '' : ' wait'}">${r.n ? esc(r.n) : '닉네임 적는 중'}</span><span class="sc">${esc(r.s)}점</span></li>`).join('') || '<li>아직 기록이 없습니다.</li>';
+    $('list').innerHTML = (top || []).map((r, i) => `<li class="r${i + 1}${meName && r.n === meName ? ' me' : ''}">${i < 3 ? '<span class="rk md">' + MEDAL[i] + '</span>' : '<span class="rk">' + (i + 1) + '</span>'}` +
+      `<span class="nm${r.n ? '' : ' wait'}">${r.n ? esc(r.n) : '✏️ 닉네임 적는 중'}</span><span class="sc">${esc(r.s)}점</span></li>`).join('') || '<li>아직 기록이 없습니다.</li>';
   }
   function say(t, kind) { $('msg').textContent = t; $('msg').className = 'msg' + (kind ? ' ' + kind : ''); }
   if (!/^[0-9a-f]{16}$/.test(code)) { $('form').innerHTML = '<div class="msg bad">주소가 올바르지 않습니다. 화면의 QR을 다시 찍어 주세요.</div>'; }
@@ -88,7 +93,7 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
     $('send').disabled = true; say('올리는 중입니다');
     fetch(api, { method: 'POST', body: JSON.stringify({ api: 'gamename', code: code, name: name }) }).then((r) => r.json()).then((d) => {
       if (!d || !d.ok) { $('send').disabled = false; say((d && d.error) || '올리지 못했습니다', 'bad'); return; }
-      $('form').innerHTML = `<div class="done">명예의 전당에 올랐습니다<b>${esc(d.rank)}위 · ${esc(d.score)}점</b>${esc(d.name)}</div>` +
+      $('form').innerHTML = `<div class="done">🎉 명예의 전당에 올랐습니다<b>${esc(d.rank)}위 · ${esc(d.score)}점</b>${esc(d.name)}</div>` +
         '<div class="hint" style="text-align:center">학교 화면에는 30초 안에 나옵니다.</div>';
       board(d.board, d.name);
     }).catch(() => { $('send').disabled = false; say('연결이 불안정합니다. 잠시 뒤 다시 눌러 주세요', 'bad'); });
