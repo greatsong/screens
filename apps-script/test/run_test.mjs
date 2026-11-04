@@ -415,9 +415,11 @@ check('같은 휴대폰·같은 메뉴는 다시 세지 않음', v2.dup && v2.co
 check('다른 휴대폰은 따로 셈', vote({ dish: '단호박카레라이스', dev: 'phone-bbbbbbbb' }).counts['단호박카레라이스'] === 2);
 const s1 = vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' });
 const s2 = vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' });
-check('화면 터치는 2초 안에 한 번만', s1.counts['조각케이크'] === 1 && s2.wait && s2.counts['조각케이크'] === 1, [s1, s2]);
-cache.clear();
-check('2초가 지나면 같은 화면에서 다시 투표', vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen' }).counts['조각케이크'] === 2);
+check('화면 터치는 누를 때마다 셈', s1.counts['조각케이크'] === 1 && s2.counts['조각케이크'] === 2, [s1, s2]);
+const s3 = vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen', n: 5 });
+check('화면이 모아 보낸 터치 수(n)만큼 셈', s3.counts['조각케이크'] === 7 && sheets['급식투표'].data.filter((r) => r[2] === '조각케이크').length === 7, s3);
+check('화면 한 번에 30표까지, 휴대폰은 n을 무시', vote({ dish: '조각케이크', dev: 'screen-b-0001', src: 'screen', n: 999 }).counts['조각케이크'] === 37
+  && vote({ dish: '팥빙수', dev: 'phone-hhhhhhhh', n: 50 }).counts['팥빙수'] === 1);
 vote({ dish: '=HYPERLINK("https://evil.example","x")', dev: 'phone-cccccccc' });
 check('수식처럼 보이는 메뉴 이름은 시트에 문자로 저장', sheets['급식투표'].data.some((r) => String(r[2]).startsWith("'=")));
 check('시트 기록에 기기 번호 원문이 없음', !JSON.stringify(sheets['급식투표'].data).includes('phone-aaaaaaaa'));
@@ -437,7 +439,7 @@ cache.clear();
 const best = JSON.parse(G.doGet({ parameter: { api: 'votes' } }).text).best;
 const bk = (k) => (best.list.find((x) => x.k === k) || {}).n || 0;
 check('역대 인기 메뉴는 표기가 달라도 같은 메뉴로 합침', bk('칼슘기장밥') === 2 && !best.list.some((x) => x.k === '친환경칼슘기장밥'), best);
-check('역대 인기 메뉴는 많은 순, 1위는 단호박카레라이스', best.list[0].k === '단호박카레라이스' && best.list[0].n === 2 && best.list.every((x, i) => !i || best.list[i - 1].n >= x.n), best);
+check('역대 인기 메뉴는 많은 순, 1위는 화면에서 많이 누른 조각케이크', best.list[0].k === '조각케이크' && best.list[0].n === 37 && best.list.every((x, i) => !i || best.list[i - 1].n >= x.n), best);
 check('역대 인기 메뉴에 연결 시험·수식 이름은 넣지 않음', !best.list.some((x) => /시험|=|HYPERLINK/.test(x.k)), best);
 check('역대 인기 메뉴는 열쇠와 수만 돌려줌(기기 정보 없음)', best.list.every((x) => Object.keys(x).join() === 'k,n') && best.total === best.list.reduce((t, x) => t + x.n, 0), best);
 check('메뉴 열쇠 규칙이 화면(meal-icons.js)과 같음', ['친환경칼슘기장밥', '돈육김치찌개(1.5.)', '배추김치9.13.', '수제돈가스&소스', '섞박지', '닭다리살구이_정육'].map(G.dishKey_).join() === '칼슘기장밥,돈육김치찌개,배추김치,돈가스,석박지,닭다리살구이');

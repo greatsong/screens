@@ -119,7 +119,7 @@
     diagTimer: null,
     show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
     meal: store.get('meal', null), mealBusy: false,
-    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, voteTap: 0, best: store.get('best', null),
+    votes: store.get('votes', {}), voteAt: 0, voteBusy: false, votePend: {}, voteFly: null, voteTimer: null, best: store.get('best', null),
     peek: null, press: null
   };
   // 화면을 누르면 A 는 급식, B 는 학사일정 달력을 잠시 보여 준다(startPeek)
@@ -863,7 +863,7 @@
   const icon = (name) => `<img class="ic" src="${MEAL.src(name)}" data-fb="${MEAL.fallback(name)}" alt="" draggable="false" onerror="${ONERR}">`;
   // ---------- 급식 메뉴 투표 ----------
   // 화면에서 메뉴를 누르거나 휴대폰(vote.html)으로 하트를 보낸다. 받는 곳은 Apps Script 웹 앱(content.vote.api).
-  // 이 화면은 무작위 기기 번호로만 투표하고(이름·연락처 없음), 서버가 한 화면에서 2초에 한 번만 센다
+  // 이 화면은 무작위 기기 번호로만 투표한다(이름·연락처 없음). 누를 때마다 바로 하트를 올리고, 서버에는 1초씩 모아 한 번에 보낸다
   const HEART = '<svg class="heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.2s-7.6-4.7-9.7-9.4C.8 8.4 2.9 4.4 6.8 4.4c2.2 0 3.9 1.2 5.2 3 1.3-1.8 3-3 5.2-3 3.9 0 6 4 4.5 7.4-2.1 4.7-9.7 9.4-9.7 9.4z" fill="currentColor"/></svg>';
   const voteAttr = (date, dish) => (state.content && state.content.vote ? ` data-vote-date="${esc(date)}" data-vote-dish="${esc(dish)}"` : '');
   function voteBadge(date, dish) {
@@ -900,7 +900,7 @@
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
     fetch(c.vote.api + '?api=votes', ctrl ? { signal: ctrl.signal } : {}).then((r) => r.json()).then((d) => {
-      if (d && d.ok && d.days) { state.votes = d.days; store.set('votes', d.days); refreshVotes(); }
+      if (d && d.ok && d.days) { store.set('votes', d.days); state.votes = withPending(d.days); refreshVotes(); }
       if (d && d.ok && d.best) { state.best = d.best; store.set('best', d.best); }
     }).catch(() => {}).then(() => { clearTimeout(timer); state.voteBusy = false; });
   }
@@ -915,24 +915,60 @@
       hv.querySelector('b').textContent = n;
     });
   }
+  // 서버 집계에 아직 서버가 받지 않은 터치(보낼 것·보내는 중)를 더한다. 받아 온 값이 화면의 숫자를 되돌리지 않게
+  function withPending(days, skipFly) {
+    const out = {};
+    Object.keys(days || {}).forEach((k) => { out[k] = Object.assign({}, days[k]); });
+    const add = (k, d, n) => { out[k] = out[k] || {}; out[k][d] = (out[k][d] || 0) + n; };
+    Object.keys(state.votePend).forEach((k) => Object.keys(state.votePend[k]).forEach((d) => add(k, d, state.votePend[k][d])));
+    if (state.voteFly && !skipFly) add(state.voteFly.date, state.voteFly.dish, state.voteFly.n);
+    return out;
+  }
   function castVote(date, dish, el) {
     const c = state.content;
     if (!c || !c.vote || !c.vote.api || !date || !dish) return;
     state.lastInteract = Date.now();
     el.classList.remove('voted'); void el.offsetWidth; el.classList.add('voted');
-    if (Date.now() - state.voteTap < 2000) return;   // 서버와 같은 간격: 한 화면에서 2초에 한 번
-    state.voteTap = Date.now();
     const day = (state.votes[date] = state.votes[date] || {});
-    day[dish] = (day[dish] || 0) + 1;                 // 먼저 올려 보이고, 서버 답으로 바로잡는다
+    day[dish] = (day[dish] || 0) + 1;                 // 누를 때마다 바로 올린다
+    const pend = (state.votePend[date] = state.votePend[date] || {});
+    pend[dish] = (pend[dish] || 0) + 1;
     refreshVotes();
     const burst = document.createElement('span');
     burst.className = 'burst';
     burst.innerHTML = HEART;
     el.appendChild(burst);
     setTimeout(() => { if (burst.parentNode) burst.parentNode.removeChild(burst); }, 1000);
-    fetch(c.vote.api, { method: 'POST', body: JSON.stringify({ api: 'vote', date: date, dish: dish, dev: devId(), src: 'screen' }) })
-      .then((r) => r.json()).then((d) => { if (d && d.counts) { state.votes[date] = d.counts; store.set('votes', state.votes); refreshVotes(); } })
-      .catch(() => {});
+    if (!state.voteTimer) state.voteTimer = setTimeout(flushVotes, 1000);
+  }
+  // 모인 터치를 메뉴마다 n으로 묶어 하나씩 보낸다(서버는 한 번에 30까지 받는다). 연결이 끊기거나 1분 한도에 걸리면 다시 모아 두었다가 보낸다
+  function flushVotes() {
+    state.voteTimer = null;
+    const c = state.content;
+    if (state.voteFly || !c || !c.vote || !c.vote.api) return;
+    const date = Object.keys(state.votePend)[0];
+    if (!date) return;
+    const dish = Object.keys(state.votePend[date])[0];
+    const n = Math.min(30, state.votePend[date][dish]);
+    if ((state.votePend[date][dish] -= n) <= 0) delete state.votePend[date][dish];
+    if (!Object.keys(state.votePend[date]).length) delete state.votePend[date];
+    state.voteFly = { date, dish, n };
+    const done = (counts, retry) => {
+      if (counts) {
+        const merged = withPending({ [date]: counts }, true);
+        state.votes[date] = merged[date];
+        store.set('votes', Object.assign({}, store.get('votes', {}), { [date]: counts }));
+      } else if (retry) {
+        const pend = (state.votePend[date] = state.votePend[date] || {});
+        pend[dish] = (pend[dish] || 0) + n;
+      }
+      state.voteFly = null;
+      refreshVotes();
+      if (Object.keys(state.votePend).length && !state.voteTimer) state.voteTimer = setTimeout(flushVotes, counts ? 1000 : 5000);
+    };
+    fetch(c.vote.api, { method: 'POST', body: JSON.stringify({ api: 'vote', date: date, dish: dish, dev: devId(), src: 'screen', n: n }) })
+      .then((r) => r.json()).then((d) => done(d && d.ok && d.counts ? d.counts : null, !!(d && d.retry)))
+      .catch(() => done(null, true));
   }
 
   // B 화면: 앞으로 급식 다섯 날(오늘부터). 날마다 주요리 그림을 크게, 메뉴는 작은 그림과 함께

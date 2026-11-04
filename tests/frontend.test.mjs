@@ -45,7 +45,7 @@ function browser({ role = 'a', time = START } = {}) {
     getAttribute(name) { return this[name]; }, setAttribute(name, value) { this[name] = value; }
   };
   element('promo').querySelector = (selector) => selector === 'video' ? video : element('soundHint');
-  const document = { getElementById: element, body: element('body'), hidden: false };
+  const document = { getElementById: element, body: element('body'), hidden: false, createElement: () => ({ className: '', innerHTML: '' }) };
   const schedule = (fn, delay, interval = 0) => {
     const id = ++nextTimer;
     timers.set(id, { fn, at: currentTime + delay, interval });
@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -341,6 +341,37 @@ test('all-time meal TOP 3 shows only dishes from the real menu, so a made-up nam
 });
 
 
+
+test('every tap on a meal counts at once and is sent in one batched request a second later, never lowering the shown count', async () => {
+  const env = screen({ role: 'b' });
+  env.state.content = { vote: { api: 'https://vote.invalid/exec' } };
+  const sent = [];
+  let reply;
+  env.setFetch((url, opts) => { sent.push(JSON.parse(opts.body)); return new Promise((resolve) => { reply = resolve; }); });
+  const tile = { classList: { add() {}, remove() {} }, offsetWidth: 0, appendChild() {} };
+  const count = () => env.state.votes['20261104']['조각케이크'];
+  for (let i = 0; i < 7; i++) env.castVote('20261104', '조각케이크', tile);
+  assert.equal(count(), 7);                     // 누른 만큼 바로 보인다
+  assert.equal(sent.length, 0);
+  env.advance(SECOND);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].n, 7);                   // 1초 동안 누른 것을 한 번에 보낸다
+  assert.equal(sent[0].src, 'screen');
+  for (let i = 0; i < 3; i++) env.castVote('20261104', '조각케이크', tile);
+  assert.equal(count(), 10);
+  reply({ json: () => ({ ok: true, counts: { 조각케이크: 12 } }) });   // 다른 화면 표까지 더해진 서버 집계
+  await new Promise((r) => setImmediate(r));
+  assert.equal(count(), 15);                    // 서버 12 + 아직 안 보낸 3
+  env.advance(SECOND);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].n, 3);
+  reply({ json: () => ({ ok: false, retry: true }) });                // 1분 한도에 걸리면 다시 모아 둔다
+  await new Promise((r) => setImmediate(r));
+  assert.equal(count(), 15);
+  env.advance(5 * SECOND);
+  assert.equal(sent.length, 3);
+  assert.equal(sent[2].n, 3);
+});
 
 test('public events join both screens, use the signup QR and expire without polling', () => {
   for (const role of ['a', 'b']) {

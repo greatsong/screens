@@ -415,11 +415,11 @@ function doGet(e) {
 // ======================================================================
 // 급식 메뉴 투표 — 스탠바이미 화면(메뉴 터치)과 휴대폰(site/vote.html)이 부른다.
 // 이름·이메일은 받지 않는다. 기기마다 무작위 번호(dev)를 만들어 그 해시로만 중복을 막는다.
-//   휴대폰: 같은 기기·같은 날·같은 메뉴는 6시간 안에 한 번  ·  화면: 한 화면에서 2초에 한 번
-//   전체: 1분에 120표까지(웹 앱 실행 할당량 보호)
+//   휴대폰: 같은 기기·같은 날·같은 메뉴는 6시간 안에 한 번  ·  화면: 누른 만큼 센다(화면이 1초씩 모아 n으로 보낸다, 한 번에 30까지)
+//   전체: 1분에 120번 요청까지(웹 앱 실행 할당량 보호)
 // 집계는 스크립트 속성 MEAL_VOTES {yyyyMMdd: {메뉴: 수}}에 두고 3주 지난 날은 지운다. 시트 '급식투표'에는 기록만 남긴다.
 // ======================================================================
-const VOTE = { BACK: 1, AHEAD: 14, KEEP: 21, MAX_DISHES: 24, PHONE_TTL: 21600, SCREEN_GAP: 2, PER_MIN: 120 };
+const VOTE = { BACK: 1, AHEAD: 14, KEEP: 21, MAX_DISHES: 24, PHONE_TTL: 21600, SCREEN_MAX: 30, PER_MIN: 120 };
 const V_COLS = ['시각', '날짜', '메뉴', '출처', '기기'];
 
 function doPost(e) {
@@ -451,21 +451,25 @@ function mealVote_(b) {
   const cache = CacheService.getScriptCache();
   const minute = 'mvm:' + fmt_(now_(), 'yyyyMMddHHmm');
   const used = Number(cache.get(minute) || 0);
-  if (used >= VOTE.PER_MIN) return { ok: false, error: '잠시 뒤 다시 눌러 주세요' };
+  if (used >= VOTE.PER_MIN) return { ok: false, retry: true, error: '잠시 뒤 다시 눌러 주세요' };
   cache.put(minute, String(used + 1), 120);
   const who = hash_(dev);
-  const gate = src === 'phone' ? 'mvp:' + who + ':' + date + ':' + hash_(dish) : 'mvs:' + who;
-  if (cache.get(gate)) return { ok: true, dup: src === 'phone', wait: src === 'screen', counts: dayVotes_(date) };
-  cache.put(gate, '1', src === 'phone' ? VOTE.PHONE_TTL : VOTE.SCREEN_GAP);
+  const n = src === 'screen' ? Math.min(VOTE.SCREEN_MAX, Math.max(1, Math.floor(Number(b.n)) || 1)) : 1;
+  if (src === 'phone') {
+    const gate = 'mvp:' + who + ':' + date + ':' + hash_(dish);
+    if (cache.get(gate)) return { ok: true, dup: true, counts: dayVotes_(date) };
+    cache.put(gate, '1', VOTE.PHONE_TTL);
+  }
   return withLock_(() => {
     const all = JSON.parse(prop_('MEAL_VOTES') || '{}');
     Object.keys(all).forEach((d) => { if (dayDiff_(d, today) > VOTE.KEEP) delete all[d]; });
     const day = all[date] = all[date] || {};
     if (!(dish in day) && Object.keys(day).length >= VOTE.MAX_DISHES) return { ok: false, error: '이 날은 더 받을 수 없습니다' };
-    day[dish] = (day[dish] || 0) + 1;
+    day[dish] = (day[dish] || 0) + n;
     setProp_('MEAL_VOTES', JSON.stringify(all));
     const sh = ensureSheet_(ss_(), '급식투표', V_COLS);
-    sh.appendRow([iso_(now_()), date, sheetValue_(dish), src === 'screen' ? '화면' : '휴대폰', who.slice(0, 8)]);
+    const row = [iso_(now_()), date, sheetValue_(dish), src === 'screen' ? '화면' : '휴대폰', who.slice(0, 8)];
+    sh.getRange(sh.getLastRow() + 1, 1, n, row.length).setValues(Array.from({ length: n }, () => row));   // 역대 집계가 한 줄을 한 표로 센다
     cache.remove('mvj');
     return { ok: true, counts: day };
   });
