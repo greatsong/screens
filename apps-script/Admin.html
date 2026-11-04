@@ -46,6 +46,7 @@
   <div id="events" class="card"><h2>학사일정 행사</h2><p class="muted">불러오는 중입니다.</p></div>
   <div id="sync" class="card"></div>
   <div id="news" class="card"></div>
+  <div id="games" class="card"><h2>게임 명예의 전당</h2><p class="muted">불러오는 중입니다.</p></div>
   <div id="projects"></div>
   <div id="requests" class="card"></div>
 </main>
@@ -269,8 +270,30 @@
     sc.onerror = function () { toast('엑셀 읽기 도구를 불러오지 못했습니다. 표를 복사해 붙여 넣어 주세요.'); };
     document.head.appendChild(sc);
   }
+  // ---------- 게임 명예의 전당: 기록을 보고 장난스러운 닉네임은 숨긴다 ----------
+  function loadGames() {
+    google.script.run.withSuccessHandler(renderGames)
+      .withFailureHandler(function (e) { document.getElementById('games').innerHTML = '<h2>게임 명예의 전당</h2><p class="pending">불러오지 못했습니다. ' + esc(e.message || e) + '</p>'; })
+      .adminGames();
+  }
+  function renderGames(list) {
+    document.getElementById('games').innerHTML = '<h2>게임 명예의 전당</h2>' +
+      '<p class="muted">닉네임은 금칙어를 거른 뒤 바로 화면에 나옵니다. 알맞지 않은 기록은 「숨기기」로 뺍니다(30초 안에 반영).</p>' +
+      (list || []).map(function (g) {
+        return '<h3 style="margin:12px 0 4px">' + esc(g.title) + '</h3>' + (g.rows.length ? '<table>' + g.rows.map(function (r) {
+          return '<tr' + (r.hidden ? ' style="opacity:.5"' : '') + '><td style="white-space:nowrap"><b>' + esc(r.score) + '점</b></td><td>' +
+            (r.name ? esc(r.name) : '<span class="muted">닉네임 없음</span>') + (r.hidden ? ' <span class="chip">숨김</span>' : '') +
+            '</td><td class="muted" style="white-space:nowrap">' + esc(r.at) + '</td><td style="text-align:right"><button class="btn" onclick="hideGame(' + r.row + ',' + !r.hidden + ')">' +
+            (r.hidden ? '보이기' : '숨기기') + '</button></td></tr>';
+        }).join('') + '</table>' : '<p class="muted">아직 기록이 없습니다.</p>');
+      }).join('');
+  }
+  function hideGame(row, hidden) {
+    google.script.run.withSuccessHandler(function (msg) { toast(msg); loadGames(); }).withFailureHandler(fail).adminGameHide(row, hidden);
+  }
   load();
   loadEvents();
+  loadGames();
 </script>
 </body>
 </html>

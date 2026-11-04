@@ -10,6 +10,7 @@
  *   관리 화면의 긴급 정지·공지·B 시연 ─→ projects/control.json 바로 커밋
  *   관리 화면의 숨김 ─→ 등록부의 해당 작품만 바로 커밋 (다음 정기 동기화를 기다리지 않는다)
  *   급식 메뉴 투표(화면 터치·휴대폰 vote.html) ─→ doPost 로 받아 스크립트 속성 MEAL_VOTES·시트 '급식투표'에 쌓고, ?api=votes 로 날짜별 집계와 역대 인기 메뉴를 돌려준다
+ *   게임 명예의 전당(화면 안 게임 site/games/*) ─→ 점수를 doPost 로 받아 시트 '게임기록'에 남기고, 순위 안이면 휴대폰(games/name.html)으로 닉네임을 받는다. ?api=games 로 순위를 돌려준다
  *
  * 스크립트 속성: GITHUB_TOKEN(필수), ADMIN_EMAILS(관리자 추가), REQUIRE_SCHOOL_LOGIN(true면 학교 계정 로그인 설문)
  * 주소: clasp 배포가 Deploy.gs에 적는다(STATUS_URL 학생용, ADMIN_URL 관리용). 스크립트 속성 WEBAPP_URL·ADMIN_URL이 있으면 그 값을 먼저 쓴다.
@@ -401,6 +402,7 @@ function teacherDigest_(waiting, changed) {
 // ======================================================================
 function doGet(e) {
   if (e && e.parameter && e.parameter.api === 'votes') return json_(mealVotes_());
+  if (e && e.parameter && e.parameter.api === 'games') return json_(gameBoard_(String(e.parameter.game || '')));
   const page = (e && e.parameter && e.parameter.page) || 'status';
   if (page === 'admin') {
     if (!isAdmin_()) return HtmlService.createHtmlOutput('<p style="font-family:sans-serif">관리 권한이 없습니다.</p>');
@@ -426,6 +428,8 @@ function doPost(e) {
   let body;
   try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return json_({ ok: false, error: '형식 오류' }); }
   if (body && body.api === 'vote') return json_(mealVote_(body));
+  if (body && body.api === 'game') return json_(gameScore_(body));
+  if (body && body.api === 'gamename') return json_(gameName_(body));
   return json_({ ok: false, error: '알 수 없는 요청' });
 }
 
@@ -522,6 +526,108 @@ function mealVotes_() {
   const out = { ok: true, at: iso_(now_()), days: days, best: bestVotes_() };
   cache.put('mvj', JSON.stringify(out), 20);
   return out;
+}
+
+// ======================================================================
+// 게임 명예의 전당 — 화면 안 게임(site/games/<게임>/)이 끝날 때 점수를 보낸다. 순위(TOP 10) 안이면 일회용 코드를 돌려주고,
+// 화면은 그 코드를 담은 QR을 띄운다. 학생은 휴대폰(site/games/name.html)으로 닉네임을 적는다(15분 안, 한 번만).
+// 이름·연락처는 받지 않는다. 닉네임은 금칙어를 거르고 바로 올린다. 관리 화면에서 기록을 숨길 수 있다.
+// 순위 밖 점수는 시트에 남기지 않고 판 수만 센다(스크립트 속성 GAME_PLAYS). 순위는 30초 동안 캐시한다.
+// ======================================================================
+const GAMES = { mole: { title: '두더지 잡기', max: 400 } };
+const GAME = { TOP: 10, CLAIM_MIN: 15, NAME_MAX: 8, PER_MIN: 60, DEV_GAP: 15 };
+const G_COLS = ['시각', '게임', '점수', '닉네임', '상태', '코드', '기기'];
+// 비교하기 전에 띄어쓰기·숫자·기호를 지우고 소문자로 바꾼다(시1발, ㅅ ㅂ 같은 변형)
+const NICK_BAN = ['시발', '씨발', '씨빨', '시빨', 'ㅅㅂ', 'ㅆㅂ', '병신', 'ㅂㅅ', '븅신', '좆', 'ㅈ같', '존나', 'ㅈㄴ', '지랄', 'ㅈㄹ', '개새', '새끼', 'ㅅㄲ',
+  '미친', 'ㅁㅊ', '꺼져', '닥쳐', '죽어', '뒤져', '엿먹', '느금', '니애미', '느그', '애미', '애비', '섹스', '야동', '자지', '보지', '창녀', '걸레', '장애인',
+  '틀딱', '한남', '한녀', '일베', '메갈', 'fuck', 'shit', 'bitch', 'sex', 'porn', 'nigger', 'admin', '관리자', '선생님', '교장', '교감'];
+
+function gameRows_() {
+  const sh = ss_().getSheetByName('게임기록');
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, G_COLS.length).getValues().map((r, i) => ({
+    row: i + 2, at: r[0], t: new Date(r[0]).getTime() || 0, game: String(r[1]), score: Number(r[2]) || 0, name: String(r[3] || '').replace(/^'/, ''), state: String(r[4] || ''), code: String(r[5] || ''),
+  }));
+}
+// 높은 점수 순, 같은 점수는 먼저 낸 기록이 앞
+function gameRank_(rows, game) {
+  return rows.filter((r) => r.game === game && r.state !== '숨김')
+    .sort((a, b) => b.score - a.score || a.t - b.t);
+}
+function gameBoardOf_(rows, game) {
+  return gameRank_(rows, game).slice(0, GAME.TOP).map((r) => ({ n: r.name, s: r.score, d: r.at ? fmt_(new Date(r.at), 'M/d') : '' }));
+}
+function gameBoard_(game) {
+  if (!GAMES[game]) return { ok: false, error: '알 수 없는 게임입니다' };
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('mgb:' + game);
+  if (hit) return JSON.parse(hit);
+  const plays = JSON.parse(prop_('GAME_PLAYS') || '{}');
+  const out = { ok: true, game: game, title: GAMES[game].title, top: gameBoardOf_(gameRows_(), game), plays: plays[game] || 0 };
+  cache.put('mgb:' + game, JSON.stringify(out), 30);
+  return out;
+}
+
+function gameScore_(b) {
+  const game = String(b.game || ''), dev = String(b.dev || '');
+  const g = GAMES[game];
+  const score = Math.floor(Number(b.score));
+  if (!g || !(score >= 0 && score <= g.max) || !/^[A-Za-z0-9_-]{8,64}$/.test(dev)) return { ok: false, error: '형식 오류' };
+  const cache = CacheService.getScriptCache();
+  const minute = 'mgm:' + fmt_(now_(), 'yyyyMMddHHmm');
+  const used = Number(cache.get(minute) || 0);
+  if (used >= GAME.PER_MIN) return { ok: false, error: '잠시 뒤 다시 시도해 주세요' };
+  cache.put(minute, String(used + 1), 120);
+  const who = hash_(dev);
+  // 한 판은 30초 넘게 걸리므로 같은 기기에서 15초 안에 다시 온 점수는 같은 판으로 본다
+  if (cache.get('mgd:' + who)) return { ok: false, error: '방금 보낸 기록이 있습니다' };
+  cache.put('mgd:' + who, '1', GAME.DEV_GAP);
+  return withLock_(() => {
+    const plays = JSON.parse(prop_('GAME_PLAYS') || '{}');
+    plays[game] = (plays[game] || 0) + 1;
+    setProp_('GAME_PLAYS', JSON.stringify(plays));
+    const rows = gameRows_();
+    const rank = 1 + gameRank_(rows, game).filter((r) => r.score >= score).length;
+    const out = { ok: true, game: game, score: score, rank: rank, top: score > 0 && rank <= GAME.TOP, plays: plays[game] };
+    if (out.top) {
+      const code = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+      const sh = ensureSheet_(ss_(), '게임기록', G_COLS);
+      sh.appendRow([iso_(now_()), game, score, '', '', hash_(code), who.slice(0, 8)]);
+      out.code = code;
+      rows.push({ row: sh.getLastRow(), at: iso_(now_()), t: now_().getTime(), game: game, score: score, name: '', state: '', code: hash_(code) });
+    }
+    out.board = gameBoardOf_(rows, game);
+    cache.remove('mgb:' + game);
+    return out;
+  });
+}
+
+function cleanNick_(v) {
+  const s = String(v == null ? '' : v).normalize('NFC').replace(/\s+/g, ' ').trim();
+  if (!s) return { error: '닉네임을 적어 주세요' };
+  if (Array.from(s).length > GAME.NAME_MAX) return { error: '닉네임은 ' + GAME.NAME_MAX + '글자까지입니다' };
+  if (!/^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9 _.~!♥★-]+$/.test(s)) return { error: '한글·영어·숫자로 적어 주세요' };
+  const flat = s.toLowerCase().replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-z]/g, '');
+  if (NICK_BAN.some((w) => flat.indexOf(w) >= 0)) return { error: '쓸 수 없는 말이 들어 있습니다. 다른 닉네임을 적어 주세요' };
+  return { name: s };
+}
+function gameName_(b) {
+  const code = String(b.code || '');
+  if (!/^[0-9a-f]{16}$/.test(code)) return { ok: false, error: '형식 오류' };
+  const nick = cleanNick_(b.name);
+  if (nick.error) return { ok: false, error: nick.error };
+  return withLock_(() => {
+    const rows = gameRows_();
+    const r = rows.filter((x) => x.code === hash_(code))[0];
+    if (!r) return { ok: false, error: '기록을 찾지 못했습니다' };
+    if (r.name) return { ok: false, error: '이미 닉네임을 적은 기록입니다' };
+    if (now_() - new Date(r.at) > GAME.CLAIM_MIN * 60000) return { ok: false, error: '닉네임을 적을 수 있는 시간(' + GAME.CLAIM_MIN + '분)이 지났습니다' };
+    ss_().getSheetByName('게임기록').getRange(r.row, 4).setValue(sheetValue_(nick.name));
+    r.name = nick.name;
+    CacheService.getScriptCache().remove('mgb:' + r.game);
+    const rank = 1 + gameRank_(rows, r.game).indexOf(r);
+    return { ok: true, game: r.game, title: GAMES[r.game] ? GAMES[r.game].title : r.game, name: nick.name, score: r.score, rank: rank, board: gameBoardOf_(rows, r.game) };
+  });
 }
 
 function rowByToken_(token) {
@@ -630,6 +736,28 @@ function adminData() {
       text: q['내용'], status: q['상태'], note: q['비고'],
     })),
   };
+}
+
+// 관리 화면: 명예의 전당 기록(게임마다 위에서 30개)과 숨기기·보이기
+function adminGames() {
+  requireAdmin_();
+  const rows = gameRows_();
+  return Object.keys(GAMES).map((g) => ({
+    game: g, title: GAMES[g].title,
+    rows: rows.filter((r) => r.game === g).sort((a, b) => b.score - a.score || a.t - b.t).slice(0, 30)
+      .map((r) => ({ row: r.row, name: r.name, score: r.score, hidden: r.state === '숨김', at: r.at ? fmt_(new Date(r.at), 'MM/dd HH:mm') : '' })),
+  }));
+}
+function adminGameHide(row, hidden) {
+  requireAdmin_();
+  return withLock_(() => {
+    const sh = ss_().getSheetByName('게임기록');
+    row = Number(row);
+    if (!sh || !(row >= 2 && row <= sh.getLastRow())) throw new Error('기록을 찾지 못했습니다');
+    sh.getRange(row, 5).setValue(hidden ? '숨김' : '');
+    CacheService.getScriptCache().remove('mgb:' + sh.getRange(row, 2).getValues()[0][0]);
+    return hidden ? '숨겼습니다. 30초 안에 화면에서 빠집니다.' : '다시 보이게 했습니다.';
+  });
 }
 
 function editRow_(id, fn, reqType, reqText) {
@@ -1125,7 +1253,7 @@ function sheetValue_(value) { return typeof value === 'string' && value.charAt(0
 
 function neutralizeSheetFormulas_() {
   let count = 0;
-  ['작품', '요청', '급식투표'].forEach((name) => {
+  ['작품', '요청', '급식투표', '게임기록'].forEach((name) => {
     const sh = ss_().getSheetByName(name);
     if (!sh || sh.getLastRow() < 2) return;
     const formulas = sh.getDataRange().getFormulas();
