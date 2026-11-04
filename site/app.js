@@ -498,15 +498,44 @@
   // AI 뉴스: 분야(cat)마다 이름과 색을 붙인다. 고르는 기준은 scripts/fetch_news.py
   const NEWS_CAT = { tech: 'AI 기술', society: 'AI와 사회', economy: 'AI와 경제', science: 'AI와 과학·건강', culture: 'AI와 문화·생활' };
   const newsDate = (n) => { const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n.date || ''); return d ? (+d[2]) + '월 ' + (+d[3]) + '일' : ''; };
-  // 뉴스 한 건 → 소식 카드(A: 제목과 요약, B: 같은 기사를 휴대폰으로 읽는 QR). 기사 본문은 옮기지 않는다
+  // 뉴스 한 건 → 소식 카드(A: 제목과 요약, B: 분야 그림·기사 QR·오늘의 다른 소식). 기사 본문은 옮기지 않는다
   function newsItem(n) {
     const src = [n.source, newsDate(n)].filter(Boolean).join(' · ');
     const tag = NEWS_CAT[n.cat] || 'AI 뉴스';
     return {
       id: 'news-' + n.id,
       a: { tag: tag, cat: n.cat, title: n.title, body: n.summary, source: src },
-      b: { tag: tag + ' · 기사 읽기', cat: n.cat, title: n.title, body: n.summary, source: src, link: n.link, linkLabel: '휴대폰으로 기사 읽기' }
+      b: { auto: 'newsread', newsId: n.id, tag: tag, cat: n.cat, title: n.title, source: src, link: n.link }
     };
+  }
+  // 분야 그림(선 그림, 글자색을 따른다)
+  const NEWS_ICON = {
+    tech: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/>',
+    society: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 14.2c3 .3 5.4 2.6 5.4 5.8"/>',
+    economy: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/><path d="M16 7h4v4"/>',
+    science: '<path d="M9 3h6M10 3v6l-5.4 9.4A1.8 1.8 0 0 0 6.2 21h11.6a1.8 1.8 0 0 0 1.6-2.6L14 9V3"/><path d="M7.6 15h8.8"/>',
+    culture: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1.3-1-1.6-1-2.7 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10" cy="7" r="1.1"/><circle cx="15" cy="7" r="1.1"/>',
+    ai: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'
+  };
+  const newsIcon = (cat) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${NEWS_ICON[cat] || NEWS_ICON.ai}</svg>`;
+  // B 화면의 기사 카드: 휴대폰으로 읽을 QR을 크게, 아래에는 오늘의 다른 소식 두 건(이어서 나올 순서대로)
+  function newsReadHTML(s) {
+    const news = state.news || [];
+    const i = news.findIndex((n) => n.id === s.newsId);
+    const others = news.length > 1 ? [1, 2].map((k) => news[(Math.max(i, 0) + k) % news.length]).filter((n, k, a) => n.id !== s.newsId && a.indexOf(n) === k) : [];
+    const host = (() => { try { return new URL(s.link).host.replace(/^www\./, ''); } catch (e) { return ''; } })();
+    const more = others.length ? `<div class="nr-more"><div class="nr-more-label">오늘의 다른 AI 소식</div><ul>${others.map((n) =>
+      `<li class="cat-${esc(n.cat)}"><i></i><span>${esc(n.title)}</span></li>`).join('')}</ul></div>` : '';
+    return `<div class="card-inner nread cat-${esc(s.cat || 'ai')}">
+      <span class="nr-bg">${newsIcon(s.cat)}</span>
+      <div class="card-text">
+        <div class="nr-head"><span class="nr-icon">${newsIcon(s.cat)}</span><span class="nr-cat">${esc(s.tag)}</span>${i >= 0 ? `<span class="nr-pos">오늘의 AI 뉴스 ${i + 1} / ${news.length}</span>` : ''}</div>
+        <h1 class="title">${esc(s.title)}</h1>
+        <div class="source">${esc(s.source)}</div>
+        ${more}
+      </div>
+      ${s.link ? `<div class="qr nr-qr"><div class="nr-qr-top">휴대폰으로<b>기사 전체 읽기</b></div><div class="qr-box" id="qr"></div><div class="qr-caption">${esc(host)}</div></div>` : ''}
+    </div>`;
   }
   // 뉴스 맨 앞의 목록 카드. B 화면에는 휴대폰용 뉴스 목록(news.html) QR을 붙인다
   const NEWS_DIGEST = { id: 'news-digest', a: { auto: 'newsdigest' }, b: { auto: 'newsdigest', link: new URL('news.html', location.href).href } };
@@ -729,12 +758,13 @@
         : auto === 'meal' ? mealHTML(side)
         : auto === 'mealweek' ? mealWeekHTML(side)
         : auto === 'newsdigest' ? newsDigestHTML(side)
+        : auto === 'newsread' ? newsReadHTML(side)
         : auto === 'schedule' ? scheduleHTML(side)
         : auto === 'calendar' ? calendarHTML(side)
         : auto === 'mealrank' ? mealRankHTML(side) : cardHTML(side);
       // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
       setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' ? 'sun'
-        : entry.project ? 'lilac' : entry.item && /^news-/.test(entry.item.id) ? 'sky' : '');
+        : entry.project ? 'lilac' : auto === 'newsread' || (entry.item && /^news-/.test(entry.item.id)) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
       enter();

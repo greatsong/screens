@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -409,6 +409,19 @@ test('a swiped screen pages on its own, holds while touched, then rejoins the cl
   for (let i = 0; i < 30 && (env.state.peek || env.state.idx !== clockIdx()); i++) { env.advance(SECOND); env.tick(); }
   assert.equal(env.state.peek, null);
   assert.equal(env.state.idx, clockIdx());        // 다시 시계 순서(옆 화면과 같은 카드)
+});
+
+test('the B news card differs from A: category picture, article QR and two other stories, all escaped', () => {
+  const env = screen({ role: 'b' });
+  env.state.news = [article('n1', { title: '첫 기사 <b>', cat: 'society' }), article('n2', { cat: 'tech' }), article('n3', { cat: 'science' })];
+  const html = env.newsReadHTML({ newsId: 'n1', tag: 'AI와 사회', cat: 'society', title: '첫 기사 <b>', source: 'Test source', link: 'https://www.example.invalid/n1' });
+  assert.match(html, /nread cat-society/);
+  assert.match(html, /오늘의 AI 뉴스 1 \/ 3/);
+  assert.match(html, /첫 기사 &lt;b&gt;/);
+  assert.match(html, /기사 전체 읽기/);
+  assert.match(html, /example\.invalid</);                       // 기사 주소는 도메인만
+  assert.ok(html.indexOf('>n2<') > -1 && html.indexOf('>n3<') > -1);   // 다른 소식 두 건
+  assert.doesNotMatch(html, /<p class="body">/);                       // 요약은 A 화면에만
 });
 
 test('public events join both screens, use the signup QR and expire without polling', () => {
