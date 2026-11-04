@@ -643,8 +643,7 @@
   function entrySide(entry) { return entry && entry.item ? (entry.item[role] || entry.item.a || {}) : null; }
 
   // 휴대폰으로 이어서 체험할 작품(모바일용, 이 화면에서 실행할 수 없는 작품)에만 QR을 붙인다
-  // 학생이 직접 해 보는 작품은 휴대폰 QR로 안내한다(화면 안 실행은 선생님 원격 시연과 QR 주소가 없는 검토 미리보기만)
-  function needsQR(p) { return !!p.shortUrl; }
+  function needsQR(p) { return p.target !== 'wide' || !p.embed; }
 
   function slideQR(entry) {
     if (!entry) return '';
@@ -660,7 +659,8 @@
   function projectHTML(p) {
     const qr = needsQR(p);
     // 체험 방법: 제작자가 적은 문장을 먼저 쓰고, 없을 때만 기본 안내를 쓴다 (같은 말이 두 번 나오지 않게)
-    const how = p.howTo || (qr ? '휴대폰으로 QR을 찍어 체험합니다.' : '');
+    const base = p.embed ? '「체험 시작」을 누르면 이 화면에서 바로 해 볼 수 있습니다.' : '휴대폰으로 QR을 찍어 체험합니다.';
+    const how = p.howTo || base;
     const img = (p.target === 'mobile' && p.images.mobile) ? p.images.mobile : p.images.wide;
     const shot = img ? `<div class="shot${p.target === 'mobile' ? ' phone' : ''}"><img src="${esc(img)}" alt=""></div>` : '';
     const text = `
@@ -668,16 +668,18 @@
       <h1 class="title">${esc(p.title)}</h1>
       <div class="maker">${badgeHTML(p.makerType)}<span>${esc(makerText(p))}</span></div>
       <p class="body">${esc(p.summary)}</p>`;
-    const howHTML = how ? `<div class="howto"><b>체험 방법</b>${esc(how)}</div>` : '';
+    const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}</div>`;
+    // 두 화면 모두 이 화면에서 실행한다. 끝내면 원래 카드로 돌아온다(위쪽 「← 돌아가기」, 리모컨 뒤로, 시간이 다 되면 저절로)
+    const tryBtn = p.embed ? `<button class="try-btn" data-try="${esc(p.id)}">▶ 체험 시작</button>` : '';
     if (role === 'a') {
       return `<div class="proj proj-a">${shot}<div class="proj-text">${text}
         <div class="howto-row">${qr ? '<div class="qr-box mini" id="qr"></div>' : ''}<div>${howHTML}${qr ? `<div class="short">${esc(p.short)}</div>` : ''}</div></div>
-      </div></div>`;
+        ${tryBtn}</div></div>`;
     }
     const side = qr
       ? `<div class="qr big"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 체험<br><b>${esc(p.short).replace(/\//g, '/<wbr>')}</b></div></div>`
       : shot;
-    return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}</div>${side}</div>`;
+    return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}${tryBtn}</div>${side}</div>`;
   }
 
   // 글자를 5m 거리용으로 크게 잡았으므로, 내용이 길어 화면을 넘치면 글자 배율(--f)을 조금씩 줄여 한 화면에 맞춘다
@@ -1233,7 +1235,7 @@
           ${badgeHTML(p.makerType)}
           <span class="app-title">${esc(p.title)}</span>
           <span class="app-by">${esc(makerText(p))}</span>
-          <span class="app-host">${needsQR(p) ? '휴대폰으로 체험 (QR)' : '이 화면에서 체험'}</span>
+          <span class="app-host">${p.embed ? '이 화면에서 체험' : '휴대폰으로 체험 (QR)'}</span>
         </button>`).concat(apps.map((a, i) => `
         <button class="app-card" data-app="${i}">
           <span class="app-title">${esc(a.title)}</span>
@@ -1242,8 +1244,7 @@
         </button>`));
     $('gallery').innerHTML = `
       <div class="gallery-head"><h2>작품 체험</h2><button class="btn primary" data-act="gclose">닫기</button></div>
-      <p class="gallery-note">${projs.length && projs.every(needsQR) ? '작품을 누르면 휴대폰으로 체험할 수 있는 QR이 나옵니다.'
-        : `작품을 누르면 휴대폰 QR이 나오거나 이 화면에서 ${holdMinutes()}분 동안 실행합니다.`}</p>
+      <p class="gallery-note">작품을 누르면 이 화면에서 ${holdMinutes()}분 동안 실행합니다. 체험하는 동안에는 다른 작품으로 넘어가지 않습니다.</p>
       <div class="gallery-grid">${cards.join('')}</div>`;
     $('gallery').hidden = false;
   }
@@ -1251,7 +1252,7 @@
   function startExperience(key) {
     const p = findProject(key);
     if (!p || isStopped()) return;
-    if (needsQR(p) || !p.embed) { showQRPanel(p); return; }
+    if (!p.embed) { showQRPanel(p); return; }
     openPlayer({ title: p.title, by: p.maker, url: p.run, project: p }, false);
   }
 
@@ -1264,7 +1265,7 @@
         <div class="qr-panel-text">
           <p class="body">휴대폰 카메라로 QR을 찍거나 아래 주소에 접속해 체험합니다.</p>
           <p class="short-big">${esc(p.short)}</p>
-          ${p.embed ? '' : '<p class="gallery-note">이 작품은 다른 사이트 안에서 실행할 수 없어 휴대폰으로 안내합니다.</p>'}
+          <p class="gallery-note">이 작품은 다른 사이트 안에서 실행할 수 없어 휴대폰으로 안내합니다.</p>
         </div>
       </div>`;
     $('gallery').hidden = false;

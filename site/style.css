@@ -157,7 +157,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .screen.tone-sun:not(.is-stopped) { --glow1: rgba(255, 228, 140, 0.55); --glow2: rgba(255, 196, 170, 0.42); --glow3: rgba(180, 230, 255, 0.32); --base1: #fffdf2; --base2: #fff4dc; }
 body.role-b .screen:not(.is-stopped) { --accent: #0a7468; }
 /* 강조색 바탕 위 글자는 흰색(진한 강조색과 5:1 이상) */
-.screen:not(.is-stopped) .sc-list .dd, .screen:not(.is-stopped) .meal-next b { color: #fff; }
+.screen:not(.is-stopped) .sc-list .dd, .screen:not(.is-stopped) .meal-next b, .screen:not(.is-stopped) .try-btn { color: #fff; }
 .screen .body { color: var(--soft); }
 .screen .lines li { background: #fff; border-color: rgba(238, 125, 28, 0.18); box-shadow: 0 0.6vmin 1.8vmin rgba(238, 125, 28, 0.13); }
 .screen .meal .lines li.treat { border-color: #ff8fa3; }
@@ -471,6 +471,11 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
 .howto-row { display: flex; align-items: center; }
 .qr-box.mini { width: 22vmin; flex: none; margin: 2.6vmin 3vmin 0 0; padding: 1.4vmin; }
 .short { margin-top: 1vmin; font-size: calc(var(--f, 1) * 3.6vmin); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.try-btn {
+  margin-top: calc(var(--f, 1) * 3.4vmin); font-size: 4.6vmin; font-weight: 800; color: #111;
+  background: var(--accent); border: 0; border-radius: 99px; padding: 2.2vmin 6vmin;
+  box-shadow: 0 0.8vmin 2.4vmin rgba(0, 0, 0, 0.35);
+}
 .qr.big { width: 38vmin; }
 .app-shot { display: block; width: 100%; height: auto; border-radius: 1.2vmin; margin-bottom: 2vmin; }
 .qr-panel { display: flex; align-items: center; margin-top: 4vmin; }

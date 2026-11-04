@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -238,17 +238,22 @@ test('a new content version removes an open phone QR for an unpublished project'
   assert.equal(env.element('gallery').innerHTML, '');
 });
 
-test('a student project with a phone link shows its QR on both screens instead of running inside the screen', () => {
+test('both screens run a student project in place with a try button, and the screen that does not host remote demos keeps it open', () => {
   for (const role of ['a', 'b']) {
     const env = screen({ role });
     const project = { id: 'wide-project', title: 'Wide project', maker: 'Student', run: 'https://example.invalid/wide', embed: true, target: 'wide',
       short: 'example.invalid/p/2', shortUrl: 'https://example.invalid/p/2', summary: '', images: {} };
-    env.applyContent(content({ projects: [project], showcase: { on: 'b' } }), false);
+    const data = content({ projects: [project], showcase: { on: 'b' } });
+    env.applyContent(data, false);
     const entry = env.state.sched.find((e) => e.project && e.project.id === project.id);
-    assert.equal(env.slideQR(entry), project.shortUrl);
+    assert.match(env.cardHTML ? env.context.review.projectHTML(entry.project) : '', /data-try="wide-project"/);
     env.context.review.startExperience(project.id);
-    assert.equal(env.state.show.app, null);                 // 화면 안에서 열지 않는다
-    assert.match(env.element('gallery').innerHTML, /example.invalid\/p\/2/);
+    assert.equal(env.state.show.app.project.id, project.id);
+    env.applyContent({ ...data, version: 2 }, true);                 // 콘텐츠를 다시 받아도(시연 화면이 아닌 A 포함) 닫히지 않는다
+    assert.equal(env.state.show.app && env.state.show.app.project.id, project.id);
+    env.act('back');
+    assert.equal(env.state.show.app, null);
+    assert.equal(env.element('player').hidden, true);
   }
 });
 
