@@ -16,6 +16,19 @@
       "makerType": "teacher"
     },
     {
+      "id": "mole",
+      "title": "두더지 잡기 챌린지",
+      "url": "https://greatsong.github.io/screens/games/mole/",
+      "summary": "30초 동안 구멍에서 올라오는 두더지를 잡습니다. TOP 10에 들면 휴대폰으로 닉네임을 적어 명예의 전당에 올립니다.",
+      "maker": "송석리",
+      "target": "wide",
+      "howTo": "「체험 시작」을 누른 뒤 올라오는 두더지를 손가락으로 누릅니다. 황금 두더지는 3점, 폭탄은 3점이 깎입니다.",
+      "demoSteps": [],
+      "makerConfirmed": true,
+      "teacher": "approved",
+      "makerType": "teacher"
+    },
+    {
       "id": "neural-explorer",
       "title": "Neural Explorer",
       "url": "https://neural-explorer.vercel.app/",
