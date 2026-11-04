@@ -1,6 +1,6 @@
 {
-  "version": 44,
-  "publishedAt": "2026-11-04T23:46:11+09:00",
+  "version": 45,
+  "publishedAt": "2026-11-05T05:07:50+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -28,6 +28,11 @@
         "title": "활성화 함수 실험실",
         "by": "송석리",
         "url": "https://activation-lab.vercel.app/"
+      },
+      {
+        "title": "두더지 잡기 챌린지",
+        "by": "송석리",
+        "url": "https://greatsong.github.io/screens/games/mole/"
       }
     ]
   },
@@ -131,6 +136,24 @@
       "images": {
         "wide": "projects/f4b085fc/wide.jpg?v=2026-11-04T114304",
         "mobile": "projects/f4b085fc/mobile.jpg?v=2026-11-04T114304"
+      },
+      "pinned": false
+    },
+    {
+      "id": "mole",
+      "no": 6,
+      "title": "두더지 잡기 챌린지",
+      "summary": "30초 동안 구멍에서 올라오는 두더지를 잡습니다. TOP 10에 들면 휴대폰으로 닉네임을 적어 명예의 전당에 올립니다.",
+      "maker": "송석리",
+      "makerType": "teacher",
+      "target": "wide",
+      "howTo": "「체험 시작」을 누른 뒤 올라오는 두더지를 손가락으로 누릅니다. 황금 두더지는 3점, 폭탄은 3점이 깎입니다.",
+      "run": "https://greatsong.github.io/screens/games/mole/",
+      "embed": true,
+      "short": "greatsong.github.io/screens/p/6",
+      "shortUrl": "https://greatsong.github.io/screens/p/6/",
+      "images": {
+        "wide": "projects/mole/wide.jpg?v=2026-11-05T050730"
       },
       "pinned": false
     }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T05:07:02+09:00",
+  "generatedAt": "2026-11-05T05:07:50+09:00",
   "registrySyncId": "20261030-151410-s643f",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -42,22 +42,22 @@
       "target": "wide",
       "howTo": "「체험 시작」을 누른 뒤 올라오는 두더지를 손가락으로 누릅니다. 황금 두더지는 3점, 폭탄은 3점이 깎입니다.",
       "run": "https://greatsong.github.io/screens/games/mole/",
-      "embed": false,
+      "embed": true,
       "short": "greatsong.github.io/screens/p/6",
       "shortUrl": "https://greatsong.github.io/screens/p/6/",
-      "images": {},
+      "images": {
+        "wide": "projects/mole/wide.jpg?v=2026-11-05T050730"
+      },
       "pinned": false,
       "source": "manual",
-      "status": "unchecked",
+      "status": "ok",
       "problems": [],
-      "checkedAt": "",
-      "fingerprint": "",
+      "checkedAt": "2026-11-05T05:07:30+09:00",
+      "fingerprint": "f849aebfdecc631e",
       "teacher": "approved",
       "makerConfirmed": true,
-      "published": false,
-      "reasons": [
-        "검사 전"
-      ],
+      "published": true,
+      "reasons": [],
       "changedAfterApproval": false,
       "demoSteps": []
     },

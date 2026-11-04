@@ -27,7 +27,9 @@
       "approvedAt": "2026-10-30T15:14:02+09:00"
     },
     "mole": {
-      "no": 6
+      "no": 6,
+      "fingerprint": "f849aebfdecc631e",
+      "approvedAt": ""
     }
   }
 }
