@@ -50,7 +50,7 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
 <main>
   <header>
     <span class="kicker">🤖 AI중점학교 당곡고등학교</span>
-    <h1 id="title">🔨 두더지 잡기 챌린지</h1>
+    <h1 id="title">🔨 DG다 잡기 챌린지</h1>
     <p class="fame-tag">🏆 명예의 전당</p>
     <p class="lead">🎉 축하합니다! TOP 10에 들었습니다. 명예의 전당에 올릴 닉네임을 적습니다.</p>
   </header>
@@ -70,7 +70,7 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const q = new URLSearchParams(location.search);
   const code = q.get('c') || '', game = q.get('g') || 'mole';
-  const TITLE = { mole: '🔨 두더지 잡기 챌린지' };
+  const TITLE = { mole: '🔨 DG다 잡기 챌린지' };
   const MEDAL = ['🥇', '🥈', '🥉'];
   let api = '';
   $('title').textContent = TITLE[game] || '🎮 게임 챌린지';
