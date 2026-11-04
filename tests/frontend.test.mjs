@@ -31,7 +31,7 @@ function browser({ role = 'a', time = START } = {}) {
         remove(name) { classes.delete(name); },
         toggle(name, value = !classes.has(name)) { if (value) classes.add(name); else classes.delete(name); return value; }
       },
-      querySelectorAll() { return []; }, addEventListener() {},
+      querySelectorAll() { return []; }, addEventListener() {}, appendChild() {},
       getAttribute(name) { return this[name]; }, setAttribute(name, value) { this[name] = value; }
     };
     el.parentNode = el;
@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -238,6 +238,20 @@ test('a new content version removes an open phone QR for an unpublished project'
   assert.equal(env.element('gallery').innerHTML, '');
 });
 
+test('a student project with a phone link shows its QR on both screens instead of running inside the screen', () => {
+  for (const role of ['a', 'b']) {
+    const env = screen({ role });
+    const project = { id: 'wide-project', title: 'Wide project', maker: 'Student', run: 'https://example.invalid/wide', embed: true, target: 'wide',
+      short: 'example.invalid/p/2', shortUrl: 'https://example.invalid/p/2', summary: '', images: {} };
+    env.applyContent(content({ projects: [project], showcase: { on: 'b' } }), false);
+    const entry = env.state.sched.find((e) => e.project && e.project.id === project.id);
+    assert.equal(env.slideQR(entry), project.shortUrl);
+    env.context.review.startExperience(project.id);
+    assert.equal(env.state.show.app, null);                 // 화면 안에서 열지 않는다
+    assert.match(env.element('gallery').innerHTML, /example.invalid\/p\/2/);
+  }
+});
+
 test('an unpublished only-preview project can keep its local review experience', () => {
   const env = screen({ role: 'b' });
   const project = { id: 'review-project', title: 'Review project', run: 'https://example.invalid/review', embed: true };
@@ -371,6 +385,25 @@ test('every tap on a meal counts at once and is sent in one batched request a se
   env.advance(5 * SECOND);
   assert.equal(sent.length, 3);
   assert.equal(sent[2].n, 3);
+});
+
+test('a swiped screen pages on its own, holds while touched, then rejoins the clock order so both screens match again', () => {
+  const env = screen({ role: 'a' });
+  const items = ['n1', 'n2', 'n3', 'n4'].map((id) => ({ id, a: { title: id } }));
+  env.applyContent(content({ items, slideSeconds: 12 }), false);
+  env.tick(); env.advance(SECOND);
+  const clockIdx = () => env.locate(env.now(), env.state.sched, 12 * SECOND).idx;
+  assert.equal(env.state.idx, clockIdx());
+  env.browse(1);
+  const mine = (clockIdx() + 1) % 4;
+  assert.equal(env.state.idx, mine);              // 민 화면만 다음 카드로
+  env.browse(-1); env.browse(-1);
+  assert.equal(env.state.idx, (mine + 2) % 4);    // 뒤로도 넘어간다(한 바퀴 돌아서)
+  for (let i = 0; i < 19; i++) { env.advance(SECOND); env.tick(); }
+  assert.equal(env.state.idx, (mine + 2) % 4);    // 20초가 지나기 전에는 그대로
+  for (let i = 0; i < 30 && (env.state.peek || env.state.idx !== clockIdx()); i++) { env.advance(SECOND); env.tick(); }
+  assert.equal(env.state.peek, null);
+  assert.equal(env.state.idx, clockIdx());        // 다시 시계 순서(옆 화면과 같은 카드)
 });
 
 test('public events join both screens, use the signup QR and expire without polling', () => {

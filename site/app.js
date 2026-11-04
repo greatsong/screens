@@ -119,13 +119,17 @@
     diagTimer: null,
     show: { app: null, remote: false, until: 0 }, dismissedRemote: '',
     meal: store.get('meal', null), mealBusy: false,
+    swipe: null, swipedAt: 0,
     votes: store.get('votes', {}), voteAt: 0, voteBusy: false, votePend: {}, voteFly: null, voteTimer: null, best: store.get('best', null),
     peek: null, press: null
   };
   // 화면을 누르면 A 는 급식, B 는 학사일정 달력을 잠시 보여 준다(startPeek)
   const PEEK_MS = 20000;
   const PEEK_ID = { a: 'meal', b: 'schedule' };
-  const PEEK_HINT = { a: '화면을 누르면 급식이 나옵니다', b: '화면을 누르면 학사일정 달력이 나옵니다' };
+  const PEEK_HINT = { a: '누르면 급식, 옆으로 밀면 다른 카드', b: '누르면 학사일정 달력, 옆으로 밀면 다른 카드' };
+  // 옆으로 밀어 넘긴 화면은 20초 동안 만지지 않으면 시계 순서로 돌아간다. 지금 칸이 15초 안에 끝나면 그 경계에서 바꿔 옆 화면과 같은 순간에 맞춘다
+  const BROWSE_MS = 20000;
+  const SYNC_WAIT_MS = 15000;
 
   // ---------- 기록 ----------
   function logEvent(msg) {
@@ -269,14 +273,16 @@
       <div class="gallery" id="gallery" hidden></div>
       <div class="player" id="player" hidden>
         <div class="player-bar">
-          <button class="pbtn go" data-act="back">끝내기</button>
+          <button class="pbtn go" data-act="back">← 돌아가기</button>
           <span class="player-title" id="playerTitle"></span>
           <span class="player-left" id="playerLeft"></span>
           <button class="pbtn" data-act="more">시간 연장 +3분</button>
           <button class="pbtn phone" data-act="phone">휴대폰으로 이어서</button>
         </div>
         <div class="player-body">
-          <iframe id="frame" title="작품" allow="fullscreen; autoplay; camera; microphone; accelerometer; gyroscope"></iframe>
+          <!-- 돌아가기 버튼이 늘 보이도록 작품의 전체 화면·새 창·바깥 페이지 이동을 막는다 -->
+          <iframe id="frame" title="작품" allow="autoplay; camera; microphone; accelerometer; gyroscope"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-orientation-lock"></iframe>
           <div class="player-msg" id="playerMsg" hidden></div>
         </div>
       </div>
@@ -456,14 +462,15 @@
     if (!c || c.mode === 'stop') return;
     if (!state.sched.length) { showEmptySchedule(); return; }
     state.emptyShown = false;
-    // 화면을 눌러 연 카드(급식·학사일정)가 떠 있는 동안은 칸을 바꾸지 않고, 시간이 지나면 지금 차례의 칸으로 돌아간다
-    if (state.peek) {
-      if (Date.now() < state.peek.until) return;
-      endPeek();
-    }
     const slideMs = Math.max(5, c.slideSeconds || 12) * 1000;
     // 두 화면이 같은 시각을 기준으로 계산하므로 서버 없이도 같은 순간에 같은 카드를 보여 준다
     const at = locate(t, state.sched, slideMs);
+    // 화면을 눌러 연 카드(급식·학사일정)나 밀어 넘긴 카드가 떠 있는 동안은 칸을 바꾸지 않고, 시간이 지나면 지금 차례의 칸으로 돌아간다
+    if (state.peek) {
+      if (state.peek.browse ? Date.now() - state.lastInteract < BROWSE_MS : Date.now() < state.peek.until) return;
+      if (state.peek.browse) endBrowse(at);
+      else endPeek();
+    }
     if (at.slot !== state.slot) {
       const first = state.slot === -1;
       state.slot = at.slot;
@@ -636,7 +643,8 @@
   function entrySide(entry) { return entry && entry.item ? (entry.item[role] || entry.item.a || {}) : null; }
 
   // 휴대폰으로 이어서 체험할 작품(모바일용, 이 화면에서 실행할 수 없는 작품)에만 QR을 붙인다
-  function needsQR(p) { return p.target !== 'wide' || !p.embed; }
+  // 학생이 직접 해 보는 작품은 휴대폰 QR로 안내한다(화면 안 실행은 선생님 원격 시연과 QR 주소가 없는 검토 미리보기만)
+  function needsQR(p) { return !!p.shortUrl; }
 
   function slideQR(entry) {
     if (!entry) return '';
@@ -652,10 +660,7 @@
   function projectHTML(p) {
     const qr = needsQR(p);
     // 체험 방법: 제작자가 적은 문장을 먼저 쓰고, 없을 때만 기본 안내를 쓴다 (같은 말이 두 번 나오지 않게)
-    const base = p.embed
-      ? (role === 'a' ? 'B 화면에서 「체험 시작」을 누르면 바로 해 볼 수 있습니다.' : '「체험 시작」을 누르면 이 화면에서 바로 해 볼 수 있습니다.')
-      : '휴대폰으로 QR을 찍어 체험합니다.';
-    const how = p.howTo ? (p.embed && role === 'a' ? 'B 화면에서 체험합니다. ' + p.howTo : p.howTo) : base;
+    const how = p.howTo || (qr ? '휴대폰으로 QR을 찍어 체험합니다.' : '');
     const img = (p.target === 'mobile' && p.images.mobile) ? p.images.mobile : p.images.wide;
     const shot = img ? `<div class="shot${p.target === 'mobile' ? ' phone' : ''}"><img src="${esc(img)}" alt=""></div>` : '';
     const text = `
@@ -663,17 +668,16 @@
       <h1 class="title">${esc(p.title)}</h1>
       <div class="maker">${badgeHTML(p.makerType)}<span>${esc(makerText(p))}</span></div>
       <p class="body">${esc(p.summary)}</p>`;
-    const howHTML = `<div class="howto"><b>체험 방법</b>${esc(how)}</div>`;
+    const howHTML = how ? `<div class="howto"><b>체험 방법</b>${esc(how)}</div>` : '';
     if (role === 'a') {
       return `<div class="proj proj-a">${shot}<div class="proj-text">${text}
         <div class="howto-row">${qr ? '<div class="qr-box mini" id="qr"></div>' : ''}<div>${howHTML}${qr ? `<div class="short">${esc(p.short)}</div>` : ''}</div></div>
       </div></div>`;
     }
-    const tryBtn = p.embed ? `<button class="try-btn" data-try="${esc(p.id)}">▶ 체험 시작</button>` : '';
     const side = qr
       ? `<div class="qr big"><div class="qr-box" id="qr"></div><div class="qr-caption">휴대폰으로 체험<br><b>${esc(p.short).replace(/\//g, '/<wbr>')}</b></div></div>`
       : shot;
-    return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}${tryBtn}</div>${side}</div>`;
+    return `<div class="proj proj-b"><div class="proj-text">${text}${howHTML}</div>${side}</div>`;
   }
 
   // 글자를 5m 거리용으로 크게 잡았으므로, 내용이 길어 화면을 넘치면 글자 배율(--f)을 조금씩 줄여 한 화면에 맞춘다
@@ -709,7 +713,7 @@
     el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
   }
 
-  function showSlide(idx, immediate) {
+  function showSlide(idx, immediate, fxName) {
     state.idx = idx;
     const entry = state.sched[idx];
     renderDots(idx, state.sched.length);
@@ -734,7 +738,7 @@
       enter();
     };
     // 칸 번호로 전환 효과를 고른다(두 화면이 같은 효과). 첫 그림은 효과 없이
-    const fx = FX[((state.slot % FX.length) + FX.length) % FX.length];
+    const fx = fxName || FX[((state.slot % FX.length) + FX.length) % FX.length];
     const enter = () => { card.className = immediate ? 'card' : 'card in fx-' + fx; };
     clearTimeout(state.fadeTimer);
     if (immediate) { paint(); return; }
@@ -768,7 +772,7 @@
       });
     }
     const v = box.querySelector('video');
-    if (!entry || !entry.promo || role !== 'a') { stopPromo(); return; }
+    if (!entry || !entry.promo || role !== 'a' || state.show.app) { stopPromo(); return; }   // 작품 체험 중에는 뒤에서 소리가 나지 않게
     const offset = Math.max(0, now() - (state.slotStart || now())) / 1000;
     const src = (innerHeight > innerWidth && entry.promo.srcTall) || entry.promo.src;
     if (v.getAttribute('src') !== src) v.setAttribute('src', src);
@@ -1198,7 +1202,8 @@
     const here = sc.on === role;
     const count = (state.content.projects || []).length || (sc.apps || []).length;
     $('showBtn').hidden = !(here && count);
-    if (!here) { if (state.show.app) closePlayer('역할 변경'); return; }
+    // 시연 화면이 아니어도 학생이 카드에서 연 체험은 그대로 둔다. 원격 시연만 닫는다
+    if (!here) { if (state.show.app && state.show.remote) closePlayer('역할 변경'); return; }
     const remote = remoteInfo();
     if (!remote) state.dismissedRemote = '';
     // 학생이 체험하는 중에는 원격 시연도 끼어들지 않는다. 체험이 끝나면 이어서 연다.
@@ -1228,7 +1233,7 @@
           ${badgeHTML(p.makerType)}
           <span class="app-title">${esc(p.title)}</span>
           <span class="app-by">${esc(makerText(p))}</span>
-          <span class="app-host">${p.embed ? '이 화면에서 체험' : '휴대폰으로 체험 (QR)'}</span>
+          <span class="app-host">${needsQR(p) ? '휴대폰으로 체험 (QR)' : '이 화면에서 체험'}</span>
         </button>`).concat(apps.map((a, i) => `
         <button class="app-card" data-app="${i}">
           <span class="app-title">${esc(a.title)}</span>
@@ -1237,7 +1242,8 @@
         </button>`));
     $('gallery').innerHTML = `
       <div class="gallery-head"><h2>작품 체험</h2><button class="btn primary" data-act="gclose">닫기</button></div>
-      <p class="gallery-note">작품을 누르면 이 화면에서 ${holdMinutes()}분 동안 실행합니다. 체험하는 동안에는 다른 작품으로 넘어가지 않습니다.</p>
+      <p class="gallery-note">${projs.length && projs.every(needsQR) ? '작품을 누르면 휴대폰으로 체험할 수 있는 QR이 나옵니다.'
+        : `작품을 누르면 휴대폰 QR이 나오거나 이 화면에서 ${holdMinutes()}분 동안 실행합니다.`}</p>
       <div class="gallery-grid">${cards.join('')}</div>`;
     $('gallery').hidden = false;
   }
@@ -1245,7 +1251,7 @@
   function startExperience(key) {
     const p = findProject(key);
     if (!p || isStopped()) return;
-    if (!p.embed) { showQRPanel(p); return; }
+    if (needsQR(p) || !p.embed) { showQRPanel(p); return; }
     openPlayer({ title: p.title, by: p.maker, url: p.run, project: p }, false);
   }
 
@@ -1258,7 +1264,7 @@
         <div class="qr-panel-text">
           <p class="body">휴대폰 카메라로 QR을 찍거나 아래 주소에 접속해 체험합니다.</p>
           <p class="short-big">${esc(p.short)}</p>
-          <p class="gallery-note">이 작품은 다른 사이트 안에서 실행할 수 없어 휴대폰으로 안내합니다.</p>
+          ${p.embed ? '' : '<p class="gallery-note">이 작품은 다른 사이트 안에서 실행할 수 없어 휴대폰으로 안내합니다.</p>'}
         </div>
       </div>`;
     $('gallery').hidden = false;
@@ -1282,6 +1288,7 @@
     $('player').classList.toggle('remote', !!remote);
     $('player').classList.toggle('has-phone', !!(info.project && info.project.shortUrl));
     $('playerMsg').hidden = true;
+    stopPromo();
     const frame = $('frame');
     frame.onload = () => { if (state.show === mine) mine.loaded = true; };
     frame.src = info.url;
@@ -1300,7 +1307,7 @@
     const el = $('playerMsg');
     el.innerHTML = `<div class="pm-box"><p class="pm-text">${esc(text)}</p>` +
       (p && p.shortUrl ? `<div class="qr-box" id="pmQR"></div><p class="pm-short">휴대폰으로 체험 · <b>${esc(p.short)}</b></p>` : '') +
-      '<div><button class="btn primary" data-act="back">끝내기</button><button class="btn" data-act="pmclose">계속 보기</button></div></div>';
+      '<div><button class="btn primary" data-act="back">← 돌아가기</button><button class="btn" data-act="pmclose">계속 보기</button></div></div>';
     el.hidden = false;
     if (p && p.shortUrl) drawQR($('pmQR'), p.shortUrl, 'M');
   }
@@ -1313,6 +1320,7 @@
     $('player').hidden = true;
     $('playerMsg').hidden = true;
     $('frame').src = 'about:blank';
+    if (state.sched[state.idx] && state.sched[state.idx].promo) syncPromo(state.sched[state.idx]);   // 체험하는 동안 멈춘 홍보 영상을 이어서 튼다
     setTimeout(syncShowcase, 0); // 체험 중에 들어온 원격 시연이 있으면 이어서 연다
   }
 
@@ -1337,6 +1345,8 @@
     document.addEventListener('pointerdown', (e) => {
       state.lastInteract = Date.now();
       if (e.pointerType === 'touch') touched();
+      state.swipe = e.isPrimary === false ? null : { x: e.clientX, y: e.clientY, t: Date.now() };
+      if (state.peek && state.peek.browse) startBar(0, BROWSE_MS);   // 만질 때마다 돌아가기까지 남은 시간을 다시 센다
       // 3초 동안 누르고 있으면 진단 정보를 연다(관리용). 손가락이 움직이거나 떼면 취소
       clearTimeout(state.press && state.press.timer);
       state.press = { x: e.clientX, y: e.clientY, long: false, timer: setTimeout(() => {
@@ -1346,8 +1356,18 @@
       }, 3000) };
     }, true);
     const cancelPress = () => { if (state.press && !state.press.long) { clearTimeout(state.press.timer); state.press = null; } };
-    document.addEventListener('pointerup', cancelPress, true);
-    document.addEventListener('pointercancel', cancelPress, true);
+    // 옆으로 빠르게 밀면(가로로 화면 폭의 6% 이상, 세로보다 1.5배 이상, 1.2초 안) 앞뒤 카드로 넘긴다
+    document.addEventListener('pointerup', (e) => {
+      const sw = state.swipe;
+      state.swipe = null;
+      cancelPress();
+      if (!sw) return;
+      const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+      if (Math.abs(dx) < Math.max(60, innerWidth * 0.06) || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - sw.t > 1200) return;
+      state.swipedAt = Date.now();
+      browse(dx < 0 ? 1 : -1);
+    }, true);
+    document.addEventListener('pointercancel', () => { state.swipe = null; cancelPress(); }, true);
     document.addEventListener('pointermove', (e) => {
       if (state.press && !state.press.long && Math.hypot(e.clientX - state.press.x, e.clientY - state.press.y) > 30) cancelPress();
     }, true);
@@ -1366,6 +1386,7 @@
   }
 
   function onClick(e) {
+    if (Date.now() - (state.swipedAt || 0) < 500) return;   // 마우스로 민 뒤 따라오는 클릭
     const actEl = e.target.closest('[data-act]');
     if (actEl) { act(actEl.getAttribute('data-act')); return; }
     const tryEl = e.target.closest('[data-try]');
@@ -1381,6 +1402,7 @@
     if (!$('diag').hidden) { closeDiag(); return; }
     // QR 을 누르면 그대로 둔다(휴대폰으로 찍으려던 QR 이 사라지지 않게)
     if (e.target.closest('.qr, .qr-box, .mw-qr, a')) return;
+    if (state.peek && state.peek.browse) return;   // 넘겨 보는 중에는 빈 곳을 눌러도 급식·달력으로 바꾸지 않는다
     startPeek();
   }
 
@@ -1395,12 +1417,15 @@
     state.peek = { until: Date.now() + PEEK_MS };
     if (!again || state.idx !== idx) showSlide(idx, false);
     startBar(0, PEEK_MS);
+    peekNote('20초 뒤 원래 순서로 돌아갑니다');
+    logEvent('화면 터치: ' + (role === 'a' ? '급식' : '학사일정') + ' 표시');
+  }
+  function peekNote(text) {
     let note = $('peekNote');
     if (!note) { note = document.createElement('div'); note.id = 'peekNote'; note.className = 'peek-note'; $('screen').appendChild(note); }
-    note.textContent = '20초 뒤 원래 순서로 돌아갑니다';
+    note.textContent = text;
     note.hidden = false;
     $('screen').classList.add('is-peek');
-    logEvent('화면 터치: ' + (role === 'a' ? '급식' : '학사일정') + ' 표시');
   }
   function endPeek() {
     state.peek = null;
@@ -1408,6 +1433,32 @@
     const note = $('peekNote');
     if (note) note.hidden = true;
     $('screen').classList.remove('is-peek');
+  }
+
+  // ---------- 옆으로 밀기: 이 화면만 앞뒤 카드로 넘긴다 ----------
+  // 두 화면은 서로 연결되지 않으므로 민 화면만 넘어간다. 홍보 영상 칸은 건너뛴다
+  function browse(dir) {
+    const c = state.content;
+    const n = state.sched.length;
+    if (!c || c.mode === 'stop' || !n || state.show.app || isStopped() || !$('gallery').hidden || !$('diag').hidden) return;
+    let i = state.idx < 0 ? 0 : state.idx;
+    for (let k = 0; k < n; k++) { i = (i + dir + n) % n; if (!state.sched[i].promo) break; }
+    if (i === state.idx || state.sched[i].promo) return;
+    if (!(state.peek && state.peek.browse)) logEvent('옆으로 밀어 넘기기 시작');
+    state.lastInteract = Date.now();
+    state.peek = { browse: true };
+    showSlide(i, false, dir > 0 ? 'slide' : 'slideback');
+    startBar(0, BROWSE_MS);
+    peekNote((i + 1) + ' / ' + n + ' · 20초 동안 만지지 않으면 원래 순서로 돌아갑니다');
+  }
+  // 돌아갈 때: 지금 차례의 칸이 곧 끝나면 그대로 두었다가 다음 칸이 바뀌는 순간(옆 화면과 같은 순간)에 바꾸고, 아니면 바로 바꾼다
+  function endBrowse(at) {
+    const entry = state.sched[at.idx];
+    if (state.idx !== at.idx && (entry.promo || at.ms - at.elapsed > SYNC_WAIT_MS)) { endPeek(); return; }
+    endPeek();
+    state.slot = at.slot;
+    state.slotStart = at.start;
+    startBar(at.elapsed, at.ms);
   }
 
   function onKey(e) {
@@ -1421,6 +1472,7 @@
       e.preventDefault();
       return;
     }
+    if ((k === 37 || k === 39) && $('diag').hidden && $('gallery').hidden && !state.show.app) { browse(k === 39 ? 1 : -1); e.preventDefault(); return; }
     if (k === 13 && $('diag').hidden && !state.show.app && document.activeElement === document.body) toggleDiag();
   }
 
@@ -1692,7 +1744,7 @@
           <figure class="frame land" id="fa"><iframe src="?screen=a&amp;embed=1" title="A 화면"></iframe><figcaption>A · 소식</figcaption></figure>
           <figure class="frame land" id="fb"><iframe src="?screen=b&amp;embed=1" title="B 화면"></iframe><figcaption>B · 깊이 보기 · 학생 작품 시연</figcaption></figure>
         </div>
-        <p class="preview-note">A 화면을 누르면 급식, B 화면을 누르면 학사일정 달력이 20초 동안 나옵니다. 진단 정보는 화면을 3초 동안 누르고 있으면 열립니다. 미리보기에서는 실행 기록을 남기지 않습니다.</p>
+        <p class="preview-note">A 화면을 누르면 급식, B 화면을 누르면 학사일정 달력이 20초 동안 나옵니다. 옆으로 밀면 그 화면만 앞뒤 카드로 넘어가고, 20초 동안 만지지 않으면 다시 두 화면이 맞춰집니다. 진단 정보는 화면을 3초 동안 누르고 있으면 열립니다. 미리보기에서는 실행 기록을 남기지 않습니다.</p>
       </div>`;
     // 스탠바이미는 두 대 모두 세로로 세울 수 있다. 화면마다 따로 돌려 본다
     ['A', 'B'].forEach((k) => {
