@@ -1,6 +1,6 @@
 {
-  "version": 45,
-  "publishedAt": "2026-11-05T05:07:50+09:00",
+  "version": 46,
+  "publishedAt": "2026-11-05T05:20:23+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -30,7 +30,7 @@
         "url": "https://activation-lab.vercel.app/"
       },
       {
-        "title": "두더지 잡기 챌린지",
+        "title": "DG다 잡기 챌린지",
         "by": "송석리",
         "url": "https://greatsong.github.io/screens/games/mole/"
       }
@@ -142,7 +142,7 @@
     {
       "id": "mole",
       "no": 6,
-      "title": "두더지 잡기 챌린지",
+      "title": "DG다 잡기 챌린지",
       "summary": "30초 동안 구멍에서 올라오는 두더지를 잡습니다. TOP 10에 들면 휴대폰으로 닉네임을 적어 명예의 전당에 올립니다.",
       "maker": "송석리",
       "makerType": "teacher",
