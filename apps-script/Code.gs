@@ -1247,9 +1247,9 @@ function withLock_(fn) {
   try { return fn(); } finally { lock.releaseLock(); }
 }
 
-// 이 앱의 관리 시트에는 수식을 사용하지 않는다. Google Sheets는 '=' 문자열을
-// 수식으로 실행하므로, 모든 쓰기 경로에서 문자로 저장한다.
-function sheetValue_(value) { return typeof value === 'string' && value.charAt(0) === '=' ? "'" + value : value; }
+// 이 앱의 관리 시트에는 수식을 사용하지 않는다. Google Sheets는 =, +, -, @로 시작하는 문자열을
+// 수식으로 해석할 수 있으므로, 모든 쓰기 경로에서 문자로 저장한다.
+function sheetValue_(value) { return typeof value === 'string' && /^[=+\-@]/.test(value) ? "'" + value : value; }
 
 function neutralizeSheetFormulas_() {
   let count = 0;
