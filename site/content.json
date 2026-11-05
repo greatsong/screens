@@ -1,6 +1,6 @@
 {
-  "version": 48,
-  "publishedAt": "2026-11-05T11:56:38+09:00",
+  "version": 49,
+  "publishedAt": "2026-11-05T19:24:00+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -183,64 +183,64 @@
   },
   "news": [
     {
-      "id": "224622ef48",
+      "id": "b34ddf9b02",
       "cat": "tech",
-      "title": "오픈AI, 일상 업무 AI 평가 '라이프밸' 공개...개인 비서 성능 1년 새 49%→81%",
-      "summary": "오픈AI가 챗GPT를 단순한 대화형 도구에서 실제 일상 업무를 처리하는 개인 AI 비서로 발전시키기 위한 성능 평가 체계를 공개했다.",
+      "title": "오픈AI, '이미지스 2.6' 공개…챗GPT서 움직이는 GIF 생성 지원",
+      "summary": "오픈AI가 정지 이미지 중심이었던 챗GPT의 이미지 생성 기능을 움직이는 애니메이션 영역으로 확장했다.",
       "source": "AI타임스",
-      "date": "2026-11-04",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216996",
-      "until": "2026-11-07T15:41:00+09:00"
-    },
-    {
-      "id": "0d6370bae5",
-      "cat": "tech",
-      "title": "엔비디아, 기업 데이터 이해하는 '오토 온톨로지' 공개…AI 정확도 높인다",
-      "summary": "엔비디아가 기업 내부 데이터의 의미와 관계를 자동으로 분석해 AI 에이전트가 활용할 수 있도록 하는 오픈소스 기술을 공개했다.",
-      "source": "AI타임스",
-      "date": "2026-11-04",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217004",
-      "until": "2026-11-07T14:55:00+09:00"
-    },
-    {
-      "id": "ed22238909",
-      "cat": "society",
-      "title": "위험 감지하면 AI가 설비 멈춘다…LG 안전관리, '감시'에서 '제어'로",
-      "summary": "LG가 그룹 안전환경 관리에 AI를 본격 접목하고 있다.",
-      "source": "전자신문",
       "date": "2026-11-05",
-      "link": "https://www.etnews.com/20261105000138",
-      "until": "2026-11-08T10:17:07+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217038",
+      "until": "2026-11-08T12:29:00+09:00"
     },
     {
-      "id": "0fb56af067",
-      "cat": "economy",
-      "title": "HSAD, 넷플릭스 광고 효과 AI로 사전 예측…타깃·예산별 분석",
-      "summary": "HSAD는 넷플릭스 광고의 예상 도달 효과를 사전에 예측할 수 있는 인공지능 에이전트를 구현했다고 5일...",
+      "id": "1dbef9cd34",
+      "cat": "society",
+      "title": "AI 에이전트 시대 개인정보 보호 어떻게…개보위 공개토론회",
+      "summary": "개인정보보호위원회는 '에이전트·피지컬 AI 시대, 개인정보 보호 기술과 안전활용 방안'을 주제로 제4기 개인정...",
       "source": "연합뉴스",
       "date": "2026-11-05",
-      "link": "https://www.yna.co.kr/view/AKR20261105032000003",
-      "until": "2026-11-08T08:52:55+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261105070600530",
+      "until": "2026-11-08T16:00:10+09:00"
     },
     {
-      "id": "2d5a80d627",
-      "cat": "science",
-      "title": "딥 프린시플, 일부 과학 평가서 GPT-6 아스트라 앞선 '하이드로젠' 공개",
-      "summary": "중국 AI 소재 연구 전문 딥 프린시플이 실제 실험 기록과 연구 과정의 시행착오까지 학습한 과학 특화 AI 모델 '하이드로젠-1.0'을 공개했다.",
-      "source": "AI타임스",
-      "date": "2026-11-03",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216967",
-      "until": "2026-11-06T17:30:00+09:00"
-    },
-    {
-      "id": "7f80e0d0fa",
-      "cat": "culture",
-      "title": "“사람이 다가가자 벽돌이 움직였다”…AI가 바꾼 예술의 풍경",
-      "summary": "서울 성수동과 종로구에서 2026 아트코리아랩 AI-융합 페스티벌이 8일까지 열린다.",
-      "source": "동아일보",
+      "id": "3dc609d411",
+      "cat": "society",
+      "title": "틸론 “DstationX로 개발자든 학생이든 사용자가 원하는 AI 환경 제공할 것”",
+      "summary": "“가상 데스크톱 환경에서도 보안에 대한 불안없이 안전하게 인공지능 전환 환경을 자유롭게 사용할 수 있게 '디스테이션 X'가 책임지겠습니다.",
+      "source": "전자신문",
       "date": "2026-11-05",
-      "link": "https://www.donga.com/news/Culture/article/all/20261105/134970211/2",
-      "until": "2026-11-08T11:15:01+09:00"
+      "link": "https://www.etnews.com/20261105000380",
+      "until": "2026-11-08T16:00:00+09:00"
+    },
+    {
+      "id": "8efaeef526",
+      "cat": "economy",
+      "title": "[AI프리즘] 전기 더 쓰는 AI…데이터센터, 전압 높여 손실 줄인다",
+      "summary": "인공지능 데이터센터의 전력 수요가 급증하면서 전기를 공급하는 방식에도 변화가 나타나고 있다.",
+      "source": "연합뉴스",
+      "date": "2026-11-05",
+      "link": "https://www.yna.co.kr/view/AKR20261105126800017",
+      "until": "2026-11-08T15:14:51+09:00"
+    },
+    {
+      "id": "0120fbbc94",
+      "cat": "science",
+      "title": "무릎 인공관절 수술 후 메스꺼움·구토, AI가 위험도 예측",
+      "summary": "대구가톨릭대의료원은 인공지능을 활용해 인공 무릎관절 수술 후 발생하는 메스꺼움·구토 증상을 예측하는 모...",
+      "source": "연합뉴스",
+      "date": "2026-11-03",
+      "link": "https://www.yna.co.kr/view/AKR20261103131300053",
+      "until": "2026-11-06T15:37:27+09:00"
+    },
+    {
+      "id": "a244a51d65",
+      "cat": "culture",
+      "title": "[공연소식] 국립정동극장 세실, 연극 '멜로드라마 열차' 내달 공연",
+      "summary": "▲ 국립정동극장 연극 '멜로드라마 열차' = 연극 '멜로드라마 열차'가 다음 달 6∼20일 국립정동극장 세실 ...",
+      "source": "연합뉴스",
+      "date": "2026-11-05",
+      "link": "https://www.yna.co.kr/view/AKR20261105087000005",
+      "until": "2026-11-08T11:37:15+09:00"
     }
   ],
   "promoSound": true,
