@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T11:50:56+09:00",
+  "generatedAt": "2026-11-07T03:36:53+09:00",
   "registrySyncId": "20261030-151410-s643f",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -19,7 +19,7 @@
       "images": {
         "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-06T115024"
       },
-      "pinned": true,
+      "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],

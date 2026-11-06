@@ -1,6 +1,6 @@
 {
-  "version": 52,
-  "publishedAt": "2026-11-06T19:26:02+09:00",
+  "version": 53,
+  "publishedAt": "2026-11-07T03:36:53+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -81,7 +81,7 @@
       "images": {
         "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-06T115024"
       },
-      "pinned": true
+      "pinned": false
     },
     {
       "id": "neural-explorer",
