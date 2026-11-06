@@ -1,35 +1,35 @@
 {
-  "updatedAt": "2026-11-06T11:42:35+09:00",
+  "updatedAt": "2026-11-06T19:25:24+09:00",
   "items": [
     {
-      "id": "ba8a7baf59",
+      "id": "d20c7f2058",
       "cat": "tech",
-      "title": "오픈AI, 'GPT-6 사이버' 출시…취약점 공격 성공률 51% 향상",
-      "summary": "오픈AI가 기존 모델보다 보안 취약점에 대한 공격 성공률을 51% 높인 사이버 보안 특화 AI 모델 'GPT-6 사이버'를 출시했다.",
+      "title": "구글 출신 연구진, 65B 모델로 8배 큰 AI 코딩 성능 추월…개발비도 10분의 1",
+      "summary": "구글 출신 연구진이 설립한 리커시브 인텔리전스가 매개변수 규모가 8배 가까이 큰 AI 모델을 코딩 성능 평가에서 앞서는 오픈웨이트 모델을 공개했다.",
       "source": "AI타임스",
       "date": "2026-11-06",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217074",
-      "until": "2026-11-09T06:05:00+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217107",
+      "until": "2026-11-09T17:44:00+09:00"
     },
     {
-      "id": "b34ddf9b02",
+      "id": "c3bc6b26d0",
       "cat": "tech",
-      "title": "오픈AI, '이미지스 2.6' 공개…챗GPT서 움직이는 GIF 생성 지원",
-      "summary": "오픈AI가 정지 이미지 중심이었던 챗GPT의 이미지 생성 기능을 움직이는 애니메이션 영역으로 확장했다.",
+      "title": "앤트로픽, 클로드에 개인 금융 기능 추가…계좌 연결해 지출 분석",
+      "summary": "앤트로픽이 '클로드'에 은행 계좌와 신용카드를 연결해 개인 재무 상태를 분석할 수 있는 '개인 금융' 기능을 추가했다.",
       "source": "AI타임스",
-      "date": "2026-11-05",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217038",
-      "until": "2026-11-08T12:29:00+09:00"
+      "date": "2026-11-06",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217084",
+      "until": "2026-11-09T16:47:00+09:00"
     },
     {
-      "id": "a8906e323d",
+      "id": "ffe0f5b7bb",
       "cat": "society",
-      "title": "앤트로픽 \"RSI 가속에 AI 안전 대책 뒤처질 수도\"…통제 강화 검토",
-      "summary": "앤트로픽이 AI를 활용한 연구개발이 급격히 빨라지면서 안전성과 보안 대책을 마련하는 속도를 앞지를 수 있다고 경고했다.",
+      "title": "식약처, 식품안전 정보 포털에 AI 기반 민원검색 서비스 도입",
+      "summary": "식품의약품안전처와 식품안전정보원이 운영하는 식품안전나라에 AI 기반 자연어 민원검색 서비스가 도입됐다.",
       "source": "AI타임스",
-      "date": "2026-11-04",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=216984",
-      "until": "2026-11-07T18:24:00+09:00"
+      "date": "2026-11-06",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217085",
+      "until": "2026-11-09T12:23:00+09:00"
     },
     {
       "id": "0845d79fde",
@@ -42,24 +42,24 @@
       "until": "2026-11-08T15:00:03+09:00"
     },
     {
-      "id": "aadc921824",
+      "id": "9eaa74c576",
       "cat": "science",
-      "title": "AI가 더 강한 AI 개발 돕는다…앤트로픽, 2년 치 성능 개선 1년 만에 달성",
-      "summary": "인공지능이 다음 세대 AI 개발을 도우면서 기술 발전 속도를 끌어올리고 있다는 연구 결과가 나왔다.",
-      "source": "ZDNet Korea",
+      "title": "비드래프트 '다윈', 수학·과학 추론 세계 2위 수준…구글·딥시크 앞서",
+      "summary": "국내 스타트업 비드래프트가 개발한 자기개선형 AI 모델 '다윈'이 중국 AI 성능 평가에서 오픈AI에 이어 수학·과학 추론 부문 두 번째로 높은 점수를 기록했다.",
+      "source": "AI타임스",
       "date": "2026-11-06",
-      "link": "https://zdnet.co.kr/view/?no=20261106103632",
-      "until": "2026-11-09T11:12:43+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217089",
+      "until": "2026-11-09T11:47:00+09:00"
     },
     {
-      "id": "e07c10404f",
-      "cat": "science",
-      "title": "ETRI, 실내 자율탐사 AI 알고리즘으로 국제대회 1위",
-      "summary": "한국전자통신연구원은 지난 9월 말 미국 피츠버그에서 열린 세계적 로봇 학술대회 ‘IROS 2026’연계 실내 자율탐사 경진대회에서 단일 로봇 부문 1위를 차지…",
-      "source": "ZDNet Korea",
+      "id": "dc8f3ccd83",
+      "cat": "culture",
+      "title": "앤트로픽, '클로드' 게임 복제 제한 완화…\"비슷한 게임 만들 수 있어\"",
+      "summary": "앤트로픽이 '클로드 코드'의 게임 복제 금지 조치를 완화했다.",
+      "source": "AI타임스",
       "date": "2026-11-06",
-      "link": "https://zdnet.co.kr/view/?no=20261105143558",
-      "until": "2026-11-09T09:36:13+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217115",
+      "until": "2026-11-09T17:10:00+09:00"
     }
   ]
 }
