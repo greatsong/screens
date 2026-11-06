@@ -1,12 +1,12 @@
 {
   "id": "mole",
   "target": "wide",
-  "checkedAt": "2026-11-05T05:07:30+09:00",
+  "checkedAt": "2026-11-06T11:50:29+09:00",
   "url": "https://greatsong.github.io/screens/games/mole/",
   "finalUrl": "https://greatsong.github.io/screens/games/mole/",
   "http": 200,
-  "responseMs": 143,
-  "fingerprint": "f849aebfdecc631e",
+  "responseMs": 96,
+  "fingerprint": "9fb4c74cd8b5086c",
   "frame": {
     "allowed": true,
     "reason": "제한 없음"
@@ -15,11 +15,11 @@
     "wide": {
       "ok": true,
       "image": "wide.jpg",
-      "title": "두더지 잡기 챌린지 · AI중점학교 당곡고",
-      "loadMs": 3638,
+      "title": "DG다 잡기 챌린지 · AI중점학교 당곡고",
+      "loadMs": 4579,
       "errors": [],
       "stats": {
-        "text": 295,
+        "text": 414,
         "visual": 5
       }
     }
