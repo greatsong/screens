@@ -1,6 +1,6 @@
 {
-  "version": 57,
-  "publishedAt": "2026-11-09T10:59:15+09:00",
+  "version": 58,
+  "publishedAt": "2026-11-09T19:56:06+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -183,44 +183,44 @@
   },
   "news": [
     {
-      "id": "d20c7f2058",
+      "id": "7e4a3492c1",
       "cat": "tech",
-      "title": "구글 출신 연구진, 65B 모델로 8배 큰 AI 코딩 성능 추월…개발비도 10분의 1",
-      "summary": "구글 출신 연구진이 설립한 리커시브 인텔리전스가 매개변수 규모가 8배 가까이 큰 AI 모델을 코딩 성능 평가에서 앞서는 오픈웨이트 모델을 공개했다.",
+      "title": "오픈AI, 생명과학 AI 벤치마크 공개…GPT-6 아스트라 성능 23%P 향상",
+      "summary": "오픈AI가 실제 생명과학 실험실에서 AI 에이전트의 데이터 분석과 오류 탐지 능력을 측정하는 새로운 벤치마크를 공개했다.",
       "source": "AI타임스",
-      "date": "2026-11-06",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217107",
-      "until": "2026-11-09T17:44:00+09:00"
+      "date": "2026-11-09",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217167",
+      "until": "2026-11-12T13:54:00+09:00"
     },
     {
-      "id": "c958af1656",
+      "id": "99667b6065",
       "cat": "tech",
-      "title": "LG AI연구원, 'K-엑사원 2.5' 무료 개방…성능 70%↑",
-      "summary": "LG AI연구원이 독자 인공지능 모델 'K-엑사원' 성능을 8주 만에 70% 이상 끌어올리고 개선된 모델을 누구나 활용할 수 있도록 무료 개방한다.",
-      "source": "ZDNet Korea",
-      "date": "2026-11-09",
-      "link": "https://zdnet.co.kr/view/?no=20261109093318",
-      "until": "2026-11-12T10:00:02+09:00"
-    },
-    {
-      "id": "579fc88d28",
-      "cat": "society",
-      "title": "에이전틱·피지컬 AI 확산에 법적책임 안전 기준 논의",
-      "summary": "에이전틱 AI와 피지컬 AI 확산에 따른 법적 책임과 안전 기준을 논의하는 자리가 마련된다.",
-      "source": "ZDNet Korea",
-      "date": "2026-11-09",
-      "link": "https://zdnet.co.kr/view/?no=20261109095743",
-      "until": "2026-11-12T09:57:43+09:00"
-    },
-    {
-      "id": "05cf0de49b",
-      "cat": "economy",
-      "title": "“AI·로봇에 대체되는 노동…기본소득으로 ‘부의 쏠림’ 줄여야”",
-      "summary": "헌정회·사회정책학회 ‘AI 시대의 양극화 현상’ 정책토론회AI 시대 해법은 서상목 대한민국헌정회 정책연구위원회 의장이 지난 6일 서울 영등포구 헌정회 회의실에…",
-      "source": "경향신문",
+      "title": "앤트그룹, '링 3.2 플래시' 공개…시각 이해 평가서 클로드 오퍼스 5 앞서",
+      "summary": "중국 앤트그룹이 이미지와 동영상을 이해하고 복잡한 작업을 수행하는 멀티모달 AI 모델 '링 3.2 플래시'를 출시했다.",
+      "source": "AI타임스",
       "date": "2026-11-08",
-      "link": "https://www.khan.co.kr/article/202611082130015/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
-      "until": "2026-11-11T21:30:00+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217146",
+      "until": "2026-11-11T16:59:00+09:00"
+    },
+    {
+      "id": "aceb5656bd",
+      "cat": "society",
+      "title": "인텔리빅스, 안전 AI 앞세워 글로벌 스마트시티 시장 공략",
+      "summary": "인텔리빅스가 스페인 바르셀로나에서 인공지능 기반 도시 안전관제 기술을 선보이며 해외 시장 확대에 나섰다.",
+      "source": "ZDNet Korea",
+      "date": "2026-11-09",
+      "link": "https://zdnet.co.kr/view/?no=20261109175655",
+      "until": "2026-11-12T17:57:15+09:00"
+    },
+    {
+      "id": "8d89357de5",
+      "cat": "economy",
+      "title": "엔비디아 AI 데이서 선보인 KT 로봇 가상훈련",
+      "summary": "피지컬 AI 데이터 인프라 기업 엔닷라이트가 엔비디아와의 기술 협력을 바탕으로 기업 맞춤형 로봇 시뮬레이션 데이터 사업을 확대한다.",
+      "source": "ZDNet Korea",
+      "date": "2026-11-09",
+      "link": "https://zdnet.co.kr/view/?no=20261109171556",
+      "until": "2026-11-12T17:15:56+09:00"
     },
     {
       "id": "1e3dfd43a0",
@@ -233,14 +233,14 @@
       "until": "2026-11-11T18:14:00+09:00"
     },
     {
-      "id": "dc8f3ccd83",
+      "id": "05ba931949",
       "cat": "culture",
-      "title": "앤트로픽, '클로드' 게임 복제 제한 완화…\"비슷한 게임 만들 수 있어\"",
-      "summary": "앤트로픽이 '클로드 코드'의 게임 복제 금지 조치를 완화했다.",
-      "source": "AI타임스",
-      "date": "2026-11-06",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217115",
-      "until": "2026-11-09T17:10:00+09:00"
+      "title": "[AI픽] AI로 입점 심사부터 개장까지…SKT, 방탈출 게임 개최",
+      "summary": "SK텔레콤[017670]은 오는 13∼14일 서울 성동구 T팩토리 성수에서 인공지능을 활용한 오프라인 ...",
+      "source": "연합뉴스",
+      "date": "2026-11-09",
+      "link": "https://www.yna.co.kr/view/AKR20261109054400017",
+      "until": "2026-11-12T10:28:33+09:00"
     }
   ],
   "promoSound": true,
