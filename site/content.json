@@ -1,6 +1,6 @@
 {
-  "version": 55,
-  "publishedAt": "2026-11-08T12:50:43+09:00",
+  "version": 56,
+  "publishedAt": "2026-11-09T10:50:17+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -193,44 +193,44 @@
       "until": "2026-11-09T17:44:00+09:00"
     },
     {
-      "id": "c3bc6b26d0",
+      "id": "c958af1656",
       "cat": "tech",
-      "title": "앤트로픽, 클로드에 개인 금융 기능 추가…계좌 연결해 지출 분석",
-      "summary": "앤트로픽이 '클로드'에 은행 계좌와 신용카드를 연결해 개인 재무 상태를 분석할 수 있는 '개인 금융' 기능을 추가했다.",
-      "source": "AI타임스",
-      "date": "2026-11-06",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217084",
-      "until": "2026-11-09T16:47:00+09:00"
+      "title": "LG AI연구원, 'K-엑사원 2.5' 무료 개방…성능 70%↑",
+      "summary": "LG AI연구원이 독자 인공지능 모델 'K-엑사원' 성능을 8주 만에 70% 이상 끌어올리고 개선된 모델을 누구나 활용할 수 있도록 무료 개방한다.",
+      "source": "ZDNet Korea",
+      "date": "2026-11-09",
+      "link": "https://zdnet.co.kr/view/?no=20261109093318",
+      "until": "2026-11-12T10:00:02+09:00"
     },
     {
-      "id": "4b7b9dc3f8",
+      "id": "579fc88d28",
       "cat": "society",
-      "title": "[AI 위클리] 말투로 보이스피싱 잡고 공부하라 전화까지…AI의 진화",
-      "summary": "전화 속 상대방의 말투와 말하는 속도를 분석해 보이스피싱 위험을 알리고, 영어 공부를 미루는 사람에게 먼저 전...",
-      "source": "연합뉴스",
-      "date": "2026-11-08",
-      "link": "https://www.yna.co.kr/view/AKR20261107024400017",
-      "until": "2026-11-11T09:30:01+09:00"
+      "title": "에이전틱·피지컬 AI 확산에 법적책임 안전 기준 논의",
+      "summary": "에이전틱 AI와 피지컬 AI 확산에 따른 법적 책임과 안전 기준을 논의하는 자리가 마련된다.",
+      "source": "ZDNet Korea",
+      "date": "2026-11-09",
+      "link": "https://zdnet.co.kr/view/?no=20261109095743",
+      "until": "2026-11-12T09:57:43+09:00"
     },
     {
-      "id": "0926dc2d34",
+      "id": "05cf0de49b",
       "cat": "economy",
-      "title": "독일 노동시장 전문가 \"AI에 안전한 직업 찾지 마라…미래 일자리 준비해야\"",
-      "summary": "AI로부터 안전한 직업을 찾기보다 앞으로 새롭게 생겨날 일자리를 준비해야 한다는 독일 노동시장 전문가의 주장이 나왔다.",
-      "source": "AI타임스",
+      "title": "“AI·로봇에 대체되는 노동…기본소득으로 ‘부의 쏠림’ 줄여야”",
+      "summary": "헌정회·사회정책학회 ‘AI 시대의 양극화 현상’ 정책토론회AI 시대 해법은 서상목 대한민국헌정회 정책연구위원회 의장이 지난 6일 서울 영등포구 헌정회 회의실에…",
+      "source": "경향신문",
       "date": "2026-11-08",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217143",
-      "until": "2026-11-11T10:27:00+09:00"
+      "link": "https://www.khan.co.kr/article/202611082130015/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
+      "until": "2026-11-11T21:30:00+09:00"
     },
     {
-      "id": "3f616b3e6b",
+      "id": "1e3dfd43a0",
       "cat": "science",
-      "title": "앤트로픽, 클로드로 40년 미스터리 단백질 연구 돌파구…3D 구조 첫 규명",
-      "summary": "앤트로픽이 '클로드'를 활용해 40년 동안 정확한 기능이 밝혀지지 않은 세포 속 단백질 구조물의 새로운 형태를 발견했다.",
+      "title": "과학자들은 AI를 어떻게 쓸까…앤트로픽 \"데이터 분석 1위, 가설 생성 4%\"",
+      "summary": "과학 연구에서 AI 활용이 늘고 있지만, 새로운 아이디어나 가설을 만드는 작업보다 데이터 분석과 논문 작성에 집중되고 있다는 조사 결과가 나왔다.",
       "source": "AI타임스",
       "date": "2026-11-08",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217145",
-      "until": "2026-11-11T12:08:00+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217147",
+      "until": "2026-11-11T18:14:00+09:00"
     },
     {
       "id": "dc8f3ccd83",
@@ -325,7 +325,7 @@
     {
       "name": "겨울방학",
       "start": "2027-01-01",
-      "end": "2027-01-08",
+      "end": "2027-01-15",
       "grades": "",
       "holiday": true
     }
