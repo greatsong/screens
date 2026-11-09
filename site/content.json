@@ -1,6 +1,6 @@
 {
-  "version": 58,
-  "publishedAt": "2026-11-09T19:56:06+09:00",
+  "version": 59,
+  "publishedAt": "2026-11-10T01:44:14+09:00",
   "appVersion": "0.7.1",
   "mode": "normal",
   "notice": "",
@@ -213,14 +213,14 @@
       "until": "2026-11-12T17:57:15+09:00"
     },
     {
-      "id": "8d89357de5",
+      "id": "0926dc2d34",
       "cat": "economy",
-      "title": "엔비디아 AI 데이서 선보인 KT 로봇 가상훈련",
-      "summary": "피지컬 AI 데이터 인프라 기업 엔닷라이트가 엔비디아와의 기술 협력을 바탕으로 기업 맞춤형 로봇 시뮬레이션 데이터 사업을 확대한다.",
-      "source": "ZDNet Korea",
-      "date": "2026-11-09",
-      "link": "https://zdnet.co.kr/view/?no=20261109171556",
-      "until": "2026-11-12T17:15:56+09:00"
+      "title": "독일 전문가 \"AI에 안전한 직업 찾지 마라…미래 일자리 준비해야\"",
+      "summary": "AI로부터 안전한 직업을 찾기보다 앞으로 새롭게 생겨날 일자리를 준비해야 한다는 독일 노동시장 전문가의 주장이 나왔다.",
+      "source": "AI타임스",
+      "date": "2026-11-08",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217143",
+      "until": "2026-11-11T10:27:00+09:00"
     },
     {
       "id": "1e3dfd43a0",
