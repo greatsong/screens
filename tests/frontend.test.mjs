@@ -662,7 +662,7 @@ test('the ridership bars highlight the current hour and name the busiest one', (
   assert.match(html, /시간대별 승차 인원 <span>10월 평일 평균<\/span>/);
   assert.equal((html.match(/<i class/g) || []).length, 13);
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
-  assert.match(html, /지금 15시대 <b>11명<\/b> · 가장 붐비는 시간 16시대/);
+  assert.match(html, /지금 15~16시 <b>11명<\/b> · 가장 붐비는 시간 16~17시/);
   assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
 });
 
@@ -734,7 +734,7 @@ test('the story tile tells last week\'s same weekday: real arrivals first, then 
   const stop = BUS.stops[0];
   env.state.ride = { stops: { '21348|관악11': { 14: 5, 15: 10, 16: 25, 17: 10 } }, week: { '21348|관악11': { 화: 100 } }, recent: { '21348|관악11': { 20261103: 120 } } };
   let html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
-  assert.match(html, /지난주 화요일엔 하루 동안 120명이 탔어요\. 15시대엔 24명쯤!/);   // 120 × 10/50
+  assert.match(html, /지난주 화요일엔 하루 동안 120명이 탔어요\. 15~16시엔 24명쯤!/);   // 120 × 10/50
   assert.match(html, /평소 화요일보다 붐빈 날이었어요\./);
   env.state.bus = { recv: env.now(), now: env.now(), stops: {}, log: { 21348: { '관악11|봉천역': [{ d: '20261109', t: ['15:18'] }, { d: '20261103', t: ['14:10', '15:12', '15:26', '16:40'] }] } } };
   html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
@@ -742,4 +742,28 @@ test('the story tile tells last week\'s same weekday: real arrivals first, then 
   assert.match(html, /요즘 이 시간에 도착한 시각/);
   env.state.ride = null; env.state.bus = null;
   assert.equal(env.busStory(stop, { logKey: '', terminus: false }), '');
+});
+
+test('real vehicle positions: a bus standing at the terminus is announced, and only buses inside the map are drawn', async () => {
+  const env = screen({ role: 'b', time: Date.parse('2026-11-10T15:20:00+09:00') });
+  const stops = [BUS.stops[0], { ...BUS.stops[1], lat: 37.4937689, lon: 126.936319 }];
+  env.setFetch(() => Promise.resolve({ json: () => Promise.resolve({ ok: true, now: env.now(), log: {}, stops: {
+    21348: { at: env.now(), buses: [], pos: [] },
+    20507: { at: env.now(), buses: [{ route: '동작11', dir: '노량진역', msg1: '출발대기', sec1: null, term: 14 }, { route: '동작11', dir: '사자암', msg1: '7분후', sec1: 420 }],
+      pos: [{ lat: 37.493812, lon: 126.936261, ord: 1, stop: 0 }, { lat: 37.504975, lon: 126.939423, ord: 14, stop: 0 }, { lat: 37.4925, lon: 126.9345, ord: 35, stop: 1 }] } } }) }));
+  env.applyContent(content({ items: [{ id: 'c1', a: { title: 'C1' } }, { id: 'c2', a: { title: 'C2' } }, { id: 'c3', a: { title: 'C3' } }],
+    bus: { ...BUS, every: 2, stops, rain: null, ride: false, map: { src: 'bus/map.webp', bounds: { north: 37.49445, south: 37.49045, west: 126.93235, east: 126.93765 } } } }), false);
+  env.state.idx = Array.from(env.state.sched, (e) => e.item && e.item.id).indexOf('bus');
+  env.maybeLoadBus(env.now());
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  const view = env.busView(stops[1]);
+  assert.equal(view.waiting, 1);
+  const head = env.busHeadline(view);
+  assert.equal(head.big, '출발 대기');
+  assert.match(head.sub, /종점에 버스 1대가 서 있습니다 · 배차 간격 약 14분/);
+  assert.equal(head.pos, 0);                                         // 길 위의 버스도 정류장 앞에 선다
+  env.busPaint();
+  assert.equal((env.element('busDots').innerHTML.match(/bm-bus/g) || []).length, 2);   // 지도 안 두 대만
+  assert.match(env.element('busDots').innerHTML, /is-stopped/);
+  assert.equal(env.element('busLive').textContent, '실시간 2대');
 });

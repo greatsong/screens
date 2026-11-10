@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.2';
+  const APP_VERSION = '0.9.3';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1024,7 +1024,8 @@
     const top = hours.reduce((a, h) => ((per[h] || 0) > (per[a] || 0) ? h : a), hours[0]);
     const bars = hours.map((h) => `<i class="${h === nowH ? 'on' : ''}${h === top ? ' top' : ''}"><em style="height:${Math.max(4, (per[h] || 0) / max * 100).toFixed(0)}%"></em><u>${h}</u></i>`).join('');
     const mon = +String(r.month || '').slice(5, 7);
-    const cap = per[nowH] != null ? `지금 ${nowH}시대 <b>${Math.round(per[nowH])}명</b>${nowH === top ? ' · 가장 붐비는 시간' : ` · 가장 붐비는 시간 ${top}시대`}` : `가장 붐비는 시간 ${top}시대`;
+    const span = (h) => h + '~' + (h + 1) + '시';   // 15시대가 아니라 15~16시로 적는다
+    const cap = per[nowH] != null ? `지금 ${span(nowH)} <b>${Math.round(per[nowH])}명</b>${nowH === top ? ' · 가장 붐비는 시간' : ` · 가장 붐비는 시간 ${span(top)}`}` : `가장 붐비는 시간 ${span(top)}`;
     return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
   }
   // 요일별 하루 승차 인원(최근 한 달의 평일, 일별 자료). 오늘 요일을 강조한다
@@ -1227,7 +1228,11 @@
     const out = mine.filter((x) => x.dir !== stop.name)[0] || null;
     const inb = mine.filter((x) => x.dir === stop.name)[0] || null;
     const src = out && out.sec1 != null ? out : null;
-    return { ready: true, out, inb, left1: src ? left(src.sec1) : null, left2: src ? left(src.sec2) : null,
+    // 실시간 차량 위치(서버가 함께 준다). 종점에서는 정류장 60m 안에 있는 차를 출발을 기다리는 차로 본다
+    const pos = sd.pos || [];
+    const meters = (b) => Math.hypot((b.lat - stop.lat) * 111320, (b.lon - stop.lon) * 111320 * Math.cos(stop.lat * Math.PI / 180));
+    const waiting = !src && stop.lat ? pos.filter((b) => meters(b) <= 60).length : 0;
+    return { ready: true, out, inb, pos, waiting, left1: src ? left(src.sec1) : null, left2: src ? left(src.sec2) : null,
       inLeft: inb ? left(inb.sec1) : null, msg: out ? out.msg1 : (inb ? '출발대기' : ''), term: (out || inb || {}).term || null,
       logKey: src ? out.route + '|' + out.dir : inb ? inb.route + '|' + inb.dir : '', terminus: !src && !!inb };
   }
@@ -1238,6 +1243,7 @@
       if (v.left1 <= 0) return { big: '도착', sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: 0 };
       return { big: v.left1 <= 60 ? '곧 도착' : busMin(v.left1), sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: v.left1 };
     }
+    if (v.waiting > 0) return { big: '출발 대기', sub: '종점에 버스 ' + v.waiting + '대가 서 있습니다' + (v.term ? ' · 배차 간격 약 ' + v.term + '분' : ''), pos: 0 };
     if (v.inLeft != null && v.inLeft > 0) return { big: busMin(v.inLeft), sub: '이 시간 뒤 종점에 들어온 차가 다시 출발합니다', pos: v.inLeft };
     if (/운행종료/.test(v.msg)) return { big: '운행 종료', sub: '', pos: null };
     return { big: '출발 대기', sub: v.term ? '배차 간격은 약 ' + v.term + '분입니다' : '', pos: null };
@@ -1279,11 +1285,11 @@
     if (total != null) {
       const sum = hourly ? Object.keys(hourly).reduce((a, h) => a + hourly[h], 0) : 0;
       const slot = hourly && sum > 0 && hourly[k.h] != null ? Math.round(total * hourly[k.h] / sum) : null;
-      says.push(`지난주 ${k.wd}요일엔 하루 동안 ${total}명이 탔어요.` + (slot ? ` ${k.h}시대엔 ${slot}명쯤!` : ''));
+      says.push(`지난주 ${k.wd}요일엔 하루 동안 ${total}명이 탔어요.` + (slot ? ` ${k.h}~${k.h + 1}시엔 ${slot}명쯤!` : ''));
       const avg = week[k.wd];
       if (avg) says.push(total >= avg * 1.1 ? `평소 ${k.wd}요일보다 붐빈 날이었어요.` : total <= avg * 0.9 ? `평소 ${k.wd}요일보다 한산한 날이었어요.` : `평소 ${k.wd}요일과 비슷했어요.`);
     } else if (hourly && hourly[k.h] != null) {
-      says.push(`${k.h}시대에는 하루 평균 ${Math.round(hourly[k.h])}명이 타요.`);
+      says.push(`${k.h}~${k.h + 1}시에는 하루 평균 ${Math.round(hourly[k.h])}명이 타요.`);
     }
     if (!says.length) return '';
     const chips = busHistory(stop, v);
@@ -1335,6 +1341,8 @@
         <span class="bm-pin is-school" style="${pos(b.school)}"><i></i><b>${esc((b.school || {}).name || '학교')}</b></span>
         <span class="bm-pin is-stop" style="${pos(stop)}"><i></i><b>${esc(stop.name)}</b></span>
         <img class="bm-walker" src="${MONG(stop.walker || 'chorong')}" alt="">
+        <div class="bm-buses" id="busDots"></div>
+        <small class="bm-live" id="busLive"></small>
         <small class="bm-credit">© OpenStreetMap</small>
       </div></div>` : '';
     const waiters = (stop.friends || ['mongsil', 'gori']).slice(0, 2).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
@@ -1407,6 +1415,17 @@
     const far = Math.min(1, Math.max(0, (h.pos || 0) / 600));
     $('busCar').style.left = h.pos == null ? '-45%' : (44 - far * 44).toFixed(1) + '%';
     $('busCar').className = 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : '');
+    // 지도 위 실제 버스: 지도 범위 안에 있는 차만 그리고, 범위 밖에서 달리는 차는 대수만 적는다
+    const bd = (b.map || {}).bounds;
+    if (bd && $('busDots')) {
+      const inside = (v.pos || []).map((p) => ({ x: (p.lon - bd.west) / (bd.east - bd.west) * 100, y: (bd.north - p.lat) / (bd.north - bd.south) * 100, stop: p.stop }))
+        .filter((p) => p.x >= 2 && p.x <= 98 && p.y >= 2 && p.y <= 98);
+      const dots = inside.map((p) => `<span class="bm-bus${p.stop ? ' is-stopped' : ''}" style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%"><i></i></span>`).join('');
+      const total = (v.pos || []).length;
+      const live = !v.ready || !total ? '' : inside.length ? '실시간 ' + inside.length + '대' : '지도 밖 ' + total + '대';
+      if (state.busDots !== dots || (dots && !$('busDots').innerHTML)) { state.busDots = dots; $('busDots').innerHTML = dots; }
+      if (state.busLive !== live) { state.busLive = live; $('busLive').textContent = live; }
+    }
     const story = busStory(stop, v);
     if ($('busStory') && (state.busStoryHTML !== story || (story && !$('busStory').innerHTML))) { state.busStoryHTML = story; $('busStory').innerHTML = story; fitCard(); }
     const ride = rideHTML(stop);

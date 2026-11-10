@@ -425,8 +425,11 @@ function doGet(e) {
 // 화면의 표시 시간(content.json 의 bus.from·until, bus.allDay)을 바꾸면 여기 PEAK·OPEN 도 함께 바꾼다.
 // ======================================================================
 const BUS = { STOPS: ['21348', '20507', '20522', '20951'], OPEN: [7 * 60 + 30, 19 * 60], PEAK: [14 * 60 + 50, 17 * 60 + 10], TTL_PEAK: 40, TTL_OFF: 180,
-  DAY_MAX: 900, KEEP_DAYS: 10, SHOW_DAYS: 3 };
+  DAY_MAX: 900, KEEP_DAYS: 10, SHOW_DAYS: 3,
+  // 정류장마다 실시간 차량 위치를 함께 받을 노선(버스위치정보 getBusPosByRtid 의 노선 ID). 한도는 도착 정보와 따로 하루 1,000회
+  POS: { '21348': '114900004', '20507': '119900011' } };
 const BUS_ENDPOINT = 'http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid';
+const BUS_POS_ENDPOINT = 'http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid';
 
 function busArrivals_(stopsParam) {
   const ids = String(stopsParam || '').split(',').filter((s, i, a) => BUS.STOPS.indexOf(s) >= 0 && a.indexOf(s) === i).slice(0, 3);
@@ -439,7 +442,10 @@ function busArrivals_(stopsParam) {
   if (!key) return { ok: false, error: '인증키 없음' };
   const cache = CacheService.getScriptCache();
   const stops = {};
-  ids.forEach((id) => { stops[id] = busStop_(id, key, cache, ttl); });
+  ids.forEach((id) => {
+    stops[id] = busStop_(id, key, cache, ttl);
+    if (BUS.POS[id]) stops[id] = Object.assign({}, stops[id], { pos: busPos_(BUS.POS[id], key, cache, ttl) });   // 함께 쓰는 값은 건드리지 않고 덧붙인다
+  });
   return { ok: true, now: Date.now(), stops: stops, log: busLog_(ids) };
 }
 
@@ -469,6 +475,29 @@ function busStop_(id, key, cache, ttl) {
   const text = JSON.stringify(out);
   cache.put('bus:' + id, text, ttl);
   cache.put('busl:' + id, text, 600);
+  return out;
+}
+
+// 노선 한 개의 운행 차량 위치 [{lat, lon, ord(몇 번째 구간), stop(정류장에 서 있으면 1)}]. 받지 못하면 빈 목록
+function busPos_(routeId, key, cache, ttl) {
+  const hit = cache.get('busq:' + routeId);
+  if (hit) return JSON.parse(hit);
+  const dayKey = 'busqn:' + fmt_(now_(), 'yyyyMMdd');
+  const used = Number(cache.get(dayKey) || 0);
+  if (used >= BUS.DAY_MAX) return [];
+  cache.put(dayKey, String(used + 1), 21600);
+  let out = [];
+  try {
+    const kp = key.indexOf('%') >= 0 ? key : encodeURIComponent(key);
+    const res = UrlFetchApp.fetch(BUS_POS_ENDPOINT + '?serviceKey=' + kp + '&busRouteId=' + routeId + '&resultType=json', { muteHttpExceptions: true });
+    const data = JSON.parse(res.getContentText());
+    const list = (data.msgBody && data.msgBody.itemList) || [];
+    out = (Array.isArray(list) ? list : [list]).map((it) => ({ lat: Number(it.gpsY), lon: Number(it.gpsX), ord: Number(it.sectOrd), stop: Number(it.stopFlag) || 0 }))
+      .filter((b) => b.lat > 30 && b.lon > 120);
+  } catch (err) {
+    return [];
+  }
+  cache.put('busq:' + routeId, JSON.stringify(out), ttl);
   return out;
 }
 

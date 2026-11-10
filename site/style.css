@@ -1087,3 +1087,27 @@ body.is-stopped #promo { display: none !important; }
   .busc .title { flex-wrap: wrap; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) { .story-top img, .story-say p { animation: none; } }
+
+/* 지도 위 실제 버스(실시간 위치) */
+.bm-buses { position: absolute; inset: 0; pointer-events: none; }
+.bm-bus { position: absolute; transform: translate(-50%, -50%); width: 5.4vmin; height: 3.6vmin; border-radius: 1.2vmin; background: var(--bc); border: 0.5vmin solid #2b2b3a; box-shadow: 0 0.5vmin 0 rgba(43, 43, 58, 0.25); animation: bm-bus 1s ease-in-out infinite; z-index: 3; }
+.bm-bus::before { content: ''; position: absolute; left: 14%; right: 14%; top: 16%; height: 36%; border-radius: 0.5vmin; background: #eaf6ff; border: 0.3vmin solid #2b2b3a; }
+.bm-bus::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -0.9vmin; height: 1.1vmin; background: radial-gradient(circle at 18% 50%, #2b2b3a 0.5vmin, transparent 0.55vmin), radial-gradient(circle at 82% 50%, #2b2b3a 0.5vmin, transparent 0.55vmin); }
+.bm-bus i { position: absolute; inset: -1.4vmin; border-radius: 50%; border: 0.4vmin solid var(--bc); opacity: 0; animation: bm-ring 1.6s ease-out infinite; }
+.bm-bus.is-stopped { animation: none; }
+.bm-live { position: absolute; left: 0.8vmin; top: 0.8vmin; font-size: 1.9vmin; font-weight: 900; color: #2b2b3a; background: rgba(255, 255, 255, 0.9); border: 0.3vmin solid #2b2b3a; border-radius: 99px; padding: 0 1.1vmin; z-index: 4; }
+.bm-live:empty { display: none; }
+.bm-live::before { content: ''; display: inline-block; width: 1.1vmin; height: 1.1vmin; margin-right: 0.6vmin; border-radius: 50%; background: #fa5252; animation: bm-blink 1.2s ease-in-out infinite; }
+@keyframes bm-bus { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -62%); } }
+@keyframes bm-ring { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes bm-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .bm-bus, .bm-bus i, .bm-live::before { animation: none; } }
+
+/* 정류장 팻말이 길 영역 위로 넘쳐 잘리지 않게 영역 안에 맞춘다 */
+.bus-stop { top: 0; bottom: 2vmin; height: auto; }
+.bus-sign { margin-top: 0.4vmin; }
+.bus-sign::after { height: 40vmin; }
+
+.bm-live { white-space: nowrap; }
+.bm { height: calc(var(--f, 1) * 33vmin); }
+.bm-bus { width: 4.6vmin; height: 3vmin; }
