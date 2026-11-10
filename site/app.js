@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.4';
+  const APP_VERSION = '0.7.5';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -640,7 +640,8 @@
   }
   function guideItem(g) {
     const arrow = g.arrow || {};
-    return { id: 'guide-' + g.id, a: { ...g, auto: 'welcome', arrow: arrow.a || 'right', greet: 'solo' }, b: { ...g, auto: 'welcome', arrow: arrow.b || 'left', greet: 'friends' } };
+    const says = (k) => Array.isArray(g.says) ? g.says : ((g.says || {})[k] || []);   // 대사는 두 화면 공통(배열)이거나 화면별({a, b})
+    return { id: 'guide-' + g.id, a: { ...g, auto: 'welcome', arrow: arrow.a || 'right', greet: 'solo', says: says('a') }, b: { ...g, auto: 'welcome', arrow: arrow.b || 'left', greet: 'friends', says: says('b') } };
   }
   function guideSchedule(guide, recurring, items, projs) {
     const g = { item: guideItem(guide) };
