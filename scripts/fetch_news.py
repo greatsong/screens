@@ -29,7 +29,7 @@ from news_policy import HOURS
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "projects" / "news.json"
 KST = datetime.timezone(datetime.timedelta(hours=9))
-PICK = 6                 # 화면에 내보낼 기사 수
+PICK = 4                 # 화면에 내보낼 기사 수
 PER_CAT = 2              # 한 분야에서 많아야 이만큼
 MIN_SCORE = 4            # 이 점수보다 낮으면 내보내지 않는다
 

@@ -552,3 +552,27 @@ test('a closed or failed bus reply leaves the card in its waiting state and outs
   late.maybeLoadBus(late.now());
   assert.equal(calls, 1);
 });
+
+test('the position counter counts only news, notices and projects, so a guide day does not inflate it', () => {
+  const guide = { id: 'open', from: '2026-11-11T00:00:00+09:00', until: '2026-11-12T00:00:00+09:00', title: 'Hi', steps: [] };
+  const env = screen({ time: Date.parse('2026-11-11T10:12:00+09:00') });
+  env.applyContent(content({ guides: [guide],
+    items: [{ id: 'meal', every: 3, a: { title: 'Meal' } }, { id: 'n1', a: { title: 'N1' } }, { id: 'n2', a: { title: 'N2' } }, { id: 'n3', a: { title: 'N3' } }],
+    projects: [{ id: 'p1', title: 'P1', images: {} }] }), false);
+  assert.equal(env.state.sched.length, 18);            // 안내가 끼어 칸은 18개지만
+  env.tick();
+  assert.match(env.element('dots').innerHTML, / \/ 4<\/span>/);   // 내용은 소식 3 + 작품 1
+  assert.equal((env.element('dots').innerHTML.match(/<i /g) || []).length, 4);
+});
+
+test('during the bus window the news shrinks to its digest card and the bus returns every second card', () => {
+  const env = screen({ time: Date.parse('2026-11-10T15:10:00+09:00') });
+  env.setFetch(() => new Promise(() => {}));
+  const data = content({ bus: { ...BUS, every: 2 }, items: [{ id: 'base', a: { title: 'Base' } }], news: [article('n1', { date: '2026-11-10' }), article('n2', { date: '2026-11-10' })] });
+  env.applyContent(data, false);
+  const ids = () => Array.from(env.state.sched, (e) => e.item && e.item.id);
+  assert.deepEqual(ids(), ['news-digest', 'bus', 'base']);
+  env.setTime(Date.parse('2026-11-10T17:00:00+09:00')); env.tick();
+  assert.deepEqual(ids().filter((x) => /^news-/.test(x)).length, 3);   // 목록 + 기사 2건
+  assert.equal(ids().includes('bus'), false);
+});

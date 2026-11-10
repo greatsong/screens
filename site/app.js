@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.7';
+  const APP_VERSION = '0.7.8';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -619,9 +619,12 @@
     const news = activeNews(c, t);
     const live = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     // 급식·학사일정: 카드 몇 장마다 한 번. 하교 시간에는 버스 카드가 그 앞에 선다
-    const recurring = (busActive(c, t) ? [busItem(c.bus)] : []).concat(live.filter((x) => x.every > 1));
+    // 하교 시간에는 뉴스를 목록 카드 한 장으로 줄여 버스 카드가 자주 돌아오게 한다(bus.fullNews 가 true 면 줄이지 않는다)
+    const busy = busActive(c, t);
+    const recurring = (busy ? [busItem(c.bus)] : []).concat(live.filter((x) => x.every > 1));
     const events = (c.events || []).filter((event) => Date.parse(event.until) > t).map(eventItem);
-    const items = events.concat(news.length > 1 ? [NEWS_DIGEST] : [], news.map(newsItem), live.filter((x) => !(x.every > 1)));
+    const brief = busy && !c.bus.fullNews && news.length > 0;
+    const items = events.concat(brief || news.length > 1 ? [NEWS_DIGEST] : [], brief ? [] : news.map(newsItem), live.filter((x) => !(x.every > 1)));
     const projs = c.projects || [];
     const guide = activeGuide(c, t);
     if (guide) return guideSchedule(guide, recurring, items, projs);
@@ -961,7 +964,7 @@
     const day0 = Math.floor((t + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000;
     [0, 1].forEach((k) => [b.from || '15:00', b.until || '17:00'].forEach((v) => boundary(day0 + k * 86400000 + hmMin(v) * 60000)));
   }
-  function busItem(b) { return { id: 'bus', every: Math.max(2, b.every || 3), a: { auto: 'bus', pick: 0 }, b: { auto: 'bus', pick: 1 } }; }
+  function busItem(b) { return { id: 'bus', every: Math.max(2, b.every || 2), a: { auto: 'bus', pick: 0 }, b: { auto: 'bus', pick: 1 } }; }
   function busOnScreen() {
     const cur = state.sched[state.idx];
     const side = cur && entrySide(cur);
@@ -1454,11 +1457,27 @@
     return `<div class="card-inner"><div class="card-text">${text}</div>${qr}</div>`;
   }
 
+  // 순서 표시는 실제 내용(뉴스·소식·작품)만 센다. 사이사이 되풀이되는 카드(행사 안내, 급식, 학사일정, 하교 버스, 홍보 영상)는
+  // 세지 않고, 그 카드가 나오는 동안에는 바로 앞 내용의 번호를 그대로 둔다. 안내가 켜진 날에도 숫자가 늘어나지 않는다
+  function contentKey(e) {
+    if (!e || e.promo) return null;
+    if (e.project) return 'p:' + e.project.id;
+    const it = e.item;
+    return !it || it.every > 1 || it.id === 'bus' || /^guide-/.test(it.id || '') ? null : 'i:' + it.id;
+  }
+  function progress(idx) {
+    const sched = state.sched;
+    const keys = [];
+    sched.forEach((e) => { const k = contentKey(e); if (k && keys.indexOf(k) < 0) keys.push(k); });
+    let at = -1;
+    for (let back = 0; back < sched.length && at < 0; back++) at = keys.indexOf(contentKey(sched[((idx - back) % sched.length + sched.length) % sched.length]));
+    return { at, n: keys.length };
+  }
   function renderDots(idx, n) {
+    const p = progress(idx);
     let html = '';
-    // 칸이 많은 날(행사 안내가 사이사이 들어간 날)에는 점이 줄을 넘치므로 번호만 보여 준다
-    for (let i = 0; i < n && n <= 24; i++) html += '<i class="' + (i === idx ? 'on' : '') + '"></i>';
-    $('dots').innerHTML = html + '<span class="count">' + (idx + 1) + ' / ' + n + '</span>';
+    for (let i = 0; i < p.n && p.n <= 24; i++) html += '<i class="' + (i === p.at ? 'on' : '') + '"></i>';
+    $('dots').innerHTML = html + (p.n ? '<span class="count">' + (p.at + 1) + ' / ' + p.n + '</span>' : '');
   }
 
   function startBar(elapsed, total) {
@@ -1774,7 +1793,8 @@
     state.peek = { browse: true };
     showSlide(i, false, dir > 0 ? 'slide' : 'slideback');
     startBar(0, BROWSE_MS);
-    peekNote((i + 1) + ' / ' + n + ' · 20초 동안 만지지 않으면 원래 순서로 돌아갑니다');
+    const pr = progress(i);
+    peekNote((pr.n ? (pr.at + 1) + ' / ' + pr.n + ' · ' : '') + '20초 동안 만지지 않으면 원래 순서로 돌아갑니다');
   }
   // 돌아갈 때: 지금 차례의 칸이 곧 끝나면 그대로 두었다가 다음 칸이 바뀌는 순간(옆 화면과 같은 순간)에 바꾸고, 아니면 바로 바꾼다
   function endBrowse(at) {
