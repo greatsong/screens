@@ -1,7 +1,7 @@
 {
   "version": 68,
   "publishedAt": "2026-11-10T19:48:02+09:00",
-  "appVersion": "0.7.8",
+  "appVersion": "0.8.0",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -408,6 +408,11 @@
     "from": "15:00",
     "until": "17:00",
     "every": 2,
+    "allDay": {
+      "from": "07:30",
+      "until": "19:00",
+      "every": 6
+    },
     "school": {
       "name": "당곡고",
       "lat": 37.49168,

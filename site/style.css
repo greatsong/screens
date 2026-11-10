@@ -906,3 +906,47 @@ body.is-stopped #promo { display: none !important; }
   .bm { height: calc(var(--f, 1) * 60vmin); margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .bus-car, .bus-wheel, .bus-road, .bus-wait img, .bm-walker, .bm-line line, .bm-pin.is-stop i { animation: none; } }
+
+/* 버스 도착 5분 전 알림: 어느 카드 위에서든 위쪽 가운데에 내려온다 */
+.bus-toast { position: absolute; left: 50%; top: 3vmin; z-index: 30; display: flex; align-items: center; gap: 2vmin; max-width: 88%;
+  background: #fff; color: #2b2b3a; border: 0.6vmin solid #2b2b3a; border-radius: 3vmin; padding: 1.4vmin 3vmin; box-shadow: 0 1.2vmin 0 rgba(43, 43, 58, 0.18);
+  transform: translate(-50%, -160%); opacity: 0; transition: transform 0.5s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.3s; pointer-events: none; }
+.bus-toast.on { transform: translate(-50%, 0); opacity: 1; }
+.bus-toast b { font-size: 4.4vmin; font-weight: 900; border: 0.5vmin solid #2b2b3a; border-radius: 1.8vmin; padding: 0 1.8vmin; white-space: nowrap; }
+.bus-toast span { display: flex; flex-direction: column; font-size: 2.6vmin; font-weight: 700; line-height: 1.25; }
+.bus-toast strong { font-size: 3.8vmin; font-weight: 900; }
+
+/* ---------- 날씨(하교 시간 밖) ---------- */
+.wxc { flex-direction: column; align-items: stretch; }
+.wxc .tag { align-self: flex-start; margin-bottom: calc(var(--f, 1) * 1.4vmin); }
+.wxc .title { font-size: calc(var(--f, 1) * 9vmin); margin-bottom: 0; }
+.wx-now { display: flex; align-items: center; gap: 3vmin; }
+.wx-now .wx-ic { width: calc(var(--f, 1) * 22vmin); height: auto; animation: wx-float 3s ease-in-out infinite; }
+.wx-now .title { font-size: calc(var(--f, 1) * 14vmin); }
+.wx-now .title small { font-size: 0.4em; font-weight: 800; }
+.wx-sum { font-size: calc(var(--f, 1) * 3.6vmin); font-weight: 700; }
+.wx-hours, .wx-week { list-style: none; display: flex; gap: 1.4vmin; margin-top: calc(var(--f, 1) * 2.4vmin); }
+.wx-hours li, .wx-week li { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 0.4vmin; padding: calc(var(--f, 1) * 1.4vmin) 0.6vmin;
+  border: 0.4vmin solid #2b2b3a; border-radius: 2.4vmin; background: rgba(255, 255, 255, 0.7); color: #2b2b3a; animation: wx-pop 0.5s backwards; animation-delay: calc(var(--i) * 0.07s); }
+.wx-hours li.is-wet, .wx-week li.is-wet { background: #d0ebff; }
+.wx-hours b, .wx-week b { font-size: calc(var(--f, 1) * 3vmin); font-weight: 900; white-space: nowrap; }
+.wx-hours .wx-ic { width: calc(var(--f, 1) * 8vmin); height: auto; }
+.wx-week .wx-ic { width: calc(var(--f, 1) * 11vmin); height: auto; }
+.wx-hours em { font-style: normal; font-size: calc(var(--f, 1) * 4vmin); font-weight: 900; }
+.wx-hours span, .wx-p { font-size: calc(var(--f, 1) * 2.6vmin); font-weight: 800; color: #1c7ed6; min-height: 1.2em; white-space: nowrap; }
+.wx-t { display: flex; align-items: baseline; gap: 1vmin; }
+.wx-t em { font-style: normal; font-size: calc(var(--f, 1) * 4.4vmin); font-weight: 900; color: #e8590c; }
+.wx-t i { font-style: normal; font-size: calc(var(--f, 1) * 3.4vmin); font-weight: 800; color: #1c7ed6; }
+.wx-foot { display: flex; align-items: center; justify-content: space-between; gap: 3vmin; margin-top: calc(var(--f, 1) * 2vmin); }
+.wx-bus { display: flex; flex-wrap: wrap; gap: 1vmin 4vmin; font-size: calc(var(--f, 1) * 3vmin); font-weight: 700; }
+.wx-bus span { display: flex; align-items: center; gap: 1.2vmin; }
+.wx-bus b { color: #2b2b3a; border: 0.4vmin solid #2b2b3a; border-radius: 1.4vmin; padding: 0 1.2vmin; font-weight: 900; }
+.wx-bus em { font-style: normal; font-weight: 900; font-variant-numeric: tabular-nums; }
+@keyframes wx-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4vmin); } }
+@keyframes wx-pop { 0% { opacity: 0; transform: translateY(3vmin) scale(0.9); } 100% { opacity: 1; transform: none; } }
+@media (orientation: portrait) {
+  .wx-hours, .wx-week { flex-wrap: wrap; }
+  .wx-hours li { flex: 0 0 calc(25% - 1.1vmin); }
+  .wx-week li { flex: 0 0 calc(25% - 1.1vmin); }
+}
+@media (prefers-reduced-motion: reduce) { .wx-now .wx-ic, .wx-hours li, .wx-week li { animation: none; } }

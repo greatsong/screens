@@ -418,11 +418,13 @@ function doGet(e) {
 // ======================================================================
 // 하교 버스 — 스탠바이미 화면이 하교 시간에 부른다(?api=bus&stops=21348,20507).
 // 서울 버스 정류소정보 API(getStationByUid)를 대신 불러 인증키를 화면에 드러내지 않는다. 키는 스크립트 속성 SEOUL_BUS_API_KEY.
-// 호출 한도(개발계정 하루 1,000회)를 지키려고 정류장마다 30초 동안 결과를 함께 쓰고, 평일 하교 시간에만 부르며, 하루 상한을 둔다.
+// 호출 한도(개발계정 하루 1,000회)를 지키려고 평일 07:30~19:00에만 부르고 하루 상한을 둔다.
+// 받은 결과는 정류장마다 하교 시간(14:50~17:10)에는 40초, 그 밖에는 3분 동안 함께 쓴다(하루 약 740회).
 // 버스가 정류장에 들어온 시각을 스크립트 속성 BUS_LOG {yyyyMMdd: {"정류장|노선|방향": ["15:42", …]}}에 남겨 지난 며칠의 도착 시각을 함께 돌려준다.
-// 화면의 표시 시간(content.json 의 bus.from·until)을 바꾸면 여기 FROM·UNTIL 도 함께 바꾼다.
+// 화면의 표시 시간(content.json 의 bus.from·until, bus.allDay)을 바꾸면 여기 PEAK·OPEN 도 함께 바꾼다.
 // ======================================================================
-const BUS = { STOPS: ['21348', '20507', '20522', '20951'], TTL: 30, FROM: 14 * 60 + 50, UNTIL: 17 * 60 + 10, DAY_MAX: 800, KEEP_DAYS: 10, SHOW_DAYS: 3 };
+const BUS = { STOPS: ['21348', '20507', '20522', '20951'], OPEN: [7 * 60 + 30, 19 * 60], PEAK: [14 * 60 + 50, 17 * 60 + 10], TTL_PEAK: 40, TTL_OFF: 180,
+  DAY_MAX: 900, KEEP_DAYS: 10, SHOW_DAYS: 3 };
 const BUS_ENDPOINT = 'http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid';
 
 function busArrivals_(stopsParam) {
@@ -430,17 +432,18 @@ function busArrivals_(stopsParam) {
   if (!ids.length) return { ok: false, error: '정류장 오류' };
   const d = now_();
   const min = Number(fmt_(d, 'H')) * 60 + Number(fmt_(d, 'm'));
-  if (Number(fmt_(d, 'u')) > 5 || min < BUS.FROM || min >= BUS.UNTIL) return { ok: false, closed: true };
+  if (Number(fmt_(d, 'u')) > 5 || min < BUS.OPEN[0] || min >= BUS.OPEN[1]) return { ok: false, closed: true };
+  const ttl = min >= BUS.PEAK[0] && min < BUS.PEAK[1] ? BUS.TTL_PEAK : BUS.TTL_OFF;
   const key = prop_('SEOUL_BUS_API_KEY');
   if (!key) return { ok: false, error: '인증키 없음' };
   const cache = CacheService.getScriptCache();
   const stops = {};
-  ids.forEach((id) => { stops[id] = busStop_(id, key, cache); });
+  ids.forEach((id) => { stops[id] = busStop_(id, key, cache, ttl); });
   return { ok: true, now: Date.now(), stops: stops, log: busLog_(ids) };
 }
 
-// 정류장 한 곳: 30초 안에 받은 결과가 있으면 그것을, 없으면 새로 받는다. 실패하면 마지막으로 받은 결과(10분 이내)를 준다
-function busStop_(id, key, cache) {
+// 정류장 한 곳: 함께 쓰는 시간(ttl) 안에 받은 결과가 있으면 그것을, 없으면 새로 받는다. 실패하면 마지막으로 받은 결과(10분 이내)를 준다
+function busStop_(id, key, cache, ttl) {
   const hit = cache.get('bus:' + id);
   if (hit) return JSON.parse(hit);
   const last = () => { const v = cache.get('busl:' + id); return v ? JSON.parse(v) : { at: 0, buses: [], error: '받지 못함' }; };
@@ -463,7 +466,7 @@ function busStop_(id, key, cache) {
   const out = { at: Date.now(), buses: items.map(busItem_) };
   busDetect_(id, out, cache);
   const text = JSON.stringify(out);
-  cache.put('bus:' + id, text, BUS.TTL);
+  cache.put('bus:' + id, text, ttl);
   cache.put('busl:' + id, text, 600);
   return out;
 }

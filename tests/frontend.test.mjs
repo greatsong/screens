@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -575,4 +575,77 @@ test('during the bus window the news shrinks to its digest card and the bus retu
   env.setTime(Date.parse('2026-11-10T17:00:00+09:00')); env.tick();
   assert.deepEqual(ids().filter((x) => /^news-/.test(x)).length, 3);   // 목록 + 기사 2건
   assert.equal(ids().includes('bus'), false);
+});
+
+test('outside the peak a weather card takes the bus card\'s turn on school days, less often, with the full news', () => {
+  const env = screen({ time: Date.parse('2026-11-10T10:00:00+09:00') });
+  env.setFetch(() => new Promise(() => {}));
+  const items = Array.from({ length: 8 }, (_, i) => ({ id: 'c' + i, a: { title: 'Card ' + i } }));
+  env.applyContent(content({ bus: { ...BUS, every: 2, allDay: { from: '07:30', until: '19:00', every: 6 } }, items, news: [article('n1', { date: '2026-11-10' }), article('n2', { date: '2026-11-10' })] }), false);
+  const ids = () => Array.from(env.state.sched, (e) => e.item && e.item.id);
+  assert.equal(ids().indexOf('weather'), 5);          // 하교 시간 밖에는 날씨 카드가 그 차례에 선다
+  assert.equal(ids().includes('bus'), false);
+  assert.equal(ids().filter((x) => /^n\d$/.test(x) || x === 'news-digest').length >= 1, true);
+  assert.equal(ids().includes('news-n1') || ids().some((x) => /n1/.test(x)), true);   // 기사 카드가 그대로 나온다
+  env.setTime(Date.parse('2026-11-10T19:00:00+09:00')); env.tick();
+  assert.equal(ids().includes('weather'), false);
+  env.setTime(Date.parse('2026-11-10T15:00:00+09:00')); env.tick();
+  assert.equal(ids().indexOf('bus'), 1);
+});
+
+test('five minutes before arrival a toast appears once during the peak, and never outside it', async () => {
+  const run = async (time) => {
+    const env = screen({ time });
+    const made = [];
+    env.document.createElement = () => { const el = { className: '', innerHTML: '' }; made.push(el); return el; };
+    env.document.getElementById = ((orig) => (id) => (id === 'busToast' ? made[0] || null : orig(id)))(env.document.getElementById);
+    env.setFetch(() => Promise.resolve({ json: () => Promise.resolve({ ok: true, now: env.now(), stops: {
+      21348: { at: env.now(), buses: [{ route: '관악11', dir: '봉천역', msg1: '6분후', sec1: 330 }] }, 20507: { at: env.now(), buses: [] } }, log: {} }) }));
+    env.applyContent(content({ bus: { ...BUS, rain: null, allDay: { from: '07:30', until: '19:00' } } }), false);
+    env.maybeLoadBus(env.now());
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    env.busAlert(env.now());
+    const before = made.length;
+    env.advance(40 * SECOND); env.busAlert(env.now());      // 290초 남음
+    env.advance(5 * SECOND); env.busAlert(env.now());       // 같은 버스로 다시 알리지 않는다
+    return { before, made };
+  };
+  const peak = await run(Date.parse('2026-11-10T15:20:00+09:00'));
+  assert.equal(peak.before, 0);
+  assert.equal(peak.made.length, 1);
+  assert.match(peak.made[0].innerHTML, /관악11/);
+  assert.match(peak.made[0].innerHTML, /약 5분 뒤 당곡중고교 정류장에 도착합니다/);
+  assert.equal(peak.made[0].className, 'bus-toast on');
+  const off = await run(Date.parse('2026-11-10T10:00:00+09:00'));
+  assert.equal(off.made.length, 0);
+});
+
+test('the weather card shows the rest of today on A and the week on B, from one forecast reply', async () => {
+  const at = Date.parse('2026-11-10T10:00:00+09:00');
+  const hours = Array.from({ length: 48 }, (_, i) => i);
+  const forecast = { current: { temperature_2m: 7.4, weather_code: 0 },
+    hourly: { time: hours.map((i) => (i < 24 ? '2026-11-10T' : '2026-11-11T') + String(i % 24).padStart(2, '0') + ':00'), temperature_2m: hours.map((i) => i), precipitation_probability: hours.map((i) => (i === 16 ? 70 : 10)), weather_code: hours.map((i) => (i === 16 ? 61 : 3)) },
+    daily: { time: ['2026-11-10', '2026-11-11', '2026-11-12'], weather_code: [1, 61, 71], temperature_2m_max: [10, 14.6, 3], temperature_2m_min: [1.1, 4.8, -2], precipitation_probability_max: [0, 92, 40] } };
+  for (const view of ['today', 'week']) {
+    const env = screen({ time: at });
+    env.setFetch((url) => Promise.resolve({ json: () => Promise.resolve(String(url).includes('open-meteo') ? forecast : { ok: false, closed: true }) }));
+    env.applyContent(content({ bus: { ...BUS, rain: { lat: 37.49, lon: 126.93 }, allDay: { from: '07:30', until: '19:00' } } }), false);
+    env.maybeLoadBus(env.now());
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    const html = env.weatherHTML({ auto: 'weather', view });
+    if (view === 'today') {
+      assert.match(html, /7° <small>맑음/);
+      assert.match(html, /최고 10° · 최저 1°/);
+      assert.match(html, /<b>지금<\/b>/);
+      assert.match(html, /<b>16시<\/b>[\s\S]*?70%/);
+      assert.match(html, /우산이 필요합니다/);
+      assert.equal((html.match(/<li /g) || []).length, 8);
+    } else {
+      assert.equal((html.match(/<li /g) || []).length, 3);
+      assert.match(html, /<b>오늘<\/b>/);
+      assert.match(html, /강수 92%/);
+      assert.match(html, /wx-snow/);
+    }
+    assert.equal(env.state.rain.hours.length, 6);       // 버스 카드의 15~20시 강수 확률도 같은 응답에서 나온다
+  }
 });

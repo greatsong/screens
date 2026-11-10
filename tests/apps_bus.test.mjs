@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
 
-function script(start) {
+function script(start, opts = {}) {
   let nowMs = start;
   const cache = new Map();
   const props = { SEOUL_BUS_API_KEY: 'test+key/==' };
@@ -36,12 +36,12 @@ function script(start) {
   });
   vm.runInContext(source + '\nglobalThis.api = { busArrivals_, doGet };', ctx);
   // advance: 30초 넘게 흐르면 30초 공유 기간이 지난 것으로 본다(모의 캐시에는 만료가 없다)
-  return { api: ctx.api, calls, props, cache, advance(ms) { nowMs += ms; if (ms >= 30000) [...cache.keys()].filter((k) => /^bus:/.test(k)).forEach((k) => cache.delete(k)); }, setUpstream(fn) { upstream = fn; } };
+  return { api: ctx.api, calls, props, cache, advance(ms) { nowMs += ms; if (ms >= (opts.ttl || 40) * 1000) [...cache.keys()].filter((k) => /^bus:/.test(k)).forEach((k) => cache.delete(k)); }, setUpstream(fn) { upstream = fn; } };
 }
 const item = (sec, extra = {}) => ({ rtNm: '관악11', adirection: '봉천역', arrmsg1: sec ? Math.round(sec / 60) + '분후[2번째 전]' : '출발대기', traTime1: String(sec || 0), arrmsg2: '', traTime2: '0', term: '16', lastTm: '2330  ', ...extra });
 
-test('the bus proxy answers only on weekday afternoons and only for listed stops', () => {
-  const noon = script(Date.parse('2026-11-10T12:00:00+09:00'));
+test('the bus proxy answers only on weekdays between 07:30 and 19:00 and only for listed stops', () => {
+  const noon = script(Date.parse('2026-11-10T06:00:00+09:00'));
   assert.deepEqual({ ...noon.api.busArrivals_('21348') }, { ok: false, closed: true });
   const sat = script(Date.parse('2026-11-14T15:30:00+09:00'));
   assert.equal(sat.api.busArrivals_('21348').closed, true);
@@ -70,12 +70,12 @@ test('an arrival is logged once when a nearly arrived bus disappears from the re
   let sec = 90;
   env.setUpstream(() => ({ msgHeader: { headerCd: '0' }, msgBody: { itemList: [item(sec)] } }));
   env.api.busArrivals_('21348');
-  env.advance(31000); sec = 59;
+  env.advance(41000); sec = 59;
   env.api.busArrivals_('21348');
   assert.equal(env.props.BUS_LOG, undefined);
-  env.advance(31000); sec = 900;                        // 다음 차로 바뀜 → 앞차가 도착한 것
+  env.advance(41000); sec = 900;                        // 다음 차로 바뀜 → 앞차가 도착한 것
   env.api.busArrivals_('21348');
-  env.advance(31000); sec = 870;
+  env.advance(41000); sec = 870;
   const out = env.api.busArrivals_('21348');
   assert.deepEqual(JSON.parse(env.props.BUS_LOG), { 20261110: { '21348|관악11|봉천역': ['15:31'] } });
   assert.deepEqual(JSON.parse(JSON.stringify(out.log)), { 21348: { '관악11|봉천역': [{ d: '20261110', t: ['15:31'] }] } });
@@ -85,9 +85,21 @@ test('an upstream failure returns the last good reply instead of an error page',
   const env = script(Date.parse('2026-11-10T15:30:00+09:00'));
   env.setUpstream(() => ({ msgHeader: { headerCd: '0' }, msgBody: { itemList: [item(300)] } }));
   const good = env.api.busArrivals_('21348');
-  env.advance(31000);
+  env.advance(41000);
   env.setUpstream(() => ({ msgHeader: { headerCd: '7', headerMsg: 'Key 인증 실패' } }));
   const bad = env.api.busArrivals_('21348');
   assert.equal(bad.ok, true);
   assert.equal(bad.stops['21348'].at, good.stops['21348'].at);
+});
+
+test('outside the after-school peak one upstream reply is shared for three minutes', () => {
+  const env = script(Date.parse('2026-11-10T10:00:00+09:00'), { ttl: 180 });
+  let puts = [];
+  env.setUpstream(() => ({ msgHeader: { headerCd: '0' }, msgBody: { itemList: [item(400)] } }));
+  env.api.busArrivals_('21348');
+  env.advance(60000); env.api.busArrivals_('21348');
+  env.advance(60000); env.api.busArrivals_('21348');
+  assert.equal(env.calls.length, 1);
+  env.advance(181000); env.api.busArrivals_('21348');
+  assert.equal(env.calls.length, 2);
 });

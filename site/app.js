@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.8';
+  const APP_VERSION = '0.8.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -458,7 +458,7 @@
     }
     renderPlayer();
     maybeLoadBus(t);
-    if (k.s !== state.busSec) { state.busSec = k.s; busPaint(); }
+    if (k.s !== state.busSec) { state.busSec = k.s; busPaint(); busAlert(t); }
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
 
     const c = state.content;
@@ -620,8 +620,9 @@
     const live = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
     // 급식·학사일정: 카드 몇 장마다 한 번. 하교 시간에는 버스 카드가 그 앞에 선다
     // 하교 시간에는 뉴스를 목록 카드 한 장으로 줄여 버스 카드가 자주 돌아오게 한다(bus.fullNews 가 true 면 줄이지 않는다)
-    const busy = busActive(c, t);
-    const recurring = (busy ? [busItem(c.bus)] : []).concat(live.filter((x) => x.every > 1));
+    const mode = busMode(c, t);
+    const busy = mode === 'peak';
+    const recurring = (mode ? [busItem(c.bus, mode)] : []).concat(live.filter((x) => x.every > 1));
     const events = (c.events || []).filter((event) => Date.parse(event.until) > t).map(eventItem);
     const brief = busy && !c.bus.fullNews && news.length > 0;
     const items = events.concat(brief || news.length > 1 ? [NEWS_DIGEST] : [], brief ? [] : news.map(newsItem), live.filter((x) => !(x.every > 1)));
@@ -854,10 +855,11 @@
         : auto === 'calendar' ? calendarHTML(side)
         : auto === 'mealrank' ? mealRankHTML(side)
         : auto === 'bus' ? busHTML(side)
+        : auto === 'weather' ? weatherHTML(side)
         : auto === 'welcome' ? welcomeHTML(side) : cardHTML(side);
-      if (auto === 'bus') busPaint();
+      if (auto === 'bus' || auto === 'weather') busPaint();
       // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
-      setTone(/^(meal|mealweek|schedule|calendar|bus)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' || auto === 'welcome' ? 'sun'
+      setTone(/^(meal|mealweek|schedule|calendar|bus|weather)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' || auto === 'welcome' ? 'sun'
         : entry.project ? 'lilac' : auto === 'newsread' || (entry.item && /^news-/.test(entry.item.id)) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
@@ -948,33 +950,44 @@
   // 남은 시간은 받은 값에서 1초씩 줄여 보여 주고 30초마다 새로 받는다. 지난 며칠의 도착 시각도 함께 온다.
   // 강수 확률은 Open-Meteo(키 없음)에서 30분마다 받는다
   const hmMin = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : NaN; };
-  function busActive(c, t) {
+  // 'peak': 하교 시간(bus.from~until, 버스 카드가 자주 나온다) · 'off': 그 밖의 운영 시간(bus.allDay, 가끔 나온다) · '': 나오지 않는다
+  function busMode(c, t) {
     const b = c && c.bus;
-    if (!b || !b.api || !(b.stops || []).length) return false;
+    if (!b || !b.api || !(b.stops || []).length) return '';
     const d = new Date(t + 9 * 3600000);
-    if ((b.days || [1, 2, 3, 4, 5]).indexOf(d.getUTCDay()) < 0) return false;
-    const min = d.getUTCHours() * 60 + d.getUTCMinutes();
-    if (!(min >= hmMin(b.from || '15:00') && min < hmMin(b.until || '17:00'))) return false;
+    if ((b.days || [1, 2, 3, 4, 5]).indexOf(d.getUTCDay()) < 0) return '';
     const iso = d.toISOString().slice(0, 10);
-    return !(c.schedule || []).some((e) => e.holiday && e.start <= iso && e.end >= iso);   // 휴업일에는 내지 않는다
+    if ((c.schedule || []).some((e) => e.holiday && e.start <= iso && e.end >= iso)) return '';   // 휴업일에는 내지 않는다
+    const min = d.getUTCHours() * 60 + d.getUTCMinutes();
+    const inside = (from, until) => min >= hmMin(from) && min < hmMin(until);
+    if (inside(b.from || '15:00', b.until || '17:00')) return 'peak';
+    return b.allDay && inside(b.allDay.from || '07:30', b.allDay.until || '19:00') ? 'off' : '';
   }
+  function busActive(c, t) { return busMode(c, t) === 'peak'; }
   function busBoundaries(c, t, boundary) {
     const b = c.bus;
     if (!b) return;
     const day0 = Math.floor((t + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000;
-    [0, 1].forEach((k) => [b.from || '15:00', b.until || '17:00'].forEach((v) => boundary(day0 + k * 86400000 + hmMin(v) * 60000)));
+    const times = [b.from || '15:00', b.until || '17:00'].concat(b.allDay ? [b.allDay.from || '07:30', b.allDay.until || '19:00'] : []);
+    [0, 1].forEach((k) => times.forEach((v) => boundary(day0 + k * 86400000 + hmMin(v) * 60000)));
   }
-  function busItem(b) { return { id: 'bus', every: Math.max(2, b.every || 2), a: { auto: 'bus', pick: 0 }, b: { auto: 'bus', pick: 1 } }; }
+  // 하교 시간에는 버스 카드, 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 버스 남은 시간을 한 줄로 붙인다
+  function busItem(b, mode) {
+    if (mode === 'peak') return { id: 'bus', every: Math.max(2, b.every || 2), a: { auto: 'bus', pick: 0 }, b: { auto: 'bus', pick: 1 } };
+    return { id: 'weather', every: Math.max(3, (b.allDay || {}).every || 6), a: { auto: 'weather', view: 'today' }, b: { auto: 'weather', view: 'week' } };
+  }
   function busOnScreen() {
     const cur = state.sched[state.idx];
     const side = cur && entrySide(cur);
-    return side && side.auto === 'bus' ? side : null;
+    return side && (side.auto === 'bus' || side.auto === 'weather') ? side : null;
   }
   function maybeLoadBus(t) {
     const c = state.content;
-    if (!c || c.mode === 'stop' || !busActive(c, t)) return;
+    const mode = c && c.mode !== 'stop' ? busMode(c, t) : '';
+    if (!mode) return;
     maybeLoadRain(c.bus);
-    if (state.busBusy || Date.now() - (state.busTry || 0) < 30000) return;
+    // 하교 시간에는 30초, 그 밖에는 60초마다(그 밖의 시간에는 서버가 3분 동안 같은 결과를 준다)
+    if (state.busBusy || Date.now() - (state.busTry || 0) < (mode === 'peak' ? 30000 : 60000)) return;
     state.busBusy = true;
     state.busTry = Date.now();
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
@@ -988,31 +1001,94 @@
     }).catch(() => { if (!state.busErr) { state.busErr = true; logEvent('버스 도착 정보를 받지 못함'); } })
       .then(() => { clearTimeout(timer); state.busBusy = false; });
   }
+  // 날씨: Open-Meteo(키 없음)에서 30분마다 시간별·일별 예보를 받는다. 하교 시간에는 버스 카드의 강수 확률 막대에,
+  // 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 사용한다
   function maybeLoadRain(b) {
     const r = b.rain;
     if (!r || state.rainBusy || Date.now() - (state.rainTry || 0) < 1800000) return;
     state.rainBusy = true;
     state.rainTry = Date.now();
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(r.lat) + '&longitude=' + encodeURIComponent(r.lon) +
-      '&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=1';
+      '&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&current=temperature_2m,weather_code&timezone=Asia%2FSeoul&forecast_days=7';
     fetch(url).then((x) => x.json()).then((d) => {
-      const hours = [];
+      const h = d.hourly || {};
+      const dl = d.daily || {};
+      const hourly = (h.time || []).map((tm, i) => ({ d: String(tm).slice(0, 10).replace(/-/g, ''), h: +String(tm).slice(11, 13),
+        temp: (h.temperature_2m || [])[i], pop: (h.precipitation_probability || [])[i], code: (h.weather_code || [])[i] }));
+      const daily = (dl.time || []).map((tm, i) => ({ d: String(tm).replace(/-/g, ''), code: (dl.weather_code || [])[i],
+        max: (dl.temperature_2m_max || [])[i], min: (dl.temperature_2m_min || [])[i], pop: (dl.precipitation_probability_max || [])[i] }));
+      if (!hourly.length) return;
+      const today = ymd(now());
       const from = r.from == null ? 15 : r.from;
       const until = r.until == null ? 20 : r.until;
-      ((d.hourly || {}).time || []).forEach((tm, i) => {
-        const h = +String(tm).slice(11, 13);
-        const p = d.hourly.precipitation_probability[i];
-        if (h >= from && h <= until && typeof p === 'number') hours.push({ h, p });
-      });
-      if (hours.length) state.rain = { day: ymd(now()), hours };
+      const hours = hourly.filter((x) => x.d === today && x.h >= from && x.h <= until && typeof x.pop === 'number').map((x) => ({ h: x.h, p: x.pop }));
+      state.wx = { at: Date.now(), hourly, daily, cur: d.current || null };
+      if (hours.length) state.rain = { day: today, hours };
+      const side = busOnScreen();
+      if (side && side.auto === 'weather') state.slot = -1;   // 날씨 카드를 보고 있으면 새 예보로 다시 그린다
       busPaint();
     }).catch(() => {}).then(() => { state.rainBusy = false; });
+  }
+  // 날씨 그림(두근두근 당곡 그림체). WMO 날씨 코드를 일곱 가지로 묶는다
+  function wxKind(code) {
+    if (code == null) return ['', ''];
+    if (code === 0) return ['sun', '맑음'];
+    if (code <= 2) return ['part', '구름 조금'];
+    if (code === 3) return ['cloud', '흐림'];
+    if (code === 45 || code === 48) return ['fog', '안개'];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['snow', '눈'];
+    if (code >= 95) return ['storm', '뇌우'];
+    return ['rain', '비'];
+  }
+  function wxIcon(code) {
+    const k = wxKind(code)[0];
+    if (!k) return '';
+    const sun = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffd166" stroke="#2b2b3a" stroke-width="5"/>`;
+    const cloud = (fill) => `<path d="M28 78a18 18 0 0 1 4-35 24 24 0 0 1 46-4 19 19 0 0 1 2 39z" fill="${fill}" stroke="#2b2b3a" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="46" cy="60" r="3" fill="#2b2b3a"/><circle cx="64" cy="60" r="3" fill="#2b2b3a"/><path d="M51 66q4 4 8 0" fill="none" stroke="#2b2b3a" stroke-width="3" stroke-linecap="round"/>`;
+    const drops = (c) => [34, 52, 70].map((x) => `<path d="M${x} 86l-4 10" stroke="${c}" stroke-width="5" stroke-linecap="round"/>`).join('');
+    const body = k === 'sun' ? sun(50, 50, 26) + '<circle cx="42" cy="48" r="3" fill="#2b2b3a"/><circle cx="58" cy="48" r="3" fill="#2b2b3a"/><path d="M45 56q5 5 10 0" fill="none" stroke="#2b2b3a" stroke-width="3" stroke-linecap="round"/>'
+      : k === 'part' ? sun(66, 34, 18) + cloud('#ffffff')
+      : k === 'cloud' ? cloud('#dfe6f0')
+      : k === 'fog' ? cloud('#eef1f6') + '<path d="M22 90h56M30 98h40" stroke="#9aa5b8" stroke-width="5" stroke-linecap="round"/>'
+      : k === 'snow' ? cloud('#ffffff') + [34, 52, 70].map((x) => `<circle cx="${x}" cy="92" r="4" fill="#bfe3ff" stroke="#2b2b3a" stroke-width="2"/>`).join('')
+      : k === 'storm' ? cloud('#c9d1de') + '<path d="M54 82l-10 12h10l-6 10" fill="none" stroke="#ffb703" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+      : cloud('#dfe6f0') + drops('#4dabf7');
+    return `<svg class="wx-ic wx-${k}" viewBox="0 0 100 106" aria-hidden="true">${body}</svg>`;
+  }
+  const deg = (v) => (typeof v === 'number' ? Math.round(v) + '°' : '-');
+  function weatherHTML(s) {
+    const wx = state.wx && Date.now() - state.wx.at < 3 * 3600000 ? state.wx : null;
+    const tag = s.view === 'week' ? '일주일 날씨' : '오늘 날씨';
+    const foot = '<div class="wx-foot"><div class="wx-bus" id="wxBus"></div><div class="source">Open-Meteo 예보</div></div>';
+    if (!wx) return cardHTML({ tag, title: '날씨 예보를 확인하고 있습니다' });
+    const today = ymd(now());
+    if (s.view === 'week') {
+      const days = wx.daily.filter((x) => x.d >= today).slice(0, 7).map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}">
+        <b>${i === 0 ? '오늘' : esc(ymdLabel(x.d).replace(/^\d+월 /, '').replace(/일 \((.)\)/, '일 $1'))}</b>${wxIcon(x.code)}
+        <span class="wx-t"><em>${deg(x.max)}</em><i>${deg(x.min)}</i></span>
+        <span class="wx-p">${typeof x.pop === 'number' ? '강수 ' + x.pop + '%' : ''}</span></li>`).join('');
+      return `<div class="card-inner wxc"><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1><ul class="wx-week">${days}</ul>${foot}</div>`;
+    }
+    const k = kst(now());
+    const rest = wx.hourly.filter((x) => (x.d === today && x.h >= k.h) || x.d > today).slice(0, 8);
+    const cur = rest[0] || {};
+    const temp = wx.cur && typeof wx.cur.temperature_2m === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.temperature_2m : cur.temp;
+    const code = wx.cur && wx.cur.weather_code != null && Date.now() - wx.at < 3600000 ? wx.cur.weather_code : cur.code;
+    const maxPop = Math.max.apply(null, rest.map((x) => (typeof x.pop === 'number' ? x.pop : 0)).concat([0]));
+    const td = wx.daily.filter((x) => x.d === today)[0];
+    const hours = rest.map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}"><b>${i === 0 ? '지금' : x.h + '시'}</b>${wxIcon(x.code)}<em>${deg(x.temp)}</em><span>${typeof x.pop === 'number' ? x.pop + '%' : ''}</span></li>`).join('');
+    return `<div class="card-inner wxc"><div class="tag">${tag}</div>
+      <div class="wx-now">${wxIcon(code)}<div><h1 class="title">${deg(temp)} <small>${esc(wxKind(code)[1])}</small></h1>
+        <p class="wx-sum">${td ? '최고 ' + deg(td.max) + ' · 최저 ' + deg(td.min) + ' · ' : ''}앞으로 ${rest.length}시간 강수 확률 최대 ${maxPop}%${maxPop >= 60 ? ' · 우산이 필요합니다' : ''}</p></div></div>
+      <ul class="wx-hours">${hours}</ul>${foot}</div>`;
   }
   // 정류장 한 곳의 지금 상태. 종점(받은 방향 이름이 정류장 이름과 같은 차)은 들어오는 차로 따로 본다
   function busView(stop) {
     const bus = state.bus && Date.now() - state.bus.recv < 150000 ? state.bus : null;
     const sd = bus && bus.stops[stop.id];
-    if (!sd || !sd.at) return { ready: false };
+    if (!sd || !sd.at || bus.now - sd.at > 400000) return { ready: false };   // 서버가 오래된 값을 돌려준 경우(받지 못해 마지막 값을 준 때)
     const age = (bus.now - sd.at) / 1000 + (Date.now() - bus.recv) / 1000;
     const left = (sec) => (sec == null ? null : sec - age);
     const mine = (sd.buses || []).filter((x) => !stop.routes || stop.routes.indexOf(x.route) >= 0);
@@ -1046,7 +1122,10 @@
       return t.length ? `<li><b>${esc(ymdLabel(d.d).replace(/^\d+월 /, ''))}</b>${t.map((x) => `<span>${esc(x)}</span>`).join('')}</li>` : '';
     }).filter(Boolean).join('');
     const label = v.terminus ? '지난 며칠 종점에 들어온 시각' : '지난 며칠 도착한 시각';
-    return rows ? `<small>${label}</small><ul>${rows}</ul>` : '<small>도착 시각 기록을 모으고 있습니다. 며칠 뒤부터 표시합니다.</small>';
+    if (rows) return `<small>${label}</small><ul>${rows}</ul>`;
+    // 도착 시각은 하교 시간에만 기록한다. 그 밖의 시간에는 배차 간격을 알려 준다
+    if (state.content && !busActive(state.content, now())) return v.term ? `<small>배차 간격은 약 ${esc(v.term)}분입니다.</small>` : '';
+    return '<small>도착 시각 기록을 모으고 있습니다. 며칠 뒤부터 표시합니다.</small>';
   }
   function rainHTML() {
     const r = state.rain;
@@ -1117,12 +1196,39 @@
       </div>
     </div>`;
   }
+  // 도착 5분 전 알림: 하교 시간에 버스(종점은 들어오는 차)가 5분 안으로 들어오면 어느 카드가 나와 있든 위쪽에 12초 동안 알린다.
+  // 이미 받고 있는 도착 정보로 판단하므로 호출이 늘지 않는다. 그 밖의 시간에는 값이 최대 3분 전 것이라 알리지 않는다
+  function busAlert(t) {
+    const c = state.content;
+    let el = $('busToast');
+    if (el && state.busToastUntil && Date.now() > state.busToastUntil) { el.className = 'bus-toast'; state.busToastUntil = 0; }
+    if (!c || c.mode === 'stop' || state.show.app || !busActive(c, t)) return;
+    const said = state.busSaid = state.busSaid || {};
+    (c.bus.stops || []).forEach((stop) => {
+      const v = busView(stop);
+      const left = !v.ready ? null : v.left1 != null ? v.left1 : v.inLeft;
+      if (left == null || left > 300 || left <= 210 || Date.now() - (said[stop.id] || 0) < 420000) return;
+      said[stop.id] = Date.now();
+      if (!el) { el = document.createElement('div'); el.id = 'busToast'; $('screen').appendChild(el); }
+      const what = v.left1 != null ? '약 5분 뒤 ' + stop.name + ' 정류장에 도착합니다' : '약 5분 뒤 ' + stop.name + ' 종점에 들어옵니다';
+      el.innerHTML = `<b style="background:${esc(stop.color || '#a8e6cf')}">${esc(stop.routes ? stop.routes[0] : '')}</b><span>${esc(stop.toward || '')}<strong>${esc(what)}</strong></span>`;
+      el.className = 'bus-toast on';
+      state.busToastUntil = Date.now() + 12000;
+      logEvent('버스 5분 전 알림: ' + (stop.routes ? stop.routes[0] : stop.name));
+    });
+  }
   // 보이는 버스 카드의 숫자와 버스 위치만 바꾼다(카드를 다시 그리면 움직임이 처음부터 다시 시작한다)
   function busPaint() {
     const s = busOnScreen();
     const b = state.content && state.content.bus;
-    if (!s || !b || !$('busBig')) return;
+    if (!s || !b) return;
     const stops = b.stops || [];
+    if (s.auto === 'weather') {
+      const line = stops.map((x) => `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)}<em>${esc(busHeadline(busView(x)).big)}</em></span>`).join('');
+      if ($('wxBus') && (state.wxBus !== line || !$('wxBus').innerHTML)) { state.wxBus = line; $('wxBus').innerHTML = line; }
+      return;
+    }
+    if (!$('busBig')) return;
     const stop = stops[s.pick] || stops[0];
     if (!stop) return;
     const v = busView(stop);
@@ -1463,7 +1569,7 @@
     if (!e || e.promo) return null;
     if (e.project) return 'p:' + e.project.id;
     const it = e.item;
-    return !it || it.every > 1 || it.id === 'bus' || /^guide-/.test(it.id || '') ? null : 'i:' + it.id;
+    return !it || it.every > 1 || it.id === 'bus' || it.id === 'weather' || /^guide-/.test(it.id || '') ? null : 'i:' + it.id;
   }
   function progress(idx) {
     const sched = state.sched;
