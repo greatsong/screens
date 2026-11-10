@@ -1,0 +1,57 @@
+name: 기상청 예보·관측 수집
+
+# 기상청 예보의 정확도를 검증할 자료(data/kma/)를 하루 네 번 덧붙인다(scripts/collect_kma.py).
+# 기상청은 예보를 최근 3일, 관측을 최근 24시간 치만 돌려준다. 실행할 때마다 그 사이 빠진 것을 모두 채우므로
+# 실행이 세 번 연속 빠져도 누락되지 않는다.
+# 기상청 API허브 인증키는 저장소 비밀값 KMA_AUTH_KEY 에 둔다. 비밀값이 없으면 아무것도 하지 않는다.
+on:
+  schedule:
+    - cron: '23 2,8,14,20 * * *'   # 매일 05:23 · 11:23 · 17:23 · 23:23 (한국 시간)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kma
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 인증키 확인
+        id: key
+        env:
+          KMA_AUTH_KEY: ${{ secrets.KMA_AUTH_KEY }}
+        run: |
+          if [ -n "$KMA_AUTH_KEY" ]; then echo "has=true" >> "$GITHUB_OUTPUT"; else echo "비밀값 KMA_AUTH_KEY 가 없어 건너뜀"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.has == 'true'
+        with:
+          ref: main
+
+      - name: 예보·관측 수집
+        if: steps.key.outputs.has == 'true'
+        env:
+          KMA_AUTH_KEY: ${{ secrets.KMA_AUTH_KEY }}
+        run: python3 scripts/collect_kma.py
+
+      # data/kma/ 는 이 워크플로만 쓰므로 rebase가 충돌하지 않는다. 수집이 일부 실패해도 받은 행과 기록은 남긴다.
+      # 화면(site/)에 들어가는 자료가 아니므로 다시 배포하지 않는다
+      - name: 커밋
+        if: always() && steps.key.outputs.has == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/kma
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
+          git commit -q -m "기상청 예보·관측 자료 추가"
+          for i in 1 2 3; do
+            if git push -q origin HEAD:main; then exit 0; fi
+            echo "push 거절, ${i}번째 재시도"
+            git pull -q --rebase origin main || { git rebase --abort; exit 1; }
+            sleep $((i * 5))
+          done
+          exit 1
