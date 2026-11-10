@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.5';
+  const APP_VERSION = '0.7.6';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -650,7 +650,9 @@
     if (!groups.length) return [g];
     const rounds = Math.max.apply(null, groups.map((x) => x.length));
     const out = [];
-    for (let r = 0; r < rounds; r++) groups.forEach((x) => { out.push(g, x[r % x.length]); });
+    // 안내 카드는 평소 시간(slideSeconds)만큼, 사이에 끼는 카드는 짧게(otherSeconds) 보여 준다
+    const ms = guide.otherSeconds > 0 ? Math.max(3, guide.otherSeconds) * 1000 : 0;
+    for (let r = 0; r < rounds; r++) groups.forEach((x) => { const e = x[r % x.length]; out.push(g, ms ? { ...e, ms } : e); });
     return out;
   }
   // 안내 카드: 환영 인사, 장소와 방향 화살표(A는 오른쪽, B는 왼쪽), 시간표. 두근두근 당곡 캐릭터가 함께 나온다.

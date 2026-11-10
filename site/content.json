@@ -1,7 +1,7 @@
 {
-  "version": 65,
-  "publishedAt": "2026-11-10T13:58:50+09:00",
-  "appVersion": "0.7.5",
+  "version": 66,
+  "publishedAt": "2026-11-10T14:06:03+09:00",
+  "appVersion": "0.7.6",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -399,7 +399,8 @@
           "label": "참관 방명록 작성",
           "place": "AI 랩실"
         }
-      ]
+      ],
+      "otherSeconds": 7
     }
   ]
 }
