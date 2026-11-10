@@ -1,0 +1,62 @@
+name: 버스 승차 인원
+
+# 하교 버스 카드의 시간대별 승차 인원(site/bus/ridership.json)을 평일 아침에 다시 만든다(scripts/build_ridership.py).
+# 서울 열린데이터광장 인증키는 저장소 비밀값 SEOUL_OPENAPI_KEY 에 둔다. 비밀값이 없으면 아무것도 하지 않는다.
+on:
+  schedule:
+    - cron: '40 21 * * 0-4'   # 평일 06:40 (한국 시간)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ridership
+  cancel-in-progress: false
+
+jobs:
+  ridership:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 인증키 확인
+        id: key
+        env:
+          SEOUL_OPENAPI_KEY: ${{ secrets.SEOUL_OPENAPI_KEY }}
+        run: |
+          if [ -n "$SEOUL_OPENAPI_KEY" ]; then echo "has=true" >> "$GITHUB_OUTPUT"; else echo "비밀값 SEOUL_OPENAPI_KEY 가 없어 건너뜀"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.has == 'true'
+        with:
+          ref: main
+
+      - name: 승차 인원 집계
+        if: steps.key.outputs.has == 'true'
+        env:
+          SEOUL_OPENAPI_KEY: ${{ secrets.SEOUL_OPENAPI_KEY }}
+        run: python3 scripts/build_ridership.py
+
+      # site/bus/ridership.json 은 이 워크플로만 쓰므로 rebase가 충돌하지 않는다
+      - name: 커밋
+        if: steps.key.outputs.has == 'true'
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/bus/ridership.json
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
+          git commit -q -m "버스 승차 인원 갱신"
+          for i in 1 2 3; do
+            if git push -q origin HEAD:main; then echo "committed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            echo "push 거절, ${i}번째 재시도"
+            git pull -q --rebase origin main || { git rebase --abort; exit 1; }
+            sleep $((i * 5))
+          done
+          exit 1
+
+      # 봇 커밋은 push 워크플로를 깨우지 않으므로 바뀌었을 때만 화면 배포를 부른다
+      - name: 화면 다시 배포
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/${{ github.repository }}/dispatches" -f event_type=redeploy

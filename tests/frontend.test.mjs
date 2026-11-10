@@ -655,9 +655,11 @@ test('the weather card shows the rest of today on A and the week on B, from one 
 
 test('the ridership bars highlight the current hour and name the busiest one', () => {
   const env = screen({ time: Date.parse('2026-11-10T15:20:00+09:00') });
-  env.state.ride = { month: '2026-10', stops: { '21348|관악11': { 7: 11.1, 8: 13.9, 15: 10.7, 16: 17.8, 17: 6.1 } } };
+  env.state.ride = { month: '2026-10', stops: { '21348|관악11': { 7: 11.1, 8: 13.9, 15: 10.7, 16: 17.8, 17: 6.1 } },
+    recent: { '21348|관악11': { 20261027: 90, 20261103: 114, 20261104: 100, 20261106: 107 } } };
   const html = env.rideHTML(BUS.stops[0]);
-  assert.match(html, /10월 시간대별 승차 인원/);
+  assert.match(html, /10월 시간대별 승차 인원\(평일 평균\)/);
+  assert.match(html, /지난주 화요일에는 하루 동안 114명이 탔습니다\./);   // 11월 10일은 화요일, 한 주 전은 11월 3일
   assert.equal((html.match(/<i class/g) || []).length, 13);
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
   assert.match(html, /15시대에는 하루 평균 11명이 탑니다\. 가장 많이 타는 시간은 16시대입니다\(18명\)\./);

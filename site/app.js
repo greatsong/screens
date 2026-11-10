@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.6';
+  const APP_VERSION = '0.8.7';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1023,7 +1023,14 @@
     const mon = +String(r.month || '').slice(5, 7);
     const here = per[nowH] != null ? `${nowH}시대에는 하루 평균 ${Math.round(per[nowH])}명이 탑니다. ` : '';
     const most = nowH === top ? '하루 중 가장 많이 타는 시간대입니다.' : `가장 많이 타는 시간은 ${top}시대입니다(${Math.round(per[top])}명).`;
-    return `<small>${mon ? mon + '월 ' : ''}시간대별 승차 인원</small><div class="ride-bars">${bars}</div><p>${here}${most}</p>`;
+    // 최근 추세: 오늘과 같은 요일 가운데 가장 가까운 날의 실제 하루 승차 인원(자료는 사흘 전까지 올라온다)
+    const recent = (r.recent || {})[stop.id + '|' + (stop.routes ? stop.routes[0] : '')] || {};
+    const dayOf = (d) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8));
+    const today = dayOf(ymd(now()));
+    const same = Object.keys(recent).filter((d) => dayOf(d) < today && (today - dayOf(d)) % (7 * 86400000) === 0).sort().pop();
+    const wd = WD[new Date(today).getUTCDay()];
+    const past = !same ? '' : (today - dayOf(same) === 7 * 86400000 ? `지난주 ${wd}요일에는` : `${+same.slice(4, 6)}월 ${+same.slice(6, 8)}일 ${wd}요일에는`) + ` 하루 동안 ${recent[same]}명이 탔습니다.`;
+    return `<small>${mon ? mon + '월 ' : ''}시간대별 승차 인원(평일 평균)</small><div class="ride-bars">${bars}</div><p>${here}${most}${past ? '<br>' + past : ''}</p>`;
   }
   // 날씨: Open-Meteo(키 없음)에서 30분마다 시간별·일별 예보를 받는다. 하교 시간에는 버스 카드의 강수 확률 막대에,
   // 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 사용한다
