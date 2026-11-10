@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.6';
+  const APP_VERSION = '0.9.7';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -409,7 +409,12 @@
     // 게시가 해제되거나 실행 주소가 바뀐 작품은 이미 열린 체험·QR에도 즉시 반영한다.
     // 검토용 only 미리보기는 게시 전 작품을 의도적으로 열 수 있다.
     if (fromNet && !params.only && !state.only) {
-      if (prev && prev.version !== data.version) { $('gallery').hidden = true; $('gallery').innerHTML = ''; }
+      // 뉴스·편성이 바뀔 때마다 버전이 오르므로, 작품 목록 자체가 달라졌을 때만 열려 있는 목록을 닫는다
+      const sig = (c) => JSON.stringify((c.projects || []).map((p) => [p.id, p.run, p.embed, p.title]));
+      if (prev && prev.version !== data.version && sig(prev) !== sig(data)) {
+        if (!$('gallery').hidden) logEvent('작품 목록 닫힘 (작품 편성 변경)');
+        $('gallery').hidden = true; $('gallery').innerHTML = '';
+      }
       const playing = state.show.app;
       if (playing && playing.project) {
         const current = (data.projects || []).filter((p) => p.id === playing.project.id)[0];
@@ -430,6 +435,8 @@
 
   function reloadForApp(target) {
     if (embed) return;
+    // 작품 목록이나 체험이 열려 있거나 방금 만진 화면은 새로 고치지 않는다(보던 것이 사라진다). 다음 확인(30초 뒤)에 다시 본다
+    if (!$('gallery').hidden || state.show.app || Date.now() - state.lastInteract < 45000) return;
     const last = store.get('reloadFor', null);
     // 캐시 때문에 새 코드가 아직 도착하지 않았으면 새로 고침을 반복하지 않는다
     if (last && last.v === target && Date.now() - last.t < 15 * 60000) return;
@@ -459,7 +466,7 @@
     renderPlayer();
     maybeLoadBus(t);
     if (k.s !== state.busSec) { state.busSec = k.s; busPaint(); busAlert(t); }
-    if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
+    if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) { $('gallery').hidden = true; logEvent('작품 목록 닫힘 (1분 동안 조작 없음)'); }
 
     const c = state.content;
     if (c && (t >= state.nextContentAt || t < state.scheduleAt)) refreshTimedContent(t, true);
@@ -1904,6 +1911,8 @@
       <p class="gallery-note">작품을 누르면 이 화면에서 ${holdMinutes()}분 동안 실행합니다. 체험하는 동안에는 다른 작품으로 넘어가지 않습니다.</p>
       <div class="gallery-grid">${cards.join('')}</div>`;
     $('gallery').hidden = false;
+    state.lastInteract = Date.now();
+    logEvent('작품 목록 열림');
   }
 
   function startExperience(key) {
@@ -2003,7 +2012,9 @@
     document.addEventListener('pointerdown', (e) => {
       state.lastInteract = Date.now();
       if (e.pointerType === 'touch') touched();
-      state.swipe = e.isPrimary === false ? null : { x: e.clientX, y: e.clientY, t: Date.now() };
+      // 버튼을 누르다 손가락이 조금 미끄러져도 카드 넘기기로 바뀌지 않게, 버튼 위에서 시작한 누름은 밀기로 보지 않는다
+      const onButton = e.target && e.target.closest && e.target.closest('button, [data-act], [data-try], [data-app], #gallery, #player');
+      state.swipe = e.isPrimary === false || onButton ? null : { x: e.clientX, y: e.clientY, t: Date.now() };
       if (state.peek && state.peek.browse) startBar(0, BROWSE_MS);   // 만질 때마다 돌아가기까지 남은 시간을 다시 센다
       // 3초 동안 누르고 있으면 진단 정보를 연다(관리용). 손가락이 움직이거나 떼면 취소
       clearTimeout(state.press && state.press.timer);
@@ -2044,6 +2055,9 @@
   }
 
   function onClick(e) {
+    // 클릭도 조작으로 센다. 리모컨 포인터처럼 pointerdown·touchstart 없이 클릭만 오는 입력에서는 조작 시각이 갱신되지 않아,
+    // 1분 넘게 쉬던 화면에서 「작품 체험하기」를 누르면 목록이 열리자마자 '1분 동안 조작 없음'으로 닫혔다
+    state.lastInteract = Date.now();
     if (Date.now() - (state.swipedAt || 0) < 500) return;   // 마우스로 민 뒤 따라오는 클릭
     const actEl = e.target.closest('[data-act]');
     if (actEl) { act(actEl.getAttribute('data-act')); return; }

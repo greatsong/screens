@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML, rideHTML, rideWeekHTML, busStory };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML, rideHTML, rideWeekHTML, busStory, onClick, openGallery };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -774,4 +774,22 @@ test('real vehicle positions: a bus standing at the terminus is announced, and o
   assert.equal((env.element('busDots').innerHTML.match(/bm-bus/g) || []).length, 2);   // 지도 안 두 대만
   assert.match(env.element('busDots').innerHTML, /is-stopped/);
   assert.equal(env.element('busLive').textContent, '실시간 2대');
+});
+
+test('the project list stays open when the tap arrives as a bare click after a long idle, and survives a news-only update', () => {
+  const env = screen({ role: 'b' });
+  const projects = [{ id: 'p1', title: 'P1', run: 'https://example.invalid/p1', embed: true, images: {} }];
+  env.applyContent(content({ showcase: { on: 'b' }, projects }), false);
+  env.advance(5 * 60 * SECOND);                       // 5분 동안 아무도 만지지 않음
+  env.onClick({ target: { closest: (sel) => (sel === '[data-act]' ? { getAttribute: () => 'gallery' } : null) } });
+  assert.equal(env.element('gallery').hidden, false);
+  env.advance(SECOND); env.tick();                    // 예전에는 여기서 '1분 동안 조작 없음'으로 닫혔다
+  assert.equal(env.element('gallery').hidden, false);
+  env.applyContent(content({ version: 2, showcase: { on: 'b' }, projects, news: [article('n9')] }), true);   // 뉴스만 바뀜
+  assert.equal(env.element('gallery').hidden, false);
+  env.applyContent(content({ version: 3, showcase: { on: 'b' }, projects: [] }), true);                       // 작품이 내려감
+  assert.equal(env.element('gallery').hidden, true);
+  env.openGallery();
+  env.advance(61 * SECOND); env.tick();               // 정말로 1분 동안 만지지 않으면 닫힌다
+  assert.equal(env.element('gallery').hidden, true);
 });
