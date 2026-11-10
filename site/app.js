@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.8';
+  const APP_VERSION = '0.9.9';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1054,7 +1054,7 @@
     const mon = +String(r.month || '').slice(5, 7);
     const span = (h) => h + '~' + (h + 1) + '시';   // 15시대가 아니라 15~16시로 적는다
     // 실시간 인원으로 읽히지 않게 '평소'와 '약'을 붙인다
-    const cap = per[nowH] != null ? `평소 ${span(nowH)} <b>약 ${Math.round(per[nowH])}명</b>${nowH === top ? ' · 하루 중 가장 많은 시간' : ` · 최다 ${span(top)}`}` : `최다 ${span(top)}`;
+    const cap = per[nowH] != null ? `평소 이 시간 <b>약 ${Math.round(per[nowH])}명</b>${nowH === top ? ' · 하루 중 가장 많은 시간' : ` · 최다 ${span(top)}`}` : `최다 ${span(top)}`;
     return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 하루 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
   }
   // 지난주 요일별 승차 인원: 지난주 월~금의 실제 하루 승차 인원(일별 자료)을 막대로, 평소 그 요일의 평균을 가로줄로 그린다.
@@ -1405,6 +1405,12 @@
       <g class="bus-wheel" style="transform-origin:196px 122px"><circle cx="196" cy="122" r="20" fill="#4a4a5e" stroke="#2b2b3a" stroke-width="6"/><path d="M196 108v28M182 122h28" stroke="#d9d9e6" stroke-width="5" stroke-linecap="round"/></g>
     </svg>`;
   }
+  // 버스 그림(두근두근 당곡 그림체로 그린 그림, 친구들이 타고 있다). 노선 번호는 그림 안에 그려져 있다.
+  // 그림을 받지 못하면 예전에 코드로 그린 버스를 대신 보여 준다
+  function busArt(stop, pick) {
+    const src = stop.art || (pick === 1 ? 'bus/bus-blue.png' : 'bus/bus-green.png');
+    return `<div class="bus-art"><img src="${esc(src)}" alt="" draggable="false" onerror="this.parentNode.className+=' no-art'"></div><div class="bus-svg">${busSVG(stop)}</div>`;
+  }
   function busHTML(s) {
     const b = (state.content && state.content.bus) || {};
     const stops = b.stops || [];
@@ -1429,7 +1435,8 @@
         <small class="bm-credit">© OpenStreetMap</small>
       </div></div>` : '';
     const waiters = (stop.friends || ['mongsil', 'gori']).slice(0, 2).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
-    return `<div class="card-inner busc" style="--bc:${esc(stop.color || '#a8e6cf')}">
+    const art = stop.art || (s.pick === 1 ? 'bus/bus-blue.png' : 'bus/bus-green.png');
+    return `<div class="card-inner busc" style="--bc:${esc(stop.color || '#a8e6cf')};--art:url('${esc(art)}')">
       <div class="bus-top">
         <div class="bus-main">
           <div class="bus-head"><div class="tag">하교 버스</div><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b></div>
@@ -1439,7 +1446,7 @@
           <p class="bus-go" id="busGo"></p>
           <p class="bus-next" id="busNext"></p>
           <div class="bus-lane">
-            <div class="bus-car" id="busCar">${busSVG(stop)}</div>
+            <div class="bus-car" id="busCar">${busArt(stop, s.pick)}</div>
             <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
             <div class="bus-walk"></div>
             <div class="bus-road"></div>
@@ -1520,7 +1527,7 @@
       const eta = (p) => {
         const o = v.out;
         const left = !o || p.ord == null ? null : p.ord === o.ord1 ? v.left1 : p.ord === o.ord2 ? v.left2 : null;
-        return left == null || left < 0 ? '' : left <= 60 ? '곧 도착' : Math.ceil(left / 60) + '분 후';
+        return left == null || left < 0 ? '' : left <= 60 ? '곧 도착' : Math.floor(left / 60) + '분 후';   // 큰 글자와 같은 분으로 적는다
       };
       const inside = (v.pos || []).map((p) => ({ x: (p.lon - bd.west) / (bd.east - bd.west) * 100, y: (bd.north - p.lat) / (bd.north - bd.south) * 100, stop: p.stop, eta: eta(p) }))
         .filter((p) => p.x >= 2 && p.x <= 98 && p.y >= 2 && p.y <= 98);

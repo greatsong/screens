@@ -671,7 +671,7 @@ test('the ridership bars highlight the current hour and name the busiest one', (
   assert.match(html, /시간대별 승차 인원 <span>10월 평일 하루 평균<\/span>/);
   assert.equal((html.match(/<i class/g) || []).length, 13);
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
-  assert.match(html, /평소 15~16시 <b>약 11명<\/b> · 최다 16~17시/);
+  assert.match(html, /평소 이 시간 <b>약 11명<\/b> · 최다 16~17시/);
   assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
 });
 
