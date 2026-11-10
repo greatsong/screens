@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.4';
+  const APP_VERSION = '0.9.5';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1372,6 +1372,7 @@
           <div class="bus-lane">
             <div class="bus-car" id="busCar">${busSVG(stop)}</div>
             <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
+            <div class="bus-walk"></div>
             <div class="bus-road"></div>
           </div>
         </div>
@@ -2074,7 +2075,7 @@
     state.peek = { until: Date.now() + PEEK_MS };
     if (!again || state.idx !== idx) showSlide(idx, false);
     startBar(0, PEEK_MS);
-    peekNote('20초 뒤 원래 순서로 돌아갑니다');
+    peekNote('20초 뒤 돌아갑니다');
     logEvent('화면 터치: ' + (role === 'a' ? '급식' : '학사일정') + ' 표시');
   }
   function peekNote(text) {
@@ -2107,7 +2108,7 @@
     showSlide(i, false, dir > 0 ? 'slide' : 'slideback');
     startBar(0, BROWSE_MS);
     const pr = progress(i);
-    peekNote((pr.n ? (pr.at + 1) + ' / ' + pr.n + ' · ' : '') + '20초 동안 만지지 않으면 원래 순서로 돌아갑니다');
+    peekNote((pr.n ? (pr.at + 1) + ' / ' + pr.n + ' · ' : '') + '20초 뒤 돌아갑니다');
   }
   // 돌아갈 때: 지금 차례의 칸이 곧 끝나면 그대로 두었다가 다음 칸이 바뀌는 순간(옆 화면과 같은 순간)에 바꾸고, 아니면 바로 바꾼다
   function endBrowse(at) {

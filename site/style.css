@@ -1116,3 +1116,12 @@ body.is-stopped #promo { display: none !important; }
 .ride-week i span { position: relative; flex: 1 1 0; min-height: 0; width: 100%; }
 .ride-week i span em { position: absolute; left: 0; right: 0; bottom: 0; width: auto; }
 .ride-week s { position: absolute; left: -8%; right: -8%; height: 0; border-top: 0.45vmin dashed #2b2b3a; opacity: 0.7; text-decoration: none; }
+
+/* 아래쪽 안내 띠: 짧게 줄여 「작품 체험하기」 버튼과 카드 내용을 가리지 않게 한다 */
+.peek-note { font-size: 2.4vmin; padding: 0.6vmin 2vmin; max-width: 26vw; overflow: hidden; text-overflow: ellipsis; }
+/* 인도: 찻길 위쪽에 보도블록 띠를 깔고 팻말과 기다리는 친구들은 그 위에 선다. 버스는 앞쪽 찻길을 달린다 */
+.bus-walk { position: absolute; left: 0; right: 0; bottom: 2.6vmin; height: 2.2vmin; border-radius: 1vmin 1vmin 0 0;
+  background: #e9e3d6 repeating-linear-gradient(90deg, transparent 0 5.4vmin, rgba(43, 43, 58, 0.16) 5.4vmin 5.7vmin); border-top: 0.5vmin solid #cfc6b4; box-shadow: 0 0.6vmin 0 #b9b1a0 inset; }
+.bus-stop { bottom: 4.6vmin; z-index: 1; }
+.bus-road { z-index: 1; }
+.bus-car { z-index: 3; bottom: 0.9vmin; }
