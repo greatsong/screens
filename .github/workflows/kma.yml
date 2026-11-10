@@ -1,7 +1,8 @@
 name: 기상청 예보·관측 수집
 
-# 기상청 예보의 정확도를 검증할 자료(data/kma/)를 하루 네 번 덧붙인다(scripts/collect_kma.py).
-# 기상청은 예보를 최근 3일, 관측을 최근 24시간 치만 돌려준다. 실행할 때마다 그 사이 빠진 것을 모두 채우므로
+# 기상청 예보의 정확도를 검증할 자료(data/kma/)와 비교할 Open-Meteo 예보(data/open-meteo/)를 하루 네 번 덧붙인다
+# (scripts/collect_kma.py, scripts/collect_open_meteo.py).
+# 기상청은 단기예보를 최근 3일, 초단기예보와 관측을 최근 하루 남짓만 돌려준다. 실행할 때마다 그 사이 빠진 것을 모두 채우므로
 # 실행이 세 번 연속 빠져도 누락되지 않는다.
 # 기상청 API허브 인증키는 저장소 비밀값 KMA_AUTH_KEY 에 둔다. 비밀값이 없으면 아무것도 하지 않는다.
 on:
@@ -38,16 +39,21 @@ jobs:
           KMA_AUTH_KEY: ${{ secrets.KMA_AUTH_KEY }}
         run: python3 scripts/collect_kma.py
 
-      # data/kma/ 는 이 워크플로만 쓰므로 rebase가 충돌하지 않는다. 수집이 일부 실패해도 받은 행과 기록은 남긴다.
+      # 기상청과 비교할 Open-Meteo 예보(키 없음). 강수 확률은 지나가면 다시 받을 수 없어 같은 시각에 받아 둔다
+      - name: Open-Meteo 예보 수집
+        if: always() && steps.key.outputs.has == 'true'
+        run: python3 scripts/collect_open_meteo.py
+
+      # data/kma/ 와 data/open-meteo/ 는 이 워크플로만 쓰므로 rebase가 충돌하지 않는다. 수집이 일부 실패해도 받은 행과 기록은 남긴다.
       # 화면(site/)에 들어가는 자료가 아니므로 다시 배포하지 않는다
       - name: 커밋
         if: always() && steps.key.outputs.has == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/kma
+          git add data/kma data/open-meteo
           if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
-          git commit -q -m "기상청 예보·관측 자료 추가"
+          git commit -q -m "예보·관측 자료 추가"
           for i in 1 2 3; do
             if git push -q origin HEAD:main; then exit 0; fi
             echo "push 거절, ${i}번째 재시도"

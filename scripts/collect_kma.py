@@ -1,8 +1,9 @@
 """기상청 예보의 정확도를 나중에 검증할 수 있도록 예보와 관측을 날마다 쌓는다.
 
-기상청 API허브 동네예보의 단기예보(getVilageFcst)와 초단기실황(getUltraSrtNcst)을 학교 격자(nx=59, ny=125)로 받아
-data/kma/forecast/YYYY-MM.csv 와 data/kma/observed/YYYY-MM.csv 에 덧붙인다(YYYY-MM 은 발표·관측 시각의 달).
-기상청은 예보를 최근 3일, 관측을 최근 24시간 치만 돌려주므로 지나가면 다시 받을 수 없다.
+기상청 API허브 동네예보의 단기예보(getVilageFcst), 초단기예보(getUltraSrtFcst), 초단기실황(getUltraSrtNcst)을
+학교 격자(nx=59, ny=125)로 받아 data/kma/forecast/ · nowcast/ · observed/ 의 YYYY-MM.csv 에 덧붙인다(YYYY-MM 은 발표·관측 시각의 달).
+단기예보는 하루 8회 발표되어 나흘 뒤까지, 초단기예보는 매시 30분에 발표되어 6시간 뒤까지 예보한다.
+기상청은 단기예보를 최근 3일, 초단기예보와 관측을 최근 하루 남짓만 돌려주므로 지나가면 다시 받을 수 없다.
 그래서 실행할 때마다 그 기간 안에서 아직 저장하지 않은 발표분과 관측 시각을 모두 채운다. 실행이 몇 번 빠져도 누락되지 않는다.
 응답 형식이 잘못되었거나 발표분이 없으면 그 행을 건너뛰고 data/kma/collect_log.csv 에 기록한다.
 인증키는 환경변수 KMA_AUTH_KEY 또는 .local/kma-apihub.env(저장소에 올라가지 않음)에서 읽는다. 키는 화면과 기록에 적지 않는다.
@@ -22,7 +23,7 @@ BASE = "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/"
 NX, NY = 59, 125
 ISSUE_HOURS = (2, 5, 8, 11, 14, 17, 20, 23)   # 단기예보 발표 시각
 FORECAST_KEEP_HOURS = 66    # 기상청은 72시간 전 발표분까지 돌려준다. 여유를 두고 66시간
-OBSERVED_KEEP_HOURS = 23    # 관측은 24시간 전까지. 여유를 두고 23시간
+OBSERVED_KEEP_HOURS = 23    # 관측은 24시간 전까지. 여유를 두고 23시간. 초단기예보도 같은 기간을 채운다
 READY_MINUTES = 15          # 발표·관측 시각에서 이만큼 지나야 요청한다
 GRACE_HOURS = 2             # 이 시간 안의 "자료 없음"은 아직 올라오지 않은 것으로 보고 기록하지 않는다
 
@@ -82,11 +83,22 @@ def text(x):
     """CSV에 적을 모양. None 은 빈칸, 정수로 떨어지면 소수점 없이."""
     if x is None:
         return ""
-    return str(int(x)) if x == int(x) else str(round(x, 1))
+    x = round(x, 1)
+    return str(int(x)) if x == int(x) else str(x)
 
 
-def parse_forecast(items, issued):
-    """단기예보 항목 목록을 대상 시각별 행으로. (행 목록, 건너뛴 이유 목록)을 돌려준다."""
+def nowcast_times(now):
+    """지금 요청할 수 있는 초단기예보 발표 시각(매시 30분)을 오래된 것부터."""
+    ready = now - datetime.timedelta(minutes=READY_MINUTES)
+    last = ready.replace(minute=30, second=0, microsecond=0)
+    if last > ready:
+        last -= datetime.timedelta(hours=1)
+    return [last - datetime.timedelta(hours=back) for back in range(OBSERVED_KEEP_HOURS - 1, -1, -1)]
+
+
+def parse_forecast(items, issued, temp="TMP", rain="PCP"):
+    """예보 항목 목록을 대상 시각별 행으로. (행 목록, 건너뛴 이유 목록)을 돌려준다.
+    단기예보는 기온 TMP·강수량 PCP, 초단기예보는 T1H·RN1 로 온다."""
     slots = {}
     notes = []
     broken = 0
@@ -105,16 +117,16 @@ def parse_forecast(items, issued):
     no_temp = 0
     for target in sorted(slots):
         v = slots[target]
-        temp = number(v.get("TMP"))
+        value = number(v.get(temp))
         lead = (target - issued).total_seconds() / 3600
-        if temp is None:
+        if value is None:
             if set(v) - {"TMN", "TMX"}:      # 최저·최고 기온만 있는 시각은 원래 시간별 값이 없다
                 no_temp += 1
             continue
         if lead <= 0:
             continue
-        rows.append([issued.strftime(STAMP), target.strftime(STAMP), text(lead), text(temp), text(number(v.get("POP"))),
-                     text(number(v.get("PTY"))), text(number(v.get("SKY"))), text(number(v.get("WSD"))), str(v.get("PCP", ""))])
+        rows.append([issued.strftime(STAMP), target.strftime(STAMP), text(lead), text(value), text(number(v.get("POP"))),
+                     text(number(v.get("PTY"))), text(number(v.get("SKY"))), text(number(v.get("WSD"))), str(v.get(rain, ""))])
     if no_temp:
         notes.append(f"기온이 없는 대상 시각 {no_temp}개 건너뜀")
     return rows, notes
@@ -174,9 +186,13 @@ def stored(root, kind, times):
     seen = set()
     for path in {month_file(root, kind, t) for t in times}:
         if path.exists():
-            with path.open(encoding="utf-8", newline="") as f:
-                seen.update(row[0] for row in csv.reader(f) if row)
+            seen.update(first_column(path))
     return seen
+
+
+def first_column(path):
+    with path.open(encoding="utf-8", newline="") as f:
+        return {row[0] for row in csv.reader(f) if row}
 
 
 def append(path, columns, rows):
@@ -192,7 +208,7 @@ def append(path, columns, rows):
 def collect(now, key, root=ROOT, fetch=fetch):
     """빠진 발표분과 관측 시각을 채운다. 요약 {forecast, observed, failed, logs}를 돌려준다."""
     logs = []
-    summary = {"forecast": 0, "releases": 0, "observed": 0, "requests": 0, "failed": 0}
+    summary = {"forecast": 0, "releases": 0, "nowcast": 0, "observed": 0, "requests": 0, "failed": 0}
 
     def note(kind, base, message):
         logs.append([now.strftime(STAMP), kind, base.strftime(STAMP), message])
@@ -200,28 +216,32 @@ def collect(now, key, root=ROOT, fetch=fetch):
     def missing(code, base):   # 방금 지난 시각의 "자료 없음"은 아직 올라오지 않은 것
         return code in ("03", "10") and now - base < datetime.timedelta(hours=GRACE_HOURS)
 
-    releases = release_times(now)
-    have = stored(root, "forecast", releases)
-    for issued in releases:
-        if issued.strftime(STAMP) in have:
-            continue
-        summary["requests"] += 1
-        items, code, message = fetch("getVilageFcst", issued, key)
-        if items is None:
-            if not missing(code, issued):
+    def forecasts(kind, function, times, temp, rain):
+        have = stored(root, kind, times)
+        for issued in times:
+            if issued.strftime(STAMP) in have:
+                continue
+            summary["requests"] += 1
+            items, code, message = fetch(function, issued, key)
+            if items is None:
+                if not missing(code, issued):
+                    summary["failed"] += 1
+                    note(kind, issued, message or "자료 없음")
+                continue
+            rows, notes = parse_forecast(items, issued, temp, rain)
+            for n in notes:
+                note(kind, issued, n)
+            if not rows:
                 summary["failed"] += 1
-                note("forecast", issued, message or "자료 없음")
-            continue
-        rows, notes = parse_forecast(items, issued)
-        for n in notes:
-            note("forecast", issued, n)
-        if not rows:
-            summary["failed"] += 1
-            note("forecast", issued, "저장할 행이 없음")
-            continue
-        append(month_file(root, "forecast", issued), FORECAST_COLUMNS, rows)
-        summary["forecast"] += len(rows)
-        summary["releases"] += 1
+                note(kind, issued, "저장할 행이 없음")
+                continue
+            append(month_file(root, kind, issued), FORECAST_COLUMNS, rows)
+            summary[kind] += len(rows)
+            if kind == "forecast":
+                summary["releases"] += 1
+
+    forecasts("forecast", "getVilageFcst", release_times(now), "TMP", "PCP")
+    forecasts("nowcast", "getUltraSrtFcst", nowcast_times(now), "T1H", "RN1")
 
     hours = observation_times(now)
     have = stored(root, "observed", hours)
@@ -255,7 +275,7 @@ def main():
         print("인증키 KMA_AUTH_KEY 가 없습니다")
         return 1
     s = collect(now_kst(), key)
-    print(f"요청 {s['requests']}건: 예보 {s['releases']}회 발표분 {s['forecast']}행, 관측 {s['observed']}행 저장, 실패 {s['failed']}건, 기록 {s['logs']}줄")
+    print(f"요청 {s['requests']}건: 단기예보 {s['releases']}회 발표분 {s['forecast']}행, 초단기예보 {s['nowcast']}행, 관측 {s['observed']}행 저장, 실패 {s['failed']}건, 기록 {s['logs']}줄")
     # 요청이 모두 실패했으면(키 만료 등) 실행을 실패로 표시해 알림이 가게 한다
     return 1 if s["requests"] and s["failed"] == s["requests"] else 0
 

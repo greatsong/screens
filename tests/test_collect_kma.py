@@ -46,6 +46,12 @@ class Times(unittest.TestCase):
         times = kma.release_times(datetime.datetime(2026, 11, 11, 5, 10))
         self.assertEqual(times[-1], datetime.datetime(2026, 11, 11, 2, 0))
 
+    def test_nowcast_times(self):
+        times = kma.nowcast_times(NOW)                                   # 05:30 발표분은 05:45부터 요청한다
+        self.assertEqual(times[-1], datetime.datetime(2026, 11, 11, 4, 30))
+        self.assertEqual(len(times), kma.OBSERVED_KEEP_HOURS)
+        self.assertEqual(kma.nowcast_times(datetime.datetime(2026, 11, 11, 5, 50))[-1], datetime.datetime(2026, 11, 11, 5, 30))
+
     def test_observation_times(self):
         hours = kma.observation_times(NOW)
         self.assertEqual(len(hours), kma.OBSERVED_KEEP_HOURS)
@@ -60,6 +66,14 @@ class Parse(unittest.TestCase):
         self.assertEqual(notes, [])
         self.assertEqual(rows[0], ["2026-11-10T23:00", "2026-11-11T00:00", "1", "6", "20", "0", "3", "0.4", "강수없음"])
         self.assertEqual(rows[1][1:3], ["2026-11-12T02:00", "27"])
+
+    def test_nowcast_uses_its_own_categories(self):
+        issued = datetime.datetime(2026, 11, 11, 5, 30)
+        t = "0600"
+        items = [{"category": c, "fcstDate": "20261111", "fcstTime": t, "fcstValue": v}
+                 for c, v in {"T1H": "5", "RN1": "강수없음", "PTY": "0", "SKY": "1", "WSD": "1", "POP": "0", "LGT": "0"}.items()]
+        rows, notes = kma.parse_forecast(items, issued, "T1H", "RN1")
+        self.assertEqual((rows, notes), ([["2026-11-11T05:30", "2026-11-11T06:00", "0.5", "5", "0", "0", "1", "1", "강수없음"]], []))
 
     def test_forecast_skips_broken_items_and_missing_temp(self):
         issued = datetime.datetime(2026, 11, 11, 2, 0)
@@ -97,6 +111,9 @@ class Collect(unittest.TestCase):
                 return bad[(function, base)]
             if function == "getVilageFcst":
                 return forecast_items(base), "00", ""
+            if function == "getUltraSrtFcst":
+                items = forecast_items(base.replace(minute=0), hours=range(1, 7), RN1="강수없음")
+                return [dict(it, category="T1H") if it["category"] == "TMP" else it for it in items], "00", ""
             return observed_items(), "00", ""
         return fetch
 
@@ -110,6 +127,9 @@ class Collect(unittest.TestCase):
         self.assertEqual(list(rows[0]), kma.FORECAST_COLUMNS)
         self.assertEqual(len(rows), s["forecast"])
         self.assertEqual(list(read(self.root / "data/kma/observed/2026-11.csv")[0]), kma.OBSERVED_COLUMNS)
+        nowcast = read(self.root / "data/kma/nowcast/2026-11.csv")
+        self.assertEqual(len(nowcast), kma.OBSERVED_KEEP_HOURS * 6)
+        self.assertEqual((nowcast[0]["lead_hours"], nowcast[0]["precip_text"]), ("0.5", "강수없음"))
         # 다시 실행하면 요청도 행도 늘지 않는다
         self.calls.clear()
         again = kma.collect(NOW, "k", self.root, self.fake())
@@ -120,7 +140,7 @@ class Collect(unittest.TestCase):
         kma.collect(NOW, "k", self.root, self.fake())
         self.calls.clear()
         s = kma.collect(NOW + datetime.timedelta(hours=6), "k", self.root, self.fake())
-        self.assertEqual((s["releases"], s["observed"]), (2, 6))   # 08시·11시 발표분, 관측 6시간
+        self.assertEqual((s["releases"], s["observed"], s["nowcast"]), (2, 6, 36))   # 08시·11시 발표분, 관측 6시간, 초단기예보 6회
 
     def test_same_target_gets_several_leads(self):
         kma.collect(NOW, "k", self.root, self.fake())
@@ -190,6 +210,87 @@ class Fetch(unittest.TestCase):
         items, code, message = self.run_with(error=OSError("failed https://x?authKey=SECRET-KEY"))
         self.assertIsNone(items)
         self.assertNotIn("SECRET-KEY", message)
+
+
+class OpenMeteo(unittest.TestCase):
+    """Open-Meteo 예보 수집(scripts/collect_open_meteo.py)"""
+
+    def setUp(self):
+        import collect_open_meteo
+        self.om = collect_open_meteo
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def hourly(self, hours=120, **override):
+        start = datetime.datetime(2026, 11, 11, 0, 0)
+        data = {"time": [(start + datetime.timedelta(hours=i)).strftime(kma.STAMP) for i in range(hours)]}
+        defaults = {"temperature_2m": 8.7, "precipitation_probability": 30, "precipitation": 0.0, "weather_code": 3, "wind_speed_10m": 1.51}
+        for field in self.om.FIELDS:
+            for model in self.om.MODELS:
+                data[f"{field}_{model}"] = [override.get(field, defaults[field])] * hours
+        data.update({name: [value] * hours for name, value in override.items() if name not in defaults})
+        return data
+
+    def test_rows_start_after_now_and_stop_at_96_hours(self):
+        s = self.om.collect(NOW, self.root, lambda: (self.hourly(), ""))
+        rows = read(self.root / "data/open-meteo/forecast/2026-11.csv")
+        self.assertEqual(s, {"rows": 96 * len(self.om.MODELS), "failed": 0, "logs": 0})
+        self.assertEqual(list(rows[0]), self.om.COLUMNS)
+        self.assertEqual(list(rows[0].values()), ["2026-11-11T05:00", "2026-11-11T06:00", "1", "best_match", "8.7", "30", "0", "3", "1.5"])
+        self.assertEqual({r["model"] for r in rows}, set(self.om.MODELS))
+        self.assertEqual((rows[-1]["target_at"], rows[-1]["lead_hours"]), ("2026-11-15T05:00", "96"))
+
+    def test_same_hour_is_not_fetched_twice(self):
+        calls = []
+
+        def fetch():
+            calls.append(1)
+            return self.hourly(), ""
+        self.om.collect(NOW, self.root, fetch)
+        self.om.collect(NOW + datetime.timedelta(minutes=20), self.root, fetch)
+        self.assertEqual(len(calls), 1)
+        self.om.collect(NOW + datetime.timedelta(hours=6), self.root, fetch)
+        self.assertEqual(len(calls), 2)
+        leads = [r["lead_hours"] for r in read(self.root / "data/open-meteo/forecast/2026-11.csv") if r["target_at"] == "2026-11-11T12:00" and r["model"] == "best_match"]
+        self.assertEqual(leads, ["7", "1"])
+
+    def test_missing_probability_stays_blank(self):
+        self.om.collect(NOW, self.root, lambda: (self.hourly(precipitation_probability=None), ""))
+        self.assertEqual(read(self.root / "data/open-meteo/forecast/2026-11.csv")[0]["pop_pct"], "")
+
+    def test_model_without_temperature_is_skipped_and_logged(self):
+        s = self.om.collect(NOW, self.root, lambda: (self.hourly(temperature_2m_jma_seamless=None), ""))
+        rows = read(self.root / "data/open-meteo/forecast/2026-11.csv")
+        self.assertEqual(s["rows"], 96 * (len(self.om.MODELS) - 1))
+        self.assertNotIn("jma_seamless", {r["model"] for r in rows})
+        self.assertEqual(s["logs"], 1)
+
+    def test_failure_is_logged(self):
+        s = self.om.collect(NOW, self.root, lambda: (None, "응답 형식 오류"))
+        self.assertEqual(s["failed"], 1)
+        self.assertFalse((self.root / "data/open-meteo/forecast/2026-11.csv").exists())
+        self.assertEqual(read(self.root / "data/open-meteo/collect_log.csv")[0]["note"], "응답 형식 오류")
+        s = self.om.collect(NOW, self.root, lambda: (self.hourly(temperature_2m=None), ""))
+        self.assertEqual((s["rows"], s["failed"]), (0, 1))
+
+    def test_fetch_rejects_bad_shape(self):
+        class Reply:
+            def __init__(self, body):
+                self.body = body
+
+            def read(self):
+                return self.body
+        original = self.om.urllib.request.urlopen
+        try:
+            self.om.urllib.request.urlopen = lambda url, timeout=0: Reply(b"<html>")
+            self.assertEqual(self.om.fetch(), (None, "응답 형식 오류"))
+            self.om.urllib.request.urlopen = lambda url, timeout=0: Reply(b'{"hourly": {"time": ["2026-11-11T00:00"], "temperature_2m_best_match": []}}')
+            self.assertEqual(self.om.fetch(), (None, "응답 형식 오류"))
+        finally:
+            self.om.urllib.request.urlopen = original
 
 
 if __name__ == "__main__":
