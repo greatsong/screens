@@ -514,6 +514,7 @@ function busItem_(it) {
   return { route: txt(it.rtNm || it.busRouteAbrv), dir: txt(it.adirection), next: txt(it.nxtStn),
     msg1: m1, sec1: sec(it.traTime1, m1), away: away ? Number(away[1]) : null,
     msg2: m2, sec2: sec(it.traTime2, m2), term: Number(it.term) || null,
+    ord1: Number(it.sectOrd1) || null, ord2: Number(it.sectOrd2) || null,   // 도착 예정 차가 지금 있는 구간 번호(위치 정보의 ord 와 짝지어 지도 위 버스에 남은 시간을 붙인다)
     last: /^\d{4}$/.test(last) ? last.slice(0, 2) + ':' + last.slice(2) : '' };
 }
 

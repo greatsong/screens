@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.7';
+  const APP_VERSION = '0.9.8';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -223,6 +223,15 @@
     if (!embed) store.set('role', role);
     document.title = '당곡고 화면 ' + role.toUpperCase();
     document.body.classList.add('role-' + role);
+    // flex gap 을 지원하지 않는 구형 브라우저에는 여백 대체 규칙(style.css 의 .no-gap)을 적용한다
+    (function () {
+      const box = document.createElement('div');
+      box.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden';
+      box.appendChild(document.createElement('div')); box.appendChild(document.createElement('div'));
+      document.body.appendChild(box);
+      if (box.scrollHeight !== 1) document.documentElement.classList.add('no-gap');
+      document.body.removeChild(box);
+    })();
     buildShell();
     if (typeof window.qrcode === 'function') state.qr = '불러옴';
     else if (window.__qrFailed) state.qr = '실패';
@@ -252,7 +261,8 @@
       <div class="screen" id="screen">
         <header class="top">
           <div class="brand">
-            <span class="school" id="school">당곡고등학교</span>
+            <img class="school-logo" id="schoolLogo" src="icons/danggok-logo.jpeg" alt="당곡고등학교" draggable="false">
+            <span class="school" id="school" hidden>당곡고등학교</span>
             <span class="role">${ROLE_LABEL[role]}</span>
             <span class="badge" id="badge" hidden></span>
           </div>
@@ -395,6 +405,9 @@
     maybeLoadMeal();
     maybeLoadVotes();
     $('school').textContent = data.school || '당곡고등학교';
+    // 학교 로고(AI 중점학교 & 인문학실천학교)에 학교 이름이 들어 있어 글자 이름은 로고를 받지 못했을 때만 보여 준다
+    const logo = $('schoolLogo');
+    if (logo) { logo.alt = data.school || '당곡고등학교'; if (!logo._bound) { logo._bound = true; logo.addEventListener('error', () => { logo.hidden = true; $('school').hidden = false; }); } }
     const badge = $('badge');
     badge.hidden = !data.badge;
     badge.textContent = data.badge || '';
@@ -1017,8 +1030,16 @@
     if (b.ride === false || state.rideBusy || Date.now() - (state.rideTry || 0) < 6 * 3600000) return;
     state.rideBusy = true;
     state.rideTry = Date.now();
-    fetch('bus/ridership.json?t=' + ymd(now())).then((x) => x.json()).then((d) => { if (d && d.stops) { state.ride = d; busPaint(); } })
+    // 받지 못하면 5분 뒤에 다시 받는다
+    timedJSON('bus/ridership.json?t=' + ymd(now())).then((d) => { if (d && d.stops) { state.ride = d; busPaint(); } else state.rideTry = Date.now() - 6 * 3600000 + 300000; })
       .catch(() => {}).then(() => { state.rideBusy = false; });
+  }
+  // 응답이 오지 않아도 멈추지 않게 시간제한을 둔 받기(실패하면 null)
+  function timedJSON(url) {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
+    return fetch(url, ctrl ? { signal: ctrl.signal } : {}).then((x) => x.json())
+      .then((d) => { clearTimeout(timer); return d; }, () => { clearTimeout(timer); return null; });
   }
   // 7~19시 막대그래프. 지금 시간대를 강조하고 그 시간대의 하루 평균을 문장으로 적는다
   function rideHTML(stop) {
@@ -1032,8 +1053,9 @@
     const bars = hours.map((h) => `<i class="${h === nowH ? 'on' : ''}${h === top ? ' top' : ''}"><em style="height:${Math.max(4, (per[h] || 0) / max * 100).toFixed(0)}%"></em><u>${h}</u></i>`).join('');
     const mon = +String(r.month || '').slice(5, 7);
     const span = (h) => h + '~' + (h + 1) + '시';   // 15시대가 아니라 15~16시로 적는다
-    const cap = per[nowH] != null ? `지금 ${span(nowH)} <b>${Math.round(per[nowH])}명</b>${nowH === top ? ' · 가장 붐비는 시간' : ` · 가장 붐비는 시간 ${span(top)}`}` : `가장 붐비는 시간 ${span(top)}`;
-    return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
+    // 실시간 인원으로 읽히지 않게 '평소'와 '약'을 붙인다
+    const cap = per[nowH] != null ? `평소 ${span(nowH)} <b>약 ${Math.round(per[nowH])}명</b>${nowH === top ? ' · 하루 중 가장 많은 시간' : ` · 최다 ${span(top)}`}` : `최다 ${span(top)}`;
+    return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 하루 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
   }
   // 지난주 요일별 승차 인원: 지난주 월~금의 실제 하루 승차 인원(일별 자료)을 막대로, 평소 그 요일의 평균을 가로줄로 그린다.
   // 오늘과 같은 요일을 강조한다. 날짜별 시간대 자료는 공개되지 않아 요일 단위로 보여 준다.
@@ -1056,14 +1078,14 @@
     const today = kst(t).wd;
     const bars = days.map((x) => {
       const v = val(x);
-      const line = real && x.avg != null ? `<s style="bottom:${(x.avg / max * 100).toFixed(0)}%"></s>` : '';
-      return `<i class="${x.d === today ? 'on' : ''}"><b>${v != null ? Math.round(v) : '-'}</b><span><em style="height:${v != null ? Math.max(6, v / max * 100).toFixed(0) : 0}%"></em>${line}</span><u>${x.d}</u></i>`;
+      // 평소 평균은 뒤에 깔린 옅은 넓은 막대, 지난주 실제 값은 앞의 진한 막대로 그린다(점선을 쓰지 않는다)
+      const ghost = real && x.avg != null ? `<s style="height:${(x.avg / max * 100).toFixed(0)}%"></s>` : '';
+      return `<i class="${x.d === today ? 'on' : ''}"><b>${v != null ? Math.round(v) : '-'}</b><span>${ghost}<em style="height:${v != null ? Math.max(6, v / max * 100).toFixed(0) : 0}%"></em></span><u>${x.d}</u></i>`;
     }).join('');
     const me = days.filter((x) => x.d === today)[0];
-    const cap = !me || val(me) == null ? '월~금 하루 승차 인원' : real
-      ? `지난주 ${today}요일 <b>${Math.round(me.real)}명</b>${me.avg != null ? ' · 평소 ' + Math.round(me.avg) + '명' : ''}`
-      : `${today}요일 평균 <b>${Math.round(me.avg)}명</b>`;
-    return `<small>${real ? '지난주 요일별 승차 인원' : '요일별 하루 승차 인원'} <span>${real ? '실제 값 · 줄은 평소' : '최근 한 달'}</span></small><div class="ride-bars ride-week">${bars}</div><p>${cap}</p>`;
+    // 지난주 값은 이야기 칸이 문장으로 말하므로 여기서는 같은 숫자를 다시 적지 않는다
+    const cap = real ? '' : !me || val(me) == null ? '월~금 하루 승차 인원' : `${today}요일 평균 <b>${Math.round(me.avg)}명</b>`;
+    return `<small>${real ? '지난주 요일별 승차 인원' : '요일별 하루 승차 인원'} <span${real ? ' class="lg"' : ''}>${real ? '<i class="k1"></i>지난주 <i class="k2"></i>평소 평균' : '최근 한 달'}</span></small><div class="ride-bars ride-week">${bars}</div>${cap ? `<p>${cap}</p>` : ''}`;
   }
   // 날씨: 30분마다 받는다. 기상청 동네예보(Apps Script 웹 앱 ?api=weather, 인증키는 그쪽에 있다)를 먼저 쓰고,
   // 기상청 단기예보가 닿지 않는 뒤쪽 날짜와 기상청을 받지 못한 때에는 Open-Meteo(키 없음)로 채운다.
@@ -1076,11 +1098,10 @@
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(r.lat) + '&longitude=' + encodeURIComponent(r.lon) +
       '&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
       '&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=7';
-    const quiet = (p) => p.then((x) => x.json()).catch(() => null);
-    const kma = b.api && r.kma !== false ? quiet(fetch(b.api + '?api=weather')) : Promise.resolve(null);
-    Promise.all([quiet(fetch(url)), kma]).then((got) => {
+    const kma = b.api && r.kma !== false ? timedJSON(b.api + '?api=weather') : Promise.resolve(null);
+    Promise.all([timedJSON(url), kma]).then((got) => {
       const wx = mergeWeather(openMeteo(got[0]), got[1] && got[1].ok && (got[1].hourly || []).length ? got[1] : null);
-      if (!wx) return;
+      if (!wx) { state.rainTry = Date.now() - 1800000 + 120000; return; }   // 받지 못하면 2분 뒤에 다시 받는다
       const today = ymd(now());
       const from = r.from == null ? 15 : r.from;
       const until = r.until == null ? 20 : r.until;
@@ -1110,7 +1131,8 @@
     if (!kma) return om ? { at: Date.now(), source: 'Open-Meteo 예보', hourly: om.hourly, daily: om.daily, cur: om.cur } : null;
     const last = kma.daily.length ? kma.daily[kma.daily.length - 1].d : '';
     const tail = om ? om.daily.filter((x) => x.d > last).map((x) => ({ ...x, om: true })) : [];
-    const daily = kma.daily.concat(tail).slice(0, 7);
+    const t0 = ymd(now());
+    const daily = kma.daily.concat(tail).filter((x) => x.d >= t0).slice(0, 7);   // 지난 날짜를 먼저 빼고 일곱 날을 채운다
     const extra = daily.filter((x) => x.om).length;
     return { at: Date.now(), source: '기상청 동네예보' + (extra ? ' · 뒤 ' + extra + '일은 Open-Meteo' : ''), hourly: kma.hourly, daily, cur: kma.cur || (om && om.cur) };
   }
@@ -1162,10 +1184,11 @@
     const windy = forced === 'wind' || (typeof wind === 'number' && wind >= WIND_STRONG);
     const rnd = (i, m) => { const v = Math.sin(i * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // 두 화면이 같은 모양이 되게 번호로 만든 흩뿌림
     const many = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
+    const tall = window.innerHeight > window.innerWidth;   // 세로 화면은 폭이 절반이라 입자를 줄여도 빽빽하게 보인다
     let html = '';
-    if (k === 'rain' || k === 'storm') html += many(34, (i) => `<i class="fx-rain" style="left:${(rnd(i, 1) * 112 - 6).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 1.2).toFixed(2)}s;animation-duration:${(0.7 + rnd(i, 3) * 0.5).toFixed(2)}s"></i>`);
+    if (k === 'rain' || k === 'storm') html += many(tall ? 18 : 30, (i) => `<i class="fx-rain" style="left:${(rnd(i, 1) * 112 - 6).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 1.2).toFixed(2)}s;animation-duration:${(0.7 + rnd(i, 3) * 0.5).toFixed(2)}s"></i>`);
     if (k === 'storm') html += '<i class="fx-flash"></i>';
-    if (k === 'snow') html += many(30, (i) => `<i class="fx-snow" style="left:${(rnd(i, 1) * 104 - 2).toFixed(1)}%;--s:${(0.6 + rnd(i, 4) * 1.1).toFixed(2)};animation-delay:-${(rnd(i, 2) * 7).toFixed(2)}s;animation-duration:${(5 + rnd(i, 3) * 4).toFixed(2)}s"></i>`);
+    if (k === 'snow') html += many(tall ? 18 : 26, (i) => `<i class="fx-snow" style="left:${(rnd(i, 1) * 104 - 2).toFixed(1)}%;--s:${(0.6 + rnd(i, 4) * 1.1).toFixed(2)};animation-delay:-${(rnd(i, 2) * 7).toFixed(2)}s;animation-duration:${(5 + rnd(i, 3) * 4).toFixed(2)}s"></i>`);
     if (ducks) html += '<i class="fx-pile"></i>' + many(5, (i) => `<i class="fx-duck" style="left:${(8 + i * 18).toFixed(1)}%;--d:${(2.5 + i * 2.2).toFixed(1)}s"><span class="dk-snow">${duckSVG(false)}</span><span class="dk-mold">${duckSVG(true)}</span></i>`);
     if (k === 'sun' || k === 'part') html += '<i class="fx-sun"></i>';
     if (k === 'cloud' || k === 'part' || k === 'fog') html += many(k === 'part' ? 2 : 4, (i) => `<i class="fx-cloud" style="top:${(4 + rnd(i, 5) * 46).toFixed(1)}%;--s:${(0.7 + rnd(i, 6) * 0.9).toFixed(2)};animation-delay:-${(rnd(i, 2) * 40).toFixed(1)}s;animation-duration:${(38 + rnd(i, 3) * 26).toFixed(1)}s"></i>`);
@@ -1199,6 +1222,7 @@
       else if (wetHome && k.h < 18) tips.push('집에 가는 길에 비가 온대요! 우산 챙겨요!');
       else if (rest.some((x) => x.pop >= 60)) tips.push('오늘 비가 온대요! 우산 챙겨요!');
       if (cold) tips.push('내일은 추워요! 옷 따뜻하게 입고 오세요!');
+      if (tips.length < 2 && typeof t0.max === 'number' && typeof t0.min === 'number' && t0.max - t0.min >= 10) tips.push('일교차가 ' + Math.round(t0.max - t0.min) + '도예요! 겉옷을 챙겨요!');
       if (tips.length < 2 && typeof wind === 'number' && wind >= WIND_STRONG) tips.push('바람이 세요! 겉옷을 잘 여며요!');
       if (tips.length < 2 && typeof t0.max === 'number' && t0.max >= 30) tips.push('오늘은 더워요! 물을 자주 마셔요!');
       if (!tips.length) tips.push(wxKind((rest[0] || {}).code)[0] === 'sun' ? '오늘은 맑아요! 즐거운 하루 보내요!' : '오늘도 즐거운 하루 보내요!');
@@ -1214,7 +1238,8 @@
     const wx = state.wx && Date.now() - state.wx.at < 3 * 3600000 ? state.wx : null;
     const tag = s.view === 'week' ? '일주일 날씨' : '오늘 날씨';
     if (!wx) return cardHTML({ tag, title: '날씨 예보를 확인하고 있습니다' });
-    const foot = `<div class="wx-foot"><div class="wx-bus" id="wxBus"></div><div class="source">${esc(wx.source || '')}</div></div>`;
+    const at = kst(wx.at);
+    const foot = `<div class="wx-foot"><div class="wx-bus" id="wxBus"></div><div class="source">${esc(wx.source || '')} · ${p2(at.h)}:${p2(at.mi)} 받음</div></div>`;
     const today = ymd(now());
     if (s.view === 'week') {
       const days = wx.daily.filter((x) => x.d >= today).slice(0, 7).map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}${x.om ? ' is-om' : ''}" style="--i:${i}">
@@ -1223,7 +1248,7 @@
         <span class="wx-p">${typeof x.pop === 'number' ? '강수 ' + x.pop + '%' : ''}</span></li>`).join('');
       const t0 = wx.daily.filter((x) => x.d === today)[0] || {};
       const c0 = wx.cur && wx.cur.code != null && Date.now() - wx.at < 3600000 ? wx.cur.code : t0.code;
-      return `<div class="card-inner wxc">${wxFx(c0, wx.cur ? wx.cur.wind : null)}<div class="wx-top"><div><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1></div>${wxSayHTML(wx, 'week')}</div><ul class="wx-week">${days}</ul>${foot}</div>`;
+      return `<div class="card-inner wxc">${wxFx(c0, wx.cur ? wx.cur.wind : null)}<div class="wx-top"><div class="tag">${tag}</div>${wxSayHTML(wx, 'week')}</div><ul class="wx-week">${days}</ul>${foot}</div>`;
     }
     const k = kst(now());
     const rest = wx.hourly.filter((x) => (x.d === today && x.h >= k.h) || x.d > today).slice(0, 8);
@@ -1232,19 +1257,26 @@
     const code = wx.cur && wx.cur.code != null && Date.now() - wx.at < 3600000 ? wx.cur.code : cur.code;
     const maxPop = Math.max.apply(null, rest.map((x) => (typeof x.pop === 'number' ? x.pop : 0)).concat([0]));
     const td = wx.daily.filter((x) => x.d === today)[0];
-    const hours = rest.map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}"><b>${i === 0 ? '지금' : x.h + '시'}</b>${wxIcon(x.code)}<em>${deg(x.temp)}</em><span>${typeof x.pop === 'number' ? x.pop + '%' : ''}</span></li>`).join('');
+    const hours = rest.map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}"><b>${i === 0 ? '지금' : x.h + '시'}</b>${wxIcon(i === 0 ? code : x.code)}<em>${deg(i === 0 ? temp : x.temp)}</em><span${x.pop < 30 ? ' class="is-dry"' : ''}>${typeof x.pop === 'number' ? x.pop + '%' : ''}</span></li>`).join('');
     const wind = wx.cur && typeof wx.cur.wind === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.wind : cur.wind;
-    const windText = typeof wind === 'number' ? ' · 바람 초속 ' + Math.round(wind) + 'm' + (wind >= WIND_STRONG ? '(강함)' : '') : '';
+    const windText = typeof wind === 'number' && wind >= WIND_STRONG ? ' · 바람이 강합니다' : '';
+    // 우산 판정을 한 줄로 먼저 보여 준다(강수 확률 60% 이상이면 필요, 30% 미만이면 필요 없음)
+    const act = maxPop >= 60 ? ['is-need', '우산이 필요합니다'] : maxPop < 30 ? ['is-ok', '우산은 필요 없습니다'] : ['is-mid', '비가 올 수도 있습니다'];
     return `<div class="card-inner wxc">${wxFx(code, wind)}<div class="tag">${tag}</div>
       <div class="wx-now">${wxIcon(code)}<div><h1 class="title">${deg(temp)} <small>${esc(wxKind(code)[1])}</small></h1>
-        <p class="wx-sum">${td ? '최고 ' + deg(td.max) + ' · 최저 ' + deg(td.min) + ' · ' : ''}앞으로 ${rest.length}시간 강수 확률 최대 ${maxPop}%${maxPop >= 60 ? ' · 우산이 필요합니다' : ''}${windText}</p></div>${wxSayHTML(wx, 'today')}</div>
+        <p class="wx-sum">${td ? '최저 ' + deg(td.min) + ' · 최고 ' + deg(td.max) : ''}${windText}</p></div>
+        <p class="wx-act ${act[0]}"><b>${act[1]}</b><small>앞으로 ${rest.length}시간 강수 확률 최대 ${maxPop}%</small></p>${wxSayHTML(wx, 'today')}</div>
       <ul class="wx-hours">${hours}</ul>${foot}</div>`;
   }
   // 정류장 한 곳의 지금 상태. 종점(받은 방향 이름이 정류장 이름과 같은 차)은 들어오는 차로 따로 본다
   function busView(stop) {
     const bus = state.bus && Date.now() - state.bus.recv < 150000 ? state.bus : null;
     const sd = bus && bus.stops[stop.id];
-    if (!sd || !sd.at || bus.now - sd.at > 400000) return { ready: false };   // 서버가 오래된 값을 돌려준 경우(받지 못해 마지막 값을 준 때)
+    if (!sd || !sd.at || bus.now - sd.at > 400000) {   // 서버가 오래된 값을 돌려준 경우(받지 못해 마지막 값을 준 때)
+      state.busFirst = state.busFirst || Date.now();
+      // 응답은 왔는데 값이 없거나 45초 넘게 받지 못하면 '확인 중'이 아니라 받지 못한 것으로 알린다
+      return { ready: false, fail: !!bus || Date.now() - (state.bus ? state.bus.recv : state.busFirst) > 45000 };
+    }
     const age = (bus.now - sd.at) / 1000 + (Date.now() - bus.recv) / 1000;
     const left = (sec) => (sec == null ? null : sec - age);
     const mine = (sd.buses || []).filter((x) => !stop.routes || stop.routes.indexOf(x.route) >= 0);
@@ -1255,21 +1287,43 @@
     const pos = sd.pos || [];
     const meters = (b) => Math.hypot((b.lat - stop.lat) * 111320, (b.lon - stop.lon) * 111320 * Math.cos(stop.lat * Math.PI / 180));
     const waiting = !src && stop.lat ? pos.filter((b) => meters(b) <= 60).length : 0;
-    return { ready: true, out, inb, pos, waiting, left1: src ? left(src.sec1) : null, left2: src ? left(src.sec2) : null,
+    return { ready: true, age, out, inb, pos, waiting, left1: src ? left(src.sec1) : null, left2: src ? left(src.sec2) : null,
       inLeft: inb ? left(inb.sec1) : null, msg: out ? out.msg1 : (inb ? '출발대기' : ''), term: (out || inb || {}).term || null,
       logKey: src ? out.route + '|' + out.dir : inb ? inb.route + '|' + inb.dir : '', terminus: !src && !!inb };
   }
-  const busMin = (sec) => { const m = Math.floor(sec / 60); const s = Math.floor(sec % 60); return m > 0 ? m + '분 ' + p2(s) + '초' : s + '초'; };
-  function busHeadline(v) {
-    if (!v.ready) return { big: '확인 중', sub: '도착 정보를 확인하고 있습니다', pos: null };
+  // 큰 글자는 분까지만 적고 초는 옆에 작게 붙인다(2~3m 거리에서 분이 먼저 읽히게)
+  const busMin = (sec) => Math.floor(sec / 60) + '분';
+  const busSec = (sec) => p2(Math.floor(sec % 60)) + '초';
+  // 걸어가는 시간과 남은 시간을 비교한 판정. 걸어서 몇 분인지는 어림값이라 타기 어려운 경우만 분명하게 나눈다
+  function busGo(left, stop) {
+    const walk = stop && stop.walkMin ? stop.walkMin * 60 : 0;
+    if (!walk || left == null) return null;
+    const spare = left - walk;
+    if (spare < 0) return { ok: false, text: '이번 버스는 타기 어렵습니다' };
+    if (spare < 240) return { ok: true, text: '지금 나가면 탈 수 있습니다' };
+    return { ok: true, text: Math.floor(spare / 60) + '분 뒤에 나가도 탈 수 있습니다' };
+  }
+  // kind: live(남은 시간) · soon(곧 도착·도착) · wait(출발 대기) · none(값 없음) · end(운행 종료). 화면은 kind 로 색과 크기를 나눈다
+  function busHeadline(v, stop) {
+    if (!v.ready) return v.fail
+      ? { kind: 'none', big: '정보 없음', sub: '도착 정보를 받지 못했습니다. 정류장 안내판을 확인하세요', pos: null }
+      : { kind: 'none', big: '확인 중', sub: '도착 정보를 확인하고 있습니다', pos: null };
+    const next = v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '';
     if (v.left1 != null) {
-      if (v.left1 <= 0) return { big: '도착', sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: 0 };
-      return { big: v.left1 <= 60 ? '곧 도착' : busMin(v.left1), sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: v.left1 };
+      // 도착하고 30초가 지나면 앞 버스는 떠난 것으로 보고 다음 버스를 크게 보여 준다
+      if (v.left1 < -30) return v.left2 > 60
+        ? { kind: 'live', big: busMin(v.left2), sec: busSec(v.left2), sub: '앞 버스는 방금 출발했습니다', pos: v.left2, go: busGo(v.left2, stop) }
+        : { kind: 'none', big: '출발함', sub: '다음 버스 정보를 기다리고 있습니다', pos: null };
+      if (v.left1 <= 0) return { kind: 'soon', big: '도착', sub: next, pos: 0, go: busGo(v.left1, stop) };
+      if (v.left1 <= 60) return { kind: 'soon', big: '곧 도착', sub: next, pos: v.left1, go: busGo(v.left1, stop) };
+      return { kind: 'live', big: busMin(v.left1), sec: busSec(v.left1), sub: next, pos: v.left1, go: busGo(v.left1, stop) };
     }
-    if (v.waiting > 0) return { big: '출발 대기', sub: '종점에 버스 ' + v.waiting + '대가 서 있습니다' + (v.term ? ' · 배차 간격 약 ' + v.term + '분' : ''), pos: 0 };
-    if (v.inLeft != null && v.inLeft > 0) return { big: busMin(v.inLeft), sub: '이 시간 뒤 종점에 들어온 차가 다시 출발합니다', pos: v.inLeft };
-    if (/운행종료/.test(v.msg)) return { big: '운행 종료', sub: '', pos: null };
-    return { big: '출발 대기', sub: v.term ? '배차 간격은 약 ' + v.term + '분입니다' : '', pos: null };
+    if (v.waiting > 0) return { kind: 'wait', big: '출발 대기', sub: '종점에 버스 ' + v.waiting + '대가 서 있습니다' + (v.term ? ' · 배차 간격 약 ' + v.term + '분' : ''), pos: 0 };
+    // 종점에 들어오는 차의 시간은 타는 시간이 아니므로 큰 숫자로 적지 않는다
+    if (v.inLeft != null && v.inLeft > 0) return { kind: 'wait', big: '출발 대기', sub: '약 ' + Math.ceil(v.inLeft / 60) + '분 뒤 종점에 버스가 들어온 다음 출발합니다', pos: v.inLeft };
+    if (/운행종료/.test(v.msg)) return { kind: 'end', big: '운행 종료', sub: '', pos: null };
+    if (!v.out && !v.inb) return { kind: 'none', big: '정보 없음', sub: '지금은 운행 정보가 없습니다', pos: null };
+    return { kind: 'wait', big: '출발 대기', sub: v.term ? '배차 간격은 약 ' + v.term + '분입니다' : '', pos: null };
   }
   // 지난 며칠의 도착 시각 가운데 지금 시각 앞뒤 45분 안의 것만 고른다
   function busHistory(stop, v) {
@@ -1306,11 +1360,9 @@
     const week = (r.week || {})[name] || {};
     const total = recent[lastWeek];
     if (total != null) {
-      const sum = hourly ? Object.keys(hourly).reduce((a, h) => a + hourly[h], 0) : 0;
-      const slot = hourly && sum > 0 && hourly[k.h] != null ? Math.round(total * hourly[k.h] / sum) : null;
-      says.push(`지난주 ${k.wd}요일엔 하루 동안 ${total}명이 탔어요.` + (slot ? ` ${k.h}~${k.h + 1}시엔 ${slot}명쯤!` : ''));
       const avg = week[k.wd];
-      if (avg) says.push(total >= avg * 1.1 ? `평소 ${k.wd}요일보다 붐빈 날이었어요.` : total <= avg * 0.9 ? `평소 ${k.wd}요일보다 한산한 날이었어요.` : `평소 ${k.wd}요일과 비슷했어요.`);
+      const cmp = !avg ? '' : total >= avg * 1.1 ? ` 평소(${Math.round(avg)}명)보다 붐빈 날이었어요.` : total <= avg * 0.9 ? ` 평소(${Math.round(avg)}명)보다 한산한 날이었어요.` : ` 평소(${Math.round(avg)}명)와 비슷했어요.`;
+      says.push(`지난주 ${k.wd}요일엔 하루 동안 ${total}명이 탔어요.` + cmp);
     } else if (hourly && hourly[k.h] != null) {
       says.push(`${k.h}~${k.h + 1}시에는 하루 평균 ${Math.round(hourly[k.h])}명이 타요.`);
     }
@@ -1318,12 +1370,20 @@
     const chips = busHistory(stop, v);
     return `<div class="story-top"><img src="${MONG(stop.teller || stop.walker || 'chorong')}" alt=""><div class="story-say">${says.slice(0, 3).map((t, i) => `<p style="--i:${i}">${esc(t)}</p>`).join('')}</div></div>${chips ? `<div class="bus-hist">${chips}</div>` : ''}`;
   }
+  // 강수 확률: 지난 시간은 빼고, 30% 미만이면 막대 없이 판정 한 줄만 적는다
   function rainHTML() {
     const r = state.rain;
     if (!r || r.day !== ymd(now())) return '';
-    const max = Math.max.apply(null, r.hours.map((x) => x.p));
-    const bars = r.hours.map((x) => `<i><em style="height:${Math.max(6, x.p)}%"></em><u>${x.h}시</u></i>`).join('');
-    return `<div class="rain-text"><small>${r.hours[0].h}~${r.hours[r.hours.length - 1].h}시 강수 확률</small><b>최대 ${max}%</b>${max >= 60 ? '<span>우산이 필요합니다</span>' : ''}</div><div class="rain-bars">${bars}</div>`;
+    const h0 = kst(now()).h;
+    const hours = r.hours.filter((x) => x.h >= h0);
+    if (!hours.length) return '';
+    const max = Math.max.apply(null, hours.map((x) => x.p));
+    const span = hours.length > 1 ? hours[0].h + '~' + hours[hours.length - 1].h + '시' : hours[0].h + '시';
+    const say = max >= 60 ? '<span class="is-need">우산이 필요합니다</span>' : max < 30 ? '<span>우산은 필요 없습니다</span>' : '';
+    const text = `<div class="rain-text"><small>${span} 강수 확률</small><b>최대 ${max}%</b>${say}</div>`;
+    if (max < 30) return text;
+    const bars = hours.map((x) => `<i><em style="height:${x.p}%"></em><u>${x.h}시</u></i>`).join('');
+    return text + `<div class="rain-bars">${bars}</div>`;
   }
   // 귀여운 마을버스(두근두근 당곡 그림체: 굵은 테두리, 파스텔, 볼 터치). 창문에는 친구가 탄다
   function busSVG(stop) {
@@ -1357,13 +1417,13 @@
     const sc = xy(b.school);
     const st = xy(stop);
     const others = stops.filter((x) => x !== stop).map((x) => `<span class="bm-pin is-other" style="${pos(x)}"><i></i><b>${esc(x.name)}</b></span>`).join('');
-    const mapHTML = map.src && bd ? `<div class="bus-map"><div class="bm" style="--x0:${sc[0].toFixed(2)}%;--y0:${sc[1].toFixed(2)}%;--x1:${st[0].toFixed(2)}%;--y1:${st[1].toFixed(2)}%">
+    const mapHTML = map.src && bd ? `<div class="bus-map"><div class="bm" style="--x0:${sc[0].toFixed(2)}%;--y0:${sc[1].toFixed(2)}%;--x1:${st[0].toFixed(2)}%;--y1:${st[1].toFixed(2)}%;--dx:${(st[0] - sc[0]).toFixed(2)}%;--dy:${(st[1] - sc[1]).toFixed(2)}%">
         <img class="bm-img" src="${esc(map.src)}" alt="" draggable="false">
         <svg class="bm-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="${sc[0].toFixed(2)}" y1="${sc[1].toFixed(2)}" x2="${st[0].toFixed(2)}" y2="${st[1].toFixed(2)}"/></svg>
         ${others}
         <span class="bm-pin is-school" style="${pos(b.school)}"><i></i><b>${esc((b.school || {}).name || '학교')}</b></span>
-        <span class="bm-pin is-stop" style="${pos(stop)}"><i></i><b>${esc(stop.name)}</b></span>
-        <img class="bm-walker" src="${MONG(stop.walker || 'chorong')}" alt="">
+        <span class="bm-pin is-stop${st[1] > 74 ? ' is-side' : ''}" style="${pos(stop)}"><i></i><b>${esc(stop.name)}</b></span>
+        <div class="bm-walk"><img class="bm-walker" src="${MONG(stop.walker || 'chorong')}" alt=""></div>
         <div class="bm-buses" id="busDots"></div>
         <small class="bm-live" id="busLive"></small>
         <small class="bm-credit">© OpenStreetMap</small>
@@ -1372,10 +1432,12 @@
     return `<div class="card-inner busc" style="--bc:${esc(stop.color || '#a8e6cf')}">
       <div class="bus-top">
         <div class="bus-main">
-          <div class="tag">하교 버스</div>
-          <h1 class="title"><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b>${esc(stop.toward || '')}</h1>
+          <div class="bus-head"><div class="tag">하교 버스</div><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b></div>
+          <h1 class="title">${esc(stop.toward || '')}</h1>
           <div class="bus-where">${esc(stop.name)} 정류장${stop.walkMin ? ' · 걸어서 약 ' + esc(stop.walkMin) + '분' : ''}</div>
-          <div class="bus-time"><strong id="busBig"></strong><span id="busNext"></span></div>
+          <div class="bus-time" id="busTime"><strong id="busBig"></strong><em id="busSec"></em></div>
+          <p class="bus-go" id="busGo"></p>
+          <p class="bus-next" id="busNext"></p>
           <div class="bus-lane">
             <div class="bus-car" id="busCar">${busSVG(stop)}</div>
             <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
@@ -1424,7 +1486,8 @@
     if (!s || !b) return;
     const stops = b.stops || [];
     if (s.auto === 'weather') {
-      const line = busMode(state.content, now()) !== 'off' ? '' : stops.map((x) => `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)}<em>${esc(busHeadline(busView(x)).big)}</em></span>`).join('');
+      // 값이 있는 정류장만 적는다(값이 없으면 줄을 내지 않는다)
+      const line = busMode(state.content, now()) !== 'off' ? '' : stops.map((x) => [x, busView(x)]).filter((p) => p[1].ready).map((p) => `<span><b style="background:${esc(p[0].color || '#a8e6cf')}">${esc(p[0].routes ? p[0].routes[0] : '')}</b>${esc(p[0].name)}<em>${esc(busHeadline(p[1], p[0]).big)}</em></span>`).join('');
       if ($('wxBus') && (state.wxBus !== line || !$('wxBus').innerHTML)) { state.wxBus = line; $('wxBus').innerHTML = line; }
       return;
     }
@@ -1432,37 +1495,56 @@
     const stop = stops[s.pick] || stops[0];
     if (!stop) return;
     const v = busView(stop);
-    const h = busHeadline(v);
-    $('busBig').textContent = h.big;
-    $('busNext').textContent = h.sub;
-    // 버스 위치: 10분 이상 남으면 길 왼쪽 끝, 도착하면 정류장 앞. 정보가 없으면 길 밖에서 기다린다
+    const h = busHeadline(v, stop);
+    const set = (id, text) => { const el = $(id); if (el && el.textContent !== text) el.textContent = text; };
+    set('busBig', h.big);
+    set('busSec', h.sec || '');
+    set('busGo', h.go ? h.go.text : '');
+    // 받은 지 90초가 넘은 값이면 몇 분 전 정보인지 함께 적는다
+    set('busNext', [h.sub, v.ready && v.age > 90 ? Math.floor(v.age / 60) + '분 전 정보' : ''].filter(Boolean).join(' · '));
+    const cls = (id, name) => { const el = $(id); if (el && el.className !== name) el.className = name; };
+    cls('busTime', 'bus-time is-' + h.kind);
+    cls('busGo', 'bus-go' + (h.go ? (h.go.ok ? ' is-ok' : ' is-no') : ''));
+    // 버스 위치: 10분 이상 남으면 길 왼쪽 끝, 도착하면 정류장 앞. 정보가 없으면 길 밖에서 기다린다.
+    // left 대신 transform 으로 옮겨 움직이는 동안 배치를 다시 계산하지 않게 한다
+    const car = $('busCar');
     const far = Math.min(1, Math.max(0, (h.pos || 0) / 600));
-    $('busCar').style.left = h.pos == null ? '-45%' : (44 - far * 44).toFixed(1) + '%';
-    $('busCar').className = 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : '');
+    const laneW = car._w || (car._w = car.parentNode.clientWidth || 1);
+    const tf = h.pos == null ? 'translate3d(-130%,0,0)' : 'translate3d(' + Math.round((0.44 - far * 0.44) * laneW) + 'px,0,0)';
+    if (car.style.transform !== tf) car.style.transform = tf;
+    cls('busCar', 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : ''));
     // 지도 위 실제 버스: 지도 범위 안에 있는 차만 그리고, 범위 밖에서 달리는 차는 대수만 적는다
     const bd = (b.map || {}).bounds;
     if (bd && $('busDots')) {
-      const inside = (v.pos || []).map((p) => ({ x: (p.lon - bd.west) / (bd.east - bd.west) * 100, y: (bd.north - p.lat) / (bd.north - bd.south) * 100, stop: p.stop }))
+      // 도착 정보의 구간 번호(ord1·ord2)와 같은 구간에 있는 차에 남은 시간을 붙인다(짝이 맞지 않으면 붙이지 않는다)
+      const eta = (p) => {
+        const o = v.out;
+        const left = !o || p.ord == null ? null : p.ord === o.ord1 ? v.left1 : p.ord === o.ord2 ? v.left2 : null;
+        return left == null || left < 0 ? '' : left <= 60 ? '곧 도착' : Math.ceil(left / 60) + '분 후';
+      };
+      const inside = (v.pos || []).map((p) => ({ x: (p.lon - bd.west) / (bd.east - bd.west) * 100, y: (bd.north - p.lat) / (bd.north - bd.south) * 100, stop: p.stop, eta: eta(p) }))
         .filter((p) => p.x >= 2 && p.x <= 98 && p.y >= 2 && p.y <= 98);
-      const dots = inside.map((p) => `<span class="bm-bus${p.stop ? ' is-stopped' : ''}" style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%"><i></i></span>`).join('');
+      const dots = inside.map((p) => `<span class="bm-bus${p.stop ? ' is-stopped' : ''}" style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%"><i></i>${p.eta ? `<b class="${p.x > 62 ? 'is-left' : ''}">${p.eta}</b>` : ''}</span>`).join('');
       const total = (v.pos || []).length;
-      const live = !v.ready || !total ? '' : inside.length ? '실시간 ' + inside.length + '대' : '지도 밖 ' + total + '대';
+      const live = !v.ready || !total ? '' : (v.age > 90 ? '' : '실시간 ') + (inside.length ? inside.length + '대' : '지도 밖 ' + total + '대');
       if (state.busDots !== dots || (dots && !$('busDots').innerHTML)) { state.busDots = dots; $('busDots').innerHTML = dots; }
-      if (state.busLive !== live) { state.busLive = live; $('busLive').textContent = live; }
+      if (state.busLive !== live || $('busLive').textContent !== live) { state.busLive = live; $('busLive').textContent = live; }
     }
+    let refit = false;   // 칸이 바뀌면 글자 배율은 마지막에 한 번만 다시 맞춘다
     const story = busStory(stop, v);
-    if ($('busStory') && (state.busStoryHTML !== story || (story && !$('busStory').innerHTML))) { state.busStoryHTML = story; $('busStory').innerHTML = story; fitCard(); }
+    if ($('busStory') && (state.busStoryHTML !== story || (story && !$('busStory').innerHTML))) { state.busStoryHTML = story; $('busStory').innerHTML = story; refit = true; }
     const ride = rideHTML(stop);
-    if ($('busRide') && (state.busRide !== ride || (ride && !$('busRide').innerHTML))) { state.busRide = ride; $('busRide').innerHTML = ride; fitCard(); }
+    if ($('busRide') && (state.busRide !== ride || (ride && !$('busRide').innerHTML))) { state.busRide = ride; $('busRide').innerHTML = ride; refit = true; }
     const week = rideWeekHTML(stop);
-    if ($('busWeek') && (state.busWeek !== week || (week && !$('busWeek').innerHTML))) { state.busWeek = week; $('busWeek').innerHTML = week; fitCard(); }
+    if ($('busWeek') && (state.busWeek !== week || (week && !$('busWeek').innerHTML))) { state.busWeek = week; $('busWeek').innerHTML = week; refit = true; }
     const rain = rainHTML();
-    if (state.busRain !== rain || (rain && !$('busRain').innerHTML)) { state.busRain = rain; $('busRain').innerHTML = rain; }
+    if (state.busRain !== rain || (rain && !$('busRain').innerHTML)) { state.busRain = rain; $('busRain').innerHTML = rain; refit = true; }
     const other = stops.filter((x) => x !== stop).map((x) => {
-      const o = busHeadline(busView(x));
-      return `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)} · ${esc(x.toward || '')}<em>${esc(o.big)}</em></span>`;
+      const o = busHeadline(busView(x), x);
+      return `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b><i>${esc(x.name)}</i><em>${esc(o.big)}</em></span>`;
     }).join('');
-    if (state.busOther !== other || (other && !$('busOther').innerHTML)) { state.busOther = other; $('busOther').innerHTML = other; }
+    if (state.busOther !== other || (other && !$('busOther').innerHTML)) { state.busOther = other; $('busOther').innerHTML = other; refit = true; }
+    if (refit) fitCard();
   }
 
   // ---------- 급식: 나이스(NEIS) 급식식단정보를 화면이 직접 받는다 ----------

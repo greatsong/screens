@@ -868,9 +868,9 @@ body.is-stopped #promo { display: none !important; }
 .bus-hist li b { min-width: 11vmin; font-weight: 800; }
 .bus-hist li span { border: 0.25vmin solid var(--line); border-radius: 99px; padding: 0.1vmin 1.4vmin; font-weight: 700; font-variant-numeric: tabular-nums; }
 .bus-map { display: flex; align-items: center; justify-content: center; }
-.bm { position: relative; height: calc(var(--f, 1) * 34vmin); max-width: 100%; aspect-ratio: 988 / 940; border-radius: 3vmin; overflow: hidden; border: 0.5vmin solid #2b2b3a; }
-.bm-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.bm-line { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bm { position: relative; height: calc(var(--f, 1) * 34vmin); max-width: 100%; border-radius: 3vmin; overflow: hidden; border: 0.5vmin solid #2b2b3a; }
+.bm-img { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.bm-line { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; }
 .bm-line line { stroke: #ff5d8f; stroke-width: 1.3; stroke-linecap: round; stroke-dasharray: 2.2 2.6; animation: bm-dash 1s linear infinite; vector-effect: non-scaling-stroke; stroke-width: 0.9vmin; }
 .bm-pin { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
 .bm-pin i { width: 3vmin; height: 3vmin; border-radius: 50%; border: 0.6vmin solid #2b2b3a; background: #fff; }
@@ -954,11 +954,11 @@ body.is-stopped #promo { display: none !important; }
 /* 날씨 배경 효과와 그림 움직임 */
 .wxc { position: relative; }
 .wxc > :not(.wx-fx) { position: relative; z-index: 1; }
-.wx-fx { position: absolute; inset: -6vmin -4vmin; overflow: hidden; pointer-events: none; z-index: 0; }
+.wx-fx { position: absolute; top: -6vmin; right: -4vmin; bottom: -6vmin; left: -4vmin; overflow: hidden; pointer-events: none; z-index: 0; }
 .wx-fx i { position: absolute; display: block; }
 .fx-rain { top: -12%; width: 0.5vmin; height: 5vmin; border-radius: 99px; background: linear-gradient(transparent, #4dabf7); opacity: 0.75; animation: fx-rain 0.9s linear infinite; }
 .wx-fx.is-windy .fx-rain { animation-name: fx-rain-wind; transform: rotate(24deg); }
-.fx-flash { inset: 0; background: #fff; opacity: 0; animation: fx-flash 6s linear infinite; }
+.fx-flash { top: 0; right: 0; bottom: 0; left: 0; background: #fff; opacity: 0; animation: fx-flash 6s linear infinite; }
 .fx-snow { top: -8%; width: calc(var(--s) * 1.8vmin); height: calc(var(--s) * 1.8vmin); border-radius: 50%; background: #fff; border: 0.3vmin solid #a5d8ff; box-shadow: 0 0 1vmin rgba(165, 216, 255, 0.9); animation: fx-snow 7s linear infinite; }
 .wx-fx.is-windy .fx-snow { animation-name: fx-snow-wind; }
 /* 햇살: 줄무늬 없이 부드러운 둥근 빛만 커졌다 작아진다(방사형 줄무늬는 쓰지 않는다) */
@@ -1007,7 +1007,7 @@ body.is-stopped #promo { display: none !important; }
 .fx-pile { left: -4%; right: -4%; bottom: 0; height: 7vmin; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(#fff, #e7f1fb); box-shadow: 0 0 2vmin rgba(165, 216, 255, 0.7);
   transform-origin: 50% 100%; animation: fx-pile 2.4s ease-out both; }
 .fx-duck { bottom: 4vmin; width: 15vmin; height: 10.4vmin; }
-.fx-duck span { position: absolute; inset: 0; display: block; transform-origin: 50% 100%; animation-duration: 2.6s; animation-delay: var(--d); animation-fill-mode: both; }
+.fx-duck span { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: block; transform-origin: 50% 100%; animation-duration: 2.6s; animation-delay: var(--d); animation-fill-mode: both; }
 .fx-duck svg { display: block; width: 100%; height: 100%; }
 .dk-snow { animation-name: dk-snow; }
 .dk-mold { animation-name: dk-mold; animation-timing-function: ease-in-out; }
@@ -1089,11 +1089,11 @@ body.is-stopped #promo { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .story-top img, .story-say p { animation: none; } }
 
 /* 지도 위 실제 버스(실시간 위치) */
-.bm-buses { position: absolute; inset: 0; pointer-events: none; }
+.bm-buses { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
 .bm-bus { position: absolute; transform: translate(-50%, -50%); width: 5.4vmin; height: 3.6vmin; border-radius: 1.2vmin; background: var(--bc); border: 0.5vmin solid #2b2b3a; box-shadow: 0 0.5vmin 0 rgba(43, 43, 58, 0.25); animation: bm-bus 1s ease-in-out infinite; z-index: 3; }
 .bm-bus::before { content: ''; position: absolute; left: 14%; right: 14%; top: 16%; height: 36%; border-radius: 0.5vmin; background: #eaf6ff; border: 0.3vmin solid #2b2b3a; }
 .bm-bus::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -0.9vmin; height: 1.1vmin; background: radial-gradient(circle at 18% 50%, #2b2b3a 0.5vmin, transparent 0.55vmin), radial-gradient(circle at 82% 50%, #2b2b3a 0.5vmin, transparent 0.55vmin); }
-.bm-bus i { position: absolute; inset: -1.4vmin; border-radius: 50%; border: 0.4vmin solid var(--bc); opacity: 0; animation: bm-ring 1.6s ease-out infinite; }
+.bm-bus i { position: absolute; top: -1.4vmin; right: -1.4vmin; bottom: -1.4vmin; left: -1.4vmin; border-radius: 50%; border: 0.4vmin solid var(--bc); opacity: 0; animation: bm-ring 1.6s ease-out infinite; }
 .bm-bus.is-stopped { animation: none; }
 .bm-live { position: absolute; left: 0.8vmin; top: 0.8vmin; font-size: 1.9vmin; font-weight: 900; color: #2b2b3a; background: rgba(255, 255, 255, 0.9); border: 0.3vmin solid #2b2b3a; border-radius: 99px; padding: 0 1.1vmin; z-index: 4; }
 .bm-live:empty { display: none; }
@@ -1185,3 +1185,204 @@ body.is-stopped #promo { display: none !important; }
 }
 
 .wx-bus span { white-space: nowrap; }
+
+/* ---------- 버스·날씨 카드 다듬기(전문가 검토 반영) ----------
+ * 1) 구형 Chromium: inset·aspect-ratio 를 사용하지 않고, flex gap 이 없는 브라우저(html.no-gap)에는 여백을 따로 준다
+ * 2) 움직임은 transform·opacity 로만(배치와 칠하기를 다시 하지 않게)
+ * 3) 큰 글자는 상태(kind)에 따라 색과 크기가 달라지고, 그 아래에 "지금 나가면 탈 수 있는지"를 한 줄로 적는다 */
+.bm { --bh: 33; height: calc(var(--f, 1) * var(--bh) * 1vmin); width: calc(var(--f, 1) * var(--bh) * 1.051vmin); flex: none; }
+.bus-car { left: 0; transform: translate3d(-130%, 0, 0); transition: transform 1s linear; animation: none; will-change: transform; }
+.bus-car.is-away { transition: none; }
+.bus-car svg { animation: bus-bob 0.6s ease-in-out infinite; }
+.bus-car.is-near svg { animation-duration: 0.35s; }
+.bus-wheel { animation-timing-function: steps(8); }
+.bus-road { overflow: hidden; background-image: none; animation: none; }
+.bus-road::after { content: ''; position: absolute; left: 0; top: 50%; width: calc(100% + 9vmin); height: 0.5vmin; margin-top: -0.25vmin;
+  background: repeating-linear-gradient(90deg, #fff3b0 0, #fff3b0 4vmin, transparent 4vmin, transparent 9vmin); animation: bus-road 0.9s linear infinite; will-change: transform; }
+@keyframes bus-road { to { transform: translateX(-9vmin); } }
+.bm-walk { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; animation: bm-walk 7s ease-in-out infinite; will-change: transform; }
+.bm-walker { animation: none; }
+@keyframes bm-walk { 0%, 8% { transform: translate(0, 0); } 70%, 100% { transform: translate(var(--dx), var(--dy)); } }
+.bm-pin.is-stop i { position: relative; animation: none; }
+.bm-pin.is-stop i::after { content: ''; position: absolute; top: -0.6vmin; right: -0.6vmin; bottom: -0.6vmin; left: -0.6vmin; border-radius: 50%; border: 0.5vmin solid rgba(255, 93, 143, 0.75); animation: bm-pulse 1.4s ease-out infinite; }
+@keyframes bm-pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.6); opacity: 0; } }
+.bm-line line { animation-timing-function: steps(4); }
+/* 지도 이름표: 학교와 다른 정류장 이름은 점 위쪽에 달아 서로 겹치거나 지도 아래에서 잘리지 않게 한다 */
+.bm-pin.is-school { z-index: 2; }
+.bm-pin.is-stop { z-index: 3; }
+.bm-pin.is-other { z-index: 1; }
+.bm-pin.is-school b, .bm-pin.is-other b { top: auto; bottom: 100%; margin: 0 0 0.3vmin; }
+/* 작은 날씨 그림은 움직이지 않는다(큰 그림 하나만 움직인다) */
+.wx-hours .wx-rays, .wx-week .wx-rays, .wx-hours .wx-drop, .wx-week .wx-drop, .wx-hours .wx-flake, .wx-week .wx-flake, .wx-hours .wx-bolt, .wx-week .wx-bolt { animation: none; }
+.fx-snow { box-shadow: none; }
+.fx-fog { filter: none; height: 10vmin; border-radius: 0; background: linear-gradient(transparent, rgba(255, 255, 255, 0.55) 35%, rgba(255, 255, 255, 0.55) 65%, transparent); }
+
+/* 남은 시간: 분은 크게, 초는 옆에 작게 */
+.bus-time { align-items: baseline; gap: 0 1.6vmin; }
+.bus-time em { font-style: normal; font-size: calc(var(--f, 1) * 5.4vmin); font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bus-time em:empty { display: none; }
+.bus-time.is-soon strong { background: #ffd43b; }
+.bus-time.is-wait strong { font-size: calc(var(--f, 1) * 10vmin); background: none; box-shadow: inset 0 0 0 0.6vmin #2b2b3a; border-radius: 3vmin; padding: 0.4vmin 3vmin; letter-spacing: -0.02em; }
+.bus-time.is-none strong, .bus-time.is-end strong { font-size: calc(var(--f, 1) * 8vmin); background: none; color: var(--muted); padding: 0; letter-spacing: -0.02em; }
+.bus-go { font-size: calc(var(--f, 1) * 4.8vmin); font-weight: 900; line-height: 1.25; margin-top: calc(var(--f, 1) * 0.6vmin); }
+.bus-go:empty, .bus-next:empty { display: none; }
+.bus-go.is-ok { color: #087f5b; }
+.bus-go.is-no { color: #d9480f; }
+.bus-next { font-size: calc(var(--f, 1) * 3.4vmin); font-weight: 700; line-height: 1.3; margin-top: calc(var(--f, 1) * 0.3vmin); }
+/* 강수 확률: 글자는 진한 파랑(밝은 바탕에서 읽히게), 우산이 필요하면 알약 모양으로 강조 */
+.rain-text b { color: #1c7ed6; }
+.rain-text span { color: #2b2b3a; font-weight: 800; }
+.rain-text span.is-need { align-self: flex-start; color: #fff; background: #1c7ed6; border-radius: 99px; padding: 0.2vmin 1.6vmin; }
+.rain-bars i { border-bottom: 0.35vmin solid #74c0fc; border-radius: 1vmin 1vmin 0 0; }
+.rain-bars em { background: #4dabf7; border-radius: 1vmin 1vmin 0 0; }
+/* 다른 노선 줄: 노선 · 정류장 · 값(값을 크게) */
+.bus-other span { flex-wrap: nowrap; white-space: nowrap; }
+.bus-other i { font-style: normal; overflow: hidden; text-overflow: ellipsis; }
+.bus-other em { font-size: 1.35em; }
+/* 오늘 날씨의 우산 판정 줄 */
+.wx-act { flex-basis: 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 2.4vmin; font-size: calc(var(--f, 1) * 5vmin); line-height: 1.25; }
+.wx-act b { font-weight: 900; }
+.wx-act small { font-size: 0.62em; font-weight: 700; color: var(--muted); }
+.wx-act.is-need b { color: #fff; background: #1c7ed6; border-radius: 99px; padding: 0.2vmin 2.4vmin; }
+.wx-act.is-ok b { color: #087f5b; }
+.wx-now { flex-wrap: wrap; }
+.wx-foot .source { text-align: right; }
+
+@media (orientation: portrait) {
+  /* 버스 카드: 통계 칸을 낮추고 두 그래프를 나란히 두어 글자 배율(--f)이 줄지 않게 한다 */
+  .bm { --bh: 28; }
+  .bus-time strong { font-size: calc(var(--f, 1) * 17vmin); }
+  .bus-time em { font-size: calc(var(--f, 1) * 6.4vmin); }
+  .bus-time.is-wait strong { font-size: calc(var(--f, 1) * 13vmin); }
+  .bus-time.is-none strong, .bus-time.is-end strong { font-size: calc(var(--f, 1) * 10vmin); }
+  .bus-go { font-size: calc(var(--f, 1) * 5.4vmin); }
+  .bus-next { font-size: calc(var(--f, 1) * 3.8vmin); }
+  .bus-where { font-size: calc(var(--f, 1) * 3.8vmin); }
+  .busc .title { font-size: calc(var(--f, 1) * 6vmin); flex-wrap: nowrap; white-space: nowrap; }
+  .bus-head .bus-route { font-size: calc(var(--f, 1) * 6vmin); }
+  .bus-lane { height: calc(var(--f, 1) * 14vmin); }
+  .bus-car { width: calc(var(--f, 1) * 19vmin); }
+  .bus-wait img { height: calc(var(--f, 1) * 7.6vmin); }
+  .bus-sign { font-size: calc(var(--f, 1) * 2.8vmin); }
+  .rain-text { flex-wrap: wrap; gap: 0 1.6vmin; font-size: calc(var(--f, 1) * 3.6vmin); }
+  .rain-text small { flex-basis: 100%; }
+  .rain-bars { height: calc(var(--f, 1) * 10vmin); padding-bottom: calc(var(--f, 1) * 4vmin); }
+  .rain-bars u { font-size: calc(var(--f, 1) * 3vmin); }
+  .bus-other { font-size: calc(var(--f, 1) * 4vmin); }
+  .bus-tiles { flex-direction: row; flex-wrap: wrap; }
+  .bus-tiles .bus-ride { flex: 1 1 0; }
+  .bus-tiles .bus-story { flex: 1 1 100%; }
+  .bus-tile { padding: calc(var(--f, 1) * 1.6vmin) 2.2vmin; }
+  .bus-tile small { flex-direction: column; font-size: calc(var(--f, 1) * 3vmin); line-height: 1.25; }
+  .bus-tile small span { font-size: 0.82em; }
+  .bus-tile p { font-size: calc(var(--f, 1) * 2.8vmin); white-space: nowrap; }
+  .bus-tile .ride-bars { height: auto; flex: 1 1 auto; min-height: calc(var(--f, 1) * 13vmin); padding-bottom: calc(var(--f, 1) * 3.6vmin); margin-top: calc(var(--f, 1) * 1vmin); }
+  .ride-bars u { font-size: calc(var(--f, 1) * 2.6vmin); }
+  .ride-bars i:nth-child(even) u { visibility: hidden; }
+  .ride-bars i.on u { visibility: visible; }
+  .ride-week i:nth-child(even) u { visibility: visible; }
+  .ride-week u { font-size: calc(var(--f, 1) * 3vmin); }
+  .ride-week b { font-size: calc(var(--f, 1) * 2.8vmin); }
+  .story-top img { height: calc(var(--f, 1) * 11vmin); }
+  .story-say p { font-size: calc(var(--f, 1) * 3.4vmin); }
+  .bus-story .bus-hist { display: none; }   /* 세로에서는 말풍선이 지난주 도착 시각을 말하므로 목록은 내지 않는다 */
+  .bus-tiles .bus-ride { display: flex; flex-direction: column; }
+  /* 날씨 카드 */
+  .wx-act { font-size: calc(var(--f, 1) * 6.4vmin); margin-top: calc(var(--f, 1) * 1vmin); }
+  .wx-top { flex-direction: column; align-items: stretch; }
+  .wx-top .wx-say { align-items: flex-start; }
+  .wx-top .wx-tip p { font-size: calc(var(--f, 1) * 5.8vmin); }
+  .wx-top .wx-tip img { height: calc(var(--f, 1) * 17vmin); }
+  /* 일주일은 날짜마다 한 줄(요일 · 그림 · 최고/최저 · 강수 확률이 세로로 정렬된다) */
+  .wx-week { flex-direction: column; flex-wrap: nowrap; gap: 1.4vmin; margin-top: calc(var(--f, 1) * 2.4vmin); }
+  .wx-week li { flex: none; flex-direction: row; align-items: center; gap: 3vmin; padding: calc(var(--f, 1) * 0.8vmin) 3.4vmin; }
+  .wx-week b { flex: 0 0 21vmin; font-size: calc(var(--f, 1) * 4.6vmin); }
+  .wx-week .wx-ic { flex: none; width: calc(var(--f, 1) * 9.4vmin); }
+  .wx-week .wx-t { flex: 1; gap: 1.6vmin; }
+  .wx-week .wx-t em { font-size: calc(var(--f, 1) * 5.8vmin); min-width: 2.2em; text-align: right; }
+  .wx-week .wx-t i { font-size: calc(var(--f, 1) * 4.6vmin); }
+  .wx-week .wx-p { flex: none; font-size: calc(var(--f, 1) * 3.8vmin); text-align: right; }
+  .wx-foot { flex-direction: column; align-items: flex-start; gap: 1.2vmin; margin-top: calc(var(--f, 1) * 2.4vmin); }
+  .wx-bus { flex-direction: row; flex-wrap: wrap; gap: 1vmin 4vmin; font-size: calc(var(--f, 1) * 3.8vmin); }
+  .wx-bus em { font-size: 1.2em; }
+  .wx-foot .source { margin-top: 0; text-align: left; white-space: nowrap; }
+  /* 지도 옆 열: 강수 확률은 지도 윗선에, 다른 노선은 지도 아랫선에 맞춘다 */
+  .busc, .bus-top { gap: calc(var(--f, 1) * 2.4vmin); }
+  .bus-top .bus-side { grid-template-rows: auto 1fr auto; row-gap: 1.6vmin; align-items: stretch; }
+  .bus-top .bus-side .bus-map { grid-row: 1 / 4; }
+  .bus-top .bus-side .bus-rain { grid-row: 1; }
+  .bus-top .bus-side .bus-other { grid-row: 3; }
+  /* 이야기 칸은 상자 없이 말풍선만 */
+  .bus-tile.bus-story { background: none; border: 0; box-shadow: none; padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .bus-car svg, .bus-road::after, .bm-walk, .bm-pin.is-stop i::after { animation: none; } }
+
+/* flex gap 이 없는 구형 브라우저(app.js 가 html 에 no-gap 을 붙인다): 사이 여백을 margin 으로 준다 */
+.no-gap .busc > * + *, .no-gap .bus-top > * + *, .no-gap .bus-side > * + * { margin-top: 2vmin; }
+.no-gap .bus-tiles > * { margin: 0 1vmin 1.6vmin 0; }
+.no-gap .busc .title > * + *, .no-gap .bus-time > * + *, .no-gap .wx-act > * + * { margin-left: 1.8vmin; }
+.no-gap .bus-other span > * + *, .no-gap .wx-bus span > * + *, .no-gap .story-top > * + *, .no-gap .wx-tip > * + * { margin-left: 1.3vmin; }
+.no-gap .ride-bars i + i { margin-left: 0.5vmin; }
+.no-gap .ride-week i + i { margin-left: 1.6vmin; }
+.no-gap .rain-bars i + i { margin-left: 1vmin; }
+.no-gap .wx-now > * + * { margin-left: 3vmin; }
+.no-gap .wx-hours li, .no-gap .wx-week li { margin: 0 1vmin 1.6vmin 0; }
+.no-gap .wx-say > * + *, .no-gap .wx-foot > * + *, .no-gap .wx-bus > * + * { margin-top: 1vmin; }
+.no-gap .bus-wait > * + * { margin-left: 0.6vmin; }
+
+/* 칸: 흰 바탕에 옅은 선과 부드러운 그림자(급식·안내 카드의 목록 칸과 같은 방식). 진한 테두리는 배지·말풍선·지도·캐릭터에만 남긴다 */
+.bus-tile { background: #fff; border: 0.25vmin solid rgba(43, 43, 58, 0.14); box-shadow: 0 0.6vmin 1.8vmin rgba(43, 47, 69, 0.07); }
+.wx-hours li, .wx-week li { border: 0.25vmin solid rgba(43, 43, 58, 0.14); background: #fff; box-shadow: 0 0.6vmin 1.8vmin rgba(43, 47, 69, 0.07); }
+.wx-hours li.is-wet, .wx-week li.is-wet { background: #d0ebff; border-color: #74c0fc; }
+.wx-week li.is-om { background: rgba(255, 255, 255, 0.5); box-shadow: none; border: 0.3vmin dashed rgba(43, 43, 58, 0.4); }
+.wx-hours span.is-dry { color: var(--muted); font-weight: 700; }
+/* 막대그래프: 숫자는 바로 세우고, 기준선을 긋고, 가장 많은 시간의 회색은 지금 시간대 강조보다 약하게 */
+.ride-bars i, .ride-bars b { font-style: normal; }
+.ride-bars i.top em { background: rgba(43, 43, 58, 0.32); }
+.bus-tile .ride-bars { border-bottom: 0; background: linear-gradient(rgba(43, 43, 58, 0.28), rgba(43, 43, 58, 0.28)) 0 calc(100% - 2.6vmin) / 100% 0.25vmin no-repeat; }
+/* 다른 정류장 이름은 옆의 다른 노선 줄에 있으므로 지도에서는 점만 남긴다 */
+.bm-pin.is-other b { display: none; }
+@media (orientation: portrait) {
+  .bus-tile .ride-bars { background-position: 0 calc(100% - var(--f, 1) * 3.6vmin); }
+}
+
+/* 버스 카드 머리: 태그와 노선 배지를 한 줄에, 방향은 그 아래 한 줄로(세로 화면에서 제목이 두 줄로 넘어가지 않게) */
+.bus-head { display: flex; align-items: center; gap: 1.8vmin; margin-bottom: calc(var(--f, 1) * 1vmin); }
+.bus-head .tag { margin-bottom: 0; }
+.bus-head .bus-route { font-size: calc(var(--f, 1) * 4.6vmin); font-weight: 900; line-height: 1.25; }
+.no-gap .bus-head > * + * { margin-left: 1.8vmin; }
+
+/* 머리 왼쪽 학교 로고(흰 바탕 그림이라 둥근 흰 칸에 담는다) */
+.school-logo { display: block; height: 7.6vmin; width: auto; background: #fff; border-radius: 1.6vmin; padding: 0.7vmin 1.4vmin; box-shadow: 0 0.4vmin 1.4vmin rgba(43, 47, 69, 0.1); }
+
+/* 그래프 색(재검토): 회색과 점선을 쓰지 않는다. 막대는 노선 색, 지금 시간대·오늘 요일은 진한 남색으로 채워 한 곳만 눈에 들어오게 한다.
+ * 평소 평균은 뒤에 깔린 옅은 넓은 막대, 지난주 값은 앞의 좁은 막대 */
+.ride-bars em, .ride-bars i.top em { background: var(--bc); opacity: 0.8; border: 0; box-shadow: none; }
+.ride-bars i.on em, .bus-tile .ride-bars i.on em { background: #2b2b3a; opacity: 1; border: 0; box-shadow: none; }
+.ride-bars u { left: -60%; right: -60%; white-space: nowrap; }
+.ride-week i span em { left: 16%; right: 16%; opacity: 1; z-index: 1; }
+.ride-week s { left: 0; right: 0; bottom: 0; top: auto; height: 0; border: 0; opacity: 1; background: rgba(43, 43, 58, 0.1); border-radius: 1.2vmin 1.2vmin 0 0; text-decoration: none; }
+.bus-tile small span.lg { display: flex; align-items: center; }
+.bus-tile small span.lg i { display: inline-block; width: 1.8vmin; height: 1.8vmin; border-radius: 0.5vmin; margin: 0 0.7vmin 0 0; }
+.bus-tile small span.lg i.k1 { background: var(--bc); }
+.bus-tile small span.lg i.k2 { background: rgba(43, 43, 58, 0.14); margin-left: 1.6vmin; }
+.bus-tile .ride-bars { background-image: linear-gradient(rgba(43, 43, 58, 0.18), rgba(43, 43, 58, 0.18)); }
+.rain-bars i { background: rgba(28, 126, 214, 0.08); }
+/* 말풍선 문장은 줄을 바꾸고, 그래프 설명 줄도 잘리지 않게 한다 */
+.bus-tile .story-say p, .bus-tile p { white-space: normal; overflow: visible; }
+@media (orientation: portrait) {
+  .wx-act { margin-top: calc(var(--f, 1) * -1.6vmin); }
+  .wx-hours li { padding: calc(var(--f, 1) * 2vmin) 0.6vmin; }
+}
+
+/* 지도 위 버스의 남은 시간 이름표(도착 예정 차에만). 오른쪽 끝에 있는 차는 이름표를 왼쪽에 단다 */
+.bm-bus b { position: absolute; left: 100%; top: 50%; margin: -1.5vmin 0 0 0.8vmin; white-space: nowrap; font-size: 2.2vmin; line-height: 3vmin; font-weight: 900; color: #fff; background: #2b2b3a; border-radius: 99px; padding: 0 1.2vmin; }
+.bm-bus b.is-left { left: auto; right: 100%; margin: -1.5vmin 0.8vmin 0 0; }
+@media (orientation: portrait) { .bm-bus b { font-size: 2.6vmin; line-height: 3.4vmin; margin-top: -1.7vmin; } }
+
+/* 지도 아래쪽에 있는 정류장은 이름표를 점 옆에 단다(지도 아랫변에서 잘리지 않게). 남은 시간 이름표는 다른 이름표보다 위에 */
+.bm-pin.is-side b { top: 50%; left: 100%; margin: -1.6vmin 0 0 0.8vmin; }
+.bm-buses { z-index: 5; }
+.bm-live { top: auto; bottom: 0.8vmin; }
+@media (orientation: portrait) { .bm { --bh: 31; } }
+@media (orientation: landscape) { .bus-tile .ride-week { height: calc(var(--f, 1) * 14vmin); } }

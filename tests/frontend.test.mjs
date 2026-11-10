@@ -524,15 +524,24 @@ test('each screen shows its own stop, counts the remaining time down, and treats
     const view = env.busView(stop);
     if (role === 'a') {
       assert.equal(Math.round(view.left1), 240);       // 서버가 10초 전에 받은 값이므로 250 - 10
-      assert.equal(env.busHeadline(view).big, '4분 00초');
+      const h = env.busHeadline(view, stop);
+      assert.equal(h.big, '4분');                       // 큰 글자는 분까지, 초는 따로
+      assert.equal(h.sec, '00초');
+      assert.equal(h.kind, 'live');
+      assert.equal(h.go.text, '지금 나가면 탈 수 있습니다');   // 걸어서 3분, 남은 시간 4분
       env.advance(20 * SECOND);
-      assert.equal(env.busHeadline(env.busView(stop)).big, '3분 40초');
+      const h2 = env.busHeadline(env.busView(stop), stop);
+      assert.equal(h2.big + ' ' + h2.sec, '3분 40초');
+      env.advance(60 * SECOND);                        // 2분 40초 남으면 걸어서 3분인 정류장은 타기 어렵다
+      assert.equal(env.busHeadline(env.busView(stop), stop).go.ok, false);
+      env.advance(-60 * SECOND);
       env.advance(170 * SECOND);                       // 받은 지 150초가 넘으면 오래된 값으로 보고 쓰지 않는다
       assert.equal(env.busView(stop).ready, false);
     } else {
       assert.equal(view.terminus, true);
-      assert.equal(env.busHeadline(view).big, '7분 00초');
-      assert.match(env.busHeadline(view).sub, /종점/);
+      assert.equal(env.busHeadline(view, stop).big, '출발 대기');   // 종점에 들어오는 시간은 타는 시간이 아니라 큰 숫자로 적지 않는다
+      assert.equal(env.busHeadline(view, stop).kind, 'wait');
+      assert.match(env.busHeadline(view, stop).sub, /약 7분 뒤 종점에 버스가 들어온 다음 출발합니다/);
     }
   }
 });
@@ -635,7 +644,7 @@ test('without the weather office the card shows the rest of today on A and the w
     const html = env.weatherHTML({ auto: 'weather', view });
     if (view === 'today') {
       assert.match(html, /7° <small>맑음/);
-      assert.match(html, /최고 10° · 최저 1°/);
+      assert.match(html, /최저 1° · 최고 10°/);
       assert.match(html, /<b>지금<\/b>/);
       assert.match(html, /<b>16시<\/b>[\s\S]*?70%/);
       assert.match(html, /우산이 필요합니다/);
@@ -659,10 +668,10 @@ test('the ridership bars highlight the current hour and name the busiest one', (
   env.state.ride = { month: '2026-10', stops: { '21348|관악11': { 7: 11.1, 8: 13.9, 15: 10.7, 16: 17.8, 17: 6.1 } },
     recent: { '21348|관악11': { 20261027: 90, 20261103: 114, 20261104: 100, 20261106: 107 } } };
   const html = env.rideHTML(BUS.stops[0]);
-  assert.match(html, /시간대별 승차 인원 <span>10월 평일 평균<\/span>/);
+  assert.match(html, /시간대별 승차 인원 <span>10월 평일 하루 평균<\/span>/);
   assert.equal((html.match(/<i class/g) || []).length, 13);
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
-  assert.match(html, /지금 15~16시 <b>11명<\/b> · 가장 붐비는 시간 16~17시/);
+  assert.match(html, /평소 15~16시 <b>약 11명<\/b> · 최다 16~17시/);
   assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
 });
 
@@ -687,7 +696,7 @@ test('the weather office forecast takes over, and only the days beyond it come f
     if (withKma) {
       assert.match(today, /8° <small>비/);                       // 지금 날씨는 기상청 실황
       assert.match(today, /집에 가는 길에 비가 온대요! 우산 챙겨요!/);
-      assert.match(today, /바람 초속 9m\(강함\)/);
+      assert.match(today, /바람이 강합니다/);
       assert.match(week, /기상청 동네예보 · 뒤 2일은 Open-Meteo/);
       assert.equal((week.match(/<li /g) || []).length, 4);
       assert.equal((week.match(/is-om/g) || []).length, 2);
@@ -725,10 +734,10 @@ test('the weekday tile shows last week\'s real daily boardings with the usual av
   env.state.ride = { week: { [name]: { 월: 101.8, 화: 89.5, 수: 84.2, 목: 80.6, 금: 82.2 } },
     recent: { [name]: { 20261102: 109, 20261103: 75, 20261104: 88, 20261105: 67, 20261106: 83, 20261107: 58 } } };
   let html = env.rideWeekHTML(BUS.stops[1]);
-  assert.match(html, /지난주 요일별 승차 인원 <span>실제 값 · 줄은 평소<\/span>/);
-  assert.equal((html.match(/<i class/g) || []).length, 5);
-  assert.match(html, /<i class="on"><b>88<\/b><span><em style="height:81%"><\/em><s style="bottom:77%"><\/s><\/span><u>수<\/u>/);   // 88/109, 평소 84.2/109
-  assert.match(html, /지난주 수요일 <b>88명<\/b> · 평소 84명/);
+  assert.match(html, /지난주 요일별 승차 인원 <span class="lg"><i class="k1"><\/i>지난주 <i class="k2"><\/i>평소 평균<\/span>/);
+  assert.equal((html.match(/<i class="(on)?"><b>/g) || []).length, 5);
+  assert.match(html, /<i class="on"><b>88<\/b><span><s style="height:77%"><\/s><em style="height:81%"><\/em><\/span><u>수<\/u>/);   // 88/109, 평소 84.2/109
+  assert.doesNotMatch(html, /<p>/);   // 지난주 값은 이야기 칸이 말하므로 설명 줄을 두지 않는다
   env.state.ride.recent = {};
   html = env.rideWeekHTML(BUS.stops[1]);
   assert.match(html, /요일별 하루 승차 인원 <span>최근 한 달<\/span>/);
@@ -742,8 +751,8 @@ test('the story tile tells last week\'s same weekday: real arrivals first, then 
   const stop = BUS.stops[0];
   env.state.ride = { stops: { '21348|관악11': { 14: 5, 15: 10, 16: 25, 17: 10 } }, week: { '21348|관악11': { 화: 100 } }, recent: { '21348|관악11': { 20261103: 120 } } };
   let html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
-  assert.match(html, /지난주 화요일엔 하루 동안 120명이 탔어요\. 15~16시엔 24명쯤!/);   // 120 × 10/50
-  assert.match(html, /평소 화요일보다 붐빈 날이었어요\./);
+  assert.match(html, /지난주 화요일엔 하루 동안 120명이 탔어요\. 평소\(100명\)보다 붐빈 날이었어요\./);
+  assert.doesNotMatch(html, /명쯤/);   // 시간대 그래프와 같은 숫자를 되풀이하지 않는다
   env.state.bus = { recv: env.now(), now: env.now(), stops: {}, log: { 21348: { '관악11|봉천역': [{ d: '20261109', t: ['15:18'] }, { d: '20261103', t: ['14:10', '15:12', '15:26', '16:40'] }] } } };
   html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
   assert.match(html, /지난주 화요일 이 시간엔 15:12, 15:26에 버스가 왔어요!/);
