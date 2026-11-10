@@ -463,24 +463,33 @@ check('닉네임 등록 후 순위에 이름이 나옴', n1.ok && n1.rank === 1 
 check('한 기록에는 닉네임을 한 번만', !post({ api: 'gamename', code: g1.code, name: '바꿔치기' }).ok);
 const low = play(0, 'screen-a-game03');
 check('0점은 순위에 넣지 않음(코드 없음)', low.ok && !low.top && !low.code);
-for (let i = 0; i < 10; i++) play(60 + i, 'screen-b-gm' + String(i).padStart(4, '0'));
+const noName = play(55, 'screen-a-game06');
+check('닉네임을 적지 않은 기록은 순위에 나오지 않음', noName.ok && noName.top && noName.board.length === 1 && noName.board[0].n === '두더지왕', noName);
+const next = play(50, 'screen-a-game07');
+check('닉네임을 적지 않은 기록은 순위 자리를 차지하지 않음', next.ok && next.rank === 1 && next.top, next);
+for (let i = 0; i < 10; i++) {
+  const r = play(60 + i, 'screen-b-gm' + String(i).padStart(4, '0'));
+  post({ api: 'gamename', code: r.code, name: '선수' + i });
+}
 const out = play(41, 'screen-a-game04');
-check('TOP 10 밖이면 시트에 남기지 않고 판 수만 셈', out.ok && !out.top && out.rank === 12 && !out.code && out.plays >= 13, out);
+check('TOP 10 밖이면 시트에 남기지 않고 판 수만 셈', out.ok && !out.top && out.rank === 12 && !out.code && out.plays >= 15, out);
 const late = play(100, 'screen-a-game05');
 const lr = sheets['게임기록'].data.findIndex((r) => r[2] === 100);
 sheets['게임기록'].data[lr][0] = new Date(Date.now() - 20 * 60000).toISOString();
 check('15분이 지나면 닉네임을 적을 수 없음', !post({ api: 'gamename', code: late.code, name: '늦은사람' }).ok);
 cache.clear();
 const board = JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text);
-check('?api=games 가 높은 순 TOP 10을 돌려줌', board.ok && board.top.length === 10 && board.top[0].s === 100 && board.top.every((x, i) => !i || board.top[i - 1].s >= x.s), board);
+check('?api=games 가 닉네임을 적은 기록만 높은 순 TOP 10으로 돌려줌', board.ok && board.top.length === 10 && board.top[0].s === 69 && board.top.every((x) => x.n)
+  && board.top.every((x, i) => !i || board.top[i - 1].s >= x.s), board);
 check('순위에는 닉네임·점수·날짜만(기기·코드 없음)', board.top.every((x) => Object.keys(x).join() === 'n,s,d'));
 const ag = G.adminGames()[0];
 const top1 = ag.rows[0];
 G.adminGameHide(top1.row, true);
 const after = JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text);
-check('관리 화면에서 숨긴 기록은 순위에서 빠짐', ag.title === 'DG다 잡기 챌린지' && after.top[0].s !== 100 && G.adminGames()[0].rows[0].hidden, after.top[0]);
+check('관리 화면에는 닉네임을 적은 기록만 나옴', ag.rows.length === 11 && ag.rows.every((r) => r.name), ag.rows);
+check('관리 화면에서 숨긴 기록은 순위에서 빠짐', ag.title === 'DG다 잡기 챌린지' && top1.score === 69 && after.top[0].s !== 69 && G.adminGames()[0].rows[0].hidden, after.top[0]);
 G.adminGameHide(top1.row, false);
-check('다시 보이게 하면 돌아옴', JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text).top[0].s === 100);
+check('다시 보이게 하면 돌아옴', JSON.parse(G.doGet({ parameter: { api: 'games', game: 'mole' } }).text).top[0].s === 69);
 
 console.log('17. 학사일정 행사 (관리 화면 붙여 넣기·엑셀)');
 const oldNow17 = G.now_;

@@ -462,6 +462,10 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
   display: flex; align-items: center; padding: 1vmin 2vmin;
   background: #0b1220; border-bottom: 0.2vmin solid var(--line); font-size: 2.2vmin;
 }
+/* 위 막대에 닿은 손가락이 조금만 미끄러져도 브라우저가 그 터치를 화면 넘기기·확대 몸짓으로 가져간다. 그러면 손가락을 모두 뗄 때까지
+   작품 안의 터치까지 전달되지 않는다(화면 위쪽을 한 손으로 잡고 게임을 하면 터치가 듣지 않았다). 막대와 안내 겹창에서는 브라우저 몸짓을 끈다.
+   .player 전체에 걸면 작품(iframe) 안의 스크롤까지 막히므로 이 둘에만 건다 */
+.player-bar, .player-msg { touch-action: none; }
 .player-title { flex: 1; min-width: 0; margin: 0 2vmin; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-left { color: var(--wait); margin-right: 1vmin; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pbtn {

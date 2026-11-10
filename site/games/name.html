@@ -42,7 +42,6 @@ li:last-child { border-bottom: 0; }
 .rk { width: 26px; height: 26px; border-radius: 50%; background: #eef1f6; color: #6b7085; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
 li.r1 .rk { background: #ffe17a; color: #6b4a00; } li.r2 .rk { background: #e5e9f0; color: #3f4a5e; } li.r3 .rk { background: #ffd6b0; color: #7c3a10; }
 .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nm.wait { color: var(--muted); font-weight: 600; font-size: 14px; }
 .sc { color: var(--accent); margin-left: 8px; font-variant-numeric: tabular-nums; }
 li.me { background: #fff3d6; border-radius: 10px; padding-left: 6px; }
 .done { text-align: center; font-size: 18px; font-weight: 800; padding: 8px 0; }
@@ -80,8 +79,9 @@ footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; line-height: 
   $('title').textContent = TITLE[game] || '🎮 게임 챌린지';
   function board(top, meName) {
     $('board').hidden = false;
-    $('list').innerHTML = (top || []).map((r, i) => `<li class="r${i + 1}${meName && r.n === meName ? ' me' : ''}">${i < 3 ? '<span class="rk md">' + MEDAL[i] + '</span>' : '<span class="rk">' + (i + 1) + '</span>'}` +
-      `<span class="nm${r.n ? '' : ' wait'}">${r.n ? esc(r.n) : '✏️ 닉네임 적는 중'}</span><span class="sc">${esc(r.s)}점</span></li>`).join('') || '<li>아직 기록이 없습니다.</li>';
+    // 닉네임을 적은 기록만 보인다(적지 않은 기록은 빈 칸으로 남으므로 그리지 않는다)
+    $('list').innerHTML = (top || []).filter((r) => r.n).map((r, i) => `<li class="r${i + 1}${meName && r.n === meName ? ' me' : ''}">${i < 3 ? '<span class="rk md">' + MEDAL[i] + '</span>' : '<span class="rk">' + (i + 1) + '</span>'}` +
+      `<span class="nm">${esc(r.n)}</span><span class="sc">${esc(r.s)}점</span></li>`).join('') || '<li>아직 기록이 없습니다.</li>';
   }
   function say(t, kind) { $('msg').textContent = t; $('msg').className = 'msg' + (kind ? ' ' + kind : ''); }
   if (!/^[0-9a-f]{16}$/.test(code)) { $('form').innerHTML = '<div class="msg bad">주소가 올바르지 않습니다. 화면의 QR을 다시 찍어 주세요.</div>'; }

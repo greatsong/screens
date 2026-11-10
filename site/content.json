@@ -1,7 +1,7 @@
 {
   "version": 69,
   "publishedAt": "2026-11-11T00:07:10+09:00",
-  "appVersion": "0.9.9",
+  "appVersion": "0.9.10",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -166,17 +166,7 @@
   "noticeUntil": "",
   "controlRequestId": "20261030-100404-atest",
   "requestedAt": "2026-10-30T10:04:04+09:00",
-  "promos": [
-    {
-      "id": "2027-dgdg",
-      "title": "2027 두근두근 당곡 프로젝트",
-      "caption": "인문사회·과학·수학·정보·AI·동아리·창체 — 다양한 프로그램이 2027년에 여러분을 기다립니다!",
-      "src": "promo/2027-wide.mp4",
-      "seconds": 15,
-      "every": 8,
-      "srcTall": "promo/2027-tall.mp4"
-    }
-  ],
+  "promos": [],
   "meal": {
     "office": "B10",
     "school": "7010073"

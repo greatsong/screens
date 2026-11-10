@@ -805,9 +805,10 @@ function gameRows_() {
     row: i + 2, at: r[0], t: new Date(r[0]).getTime() || 0, game: String(r[1]), score: Number(r[2]) || 0, name: String(r[3] || '').replace(/^'/, ''), state: String(r[4] || ''), code: String(r[5] || ''),
   }));
 }
-// 높은 점수 순, 같은 점수는 먼저 낸 기록이 앞
+// 높은 점수 순, 같은 점수는 먼저 낸 기록이 앞. 닉네임을 적지 않은 기록은 순위에 넣지 않는다(화면에 빈 칸으로 남고 자리만 차지한다).
+// 닉네임을 적으면 그때 순위에 들어간다
 function gameRank_(rows, game) {
-  return rows.filter((r) => r.game === game && r.state !== '숨김')
+  return rows.filter((r) => r.game === game && r.state !== '숨김' && r.name)
     .sort((a, b) => b.score - a.score || a.t - b.t);
 }
 function gameBoardOf_(rows, game) {
@@ -1000,7 +1001,7 @@ function adminGames() {
   const rows = gameRows_();
   return Object.keys(GAMES).map((g) => ({
     game: g, title: GAMES[g].title,
-    rows: rows.filter((r) => r.game === g).sort((a, b) => b.score - a.score || a.t - b.t).slice(0, 30)
+    rows: rows.filter((r) => r.game === g && r.name).sort((a, b) => b.score - a.score || a.t - b.t).slice(0, 30)   // 닉네임 없는 기록은 화면에 나오지 않으므로 여기서도 뺀다
       .map((r) => ({ row: r.row, name: r.name, score: r.score, hidden: r.state === '숨김', at: r.at ? fmt_(new Date(r.at), 'MM/dd HH:mm') : '' })),
   }));
 }
