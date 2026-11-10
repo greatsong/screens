@@ -950,3 +950,52 @@ body.is-stopped #promo { display: none !important; }
   .wx-week li { flex: 0 0 calc(25% - 1.1vmin); }
 }
 @media (prefers-reduced-motion: reduce) { .wx-now .wx-ic, .wx-hours li, .wx-week li { animation: none; } }
+
+/* 날씨 배경 효과와 그림 움직임 */
+.wxc { position: relative; }
+.wxc > :not(.wx-fx) { position: relative; z-index: 1; }
+.wx-fx { position: absolute; inset: -6vmin -4vmin; overflow: hidden; pointer-events: none; z-index: 0; }
+.wx-fx i { position: absolute; display: block; }
+.fx-rain { top: -12%; width: 0.5vmin; height: 5vmin; border-radius: 99px; background: linear-gradient(transparent, #4dabf7); opacity: 0.75; animation: fx-rain 0.9s linear infinite; }
+.wx-fx.is-windy .fx-rain { animation-name: fx-rain-wind; transform: rotate(24deg); }
+.fx-flash { inset: 0; background: #fff; opacity: 0; animation: fx-flash 6s linear infinite; }
+.fx-snow { top: -8%; width: calc(var(--s) * 1.8vmin); height: calc(var(--s) * 1.8vmin); border-radius: 50%; background: #fff; border: 0.3vmin solid #a5d8ff; box-shadow: 0 0 1vmin rgba(165, 216, 255, 0.9); animation: fx-snow 7s linear infinite; }
+.wx-fx.is-windy .fx-snow { animation-name: fx-snow-wind; }
+/* 햇살: 줄무늬 없이 부드러운 둥근 빛만 커졌다 작아진다(방사형 줄무늬는 쓰지 않는다) */
+.fx-sun { right: -6vmin; top: -8vmin; width: 40vmin; height: 40vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255, 224, 138, 0.75) 0%, rgba(255, 224, 138, 0.3) 45%, transparent 70%); animation: fx-glow 5s ease-in-out infinite; }
+.fx-cloud { left: -30%; width: calc(var(--s) * 26vmin); height: calc(var(--s) * 9vmin); border-radius: 99px; background: rgba(255, 255, 255, 0.8); box-shadow: calc(var(--s) * 6vmin) calc(var(--s) * -4vmin) 0 calc(var(--s) * 1vmin) rgba(255, 255, 255, 0.8), calc(var(--s) * 13vmin) calc(var(--s) * -2vmin) 0 0 rgba(255, 255, 255, 0.8);
+  animation: fx-drift 50s linear infinite; }
+.fx-fog { left: -20%; width: 140%; height: 7vmin; border-radius: 99px; background: rgba(255, 255, 255, 0.55); filter: blur(1.2vmin); animation: fx-fog 12s ease-in-out infinite alternate; }
+.fx-wind { left: -40%; width: var(--w); height: 0.7vmin; border-radius: 99px; background: linear-gradient(90deg, transparent, rgba(120, 160, 200, 0.75), transparent); animation: fx-wind 2s cubic-bezier(0.3, 0, 0.2, 1) infinite; }
+.fx-leaf { left: -10%; width: 3vmin; height: 1.8vmin; border-radius: 0 100% 0 100%; background: #8ce99a; border: 0.35vmin solid #2b2b3a; animation: fx-leaf 4s linear infinite; }
+.wx-rays { animation: fx-spin 14s linear infinite; }
+.wx-drop { animation: wx-drop 0.9s linear infinite; animation-delay: calc(var(--i) * -0.3s); }
+.wx-flake { animation: wx-flake 1.8s linear infinite; animation-delay: calc(var(--i) * -0.6s); }
+.wx-bolt { animation: wx-bolt 2.4s steps(1) infinite; }
+@keyframes fx-rain { to { transform: translateY(125vh); } }
+@keyframes fx-rain-wind { from { transform: translate(0, 0) rotate(24deg); } to { transform: translate(-46vh, 125vh) rotate(24deg); } }
+@keyframes fx-flash { 0%, 91%, 94%, 100% { opacity: 0; } 92%, 95% { opacity: 0.55; } }
+@keyframes fx-snow { 0% { transform: translate(0, 0); } 25% { transform: translate(2.4vmin, 28vh); } 50% { transform: translate(-2vmin, 56vh); } 75% { transform: translate(2vmin, 84vh); } 100% { transform: translate(0, 118vh); } }
+@keyframes fx-snow-wind { 0% { transform: translate(0, 0); } 100% { transform: translate(70vmin, 118vh); } }
+@keyframes fx-glow { 0%, 100% { transform: scale(0.92); opacity: 0.8; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes fx-spin { to { transform: rotate(360deg); } }
+@keyframes fx-drift { to { transform: translateX(190vw); } }
+@keyframes fx-fog { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+@keyframes fx-wind { 0% { transform: translateX(0) scaleX(0.4); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateX(190vw) scaleX(1.4); opacity: 0; } }
+@keyframes fx-leaf { 0% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(70vw, -8vmin) rotate(540deg); } 100% { transform: translate(140vw, 6vmin) rotate(1080deg); } }
+@keyframes wx-drop { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+@keyframes wx-flake { 0% { transform: translateY(-6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(12px); opacity: 0; } }
+@keyframes wx-bolt { 0%, 60% { opacity: 1; } 30%, 80% { opacity: 0.2; } }
+@media (prefers-reduced-motion: reduce) { .wx-fx { display: none; } .wx-rays, .wx-drop, .wx-flake, .wx-bolt { animation: none; } }
+
+/* 캐릭터 한마디 */
+.wx-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 3vmin; }
+.wx-now > div:nth-child(2) { flex: 1; min-width: 0; }
+.wx-say { display: flex; flex-direction: column; align-items: flex-end; gap: 1.2vmin; flex: 0 1 46%; }
+.wx-tip { display: flex; align-items: center; gap: 1.2vmin; animation: wx-tip 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) backwards; animation-delay: calc(0.5s + var(--i) * 0.5s); }
+.wx-tip p { position: relative; background: #fff; color: #2b2b3a; border: 0.5vmin solid #2b2b3a; border-radius: 2.6vmin; padding: 0.8vmin 2.2vmin; font-size: calc(var(--f, 1) * 3.3vmin); font-weight: 900; line-height: 1.25; }
+.wx-tip p::after { content: ''; position: absolute; right: -1.5vmin; top: 50%; width: 2vmin; height: 2vmin; margin-top: -1vmin; background: #fff; border-right: 0.5vmin solid #2b2b3a; border-top: 0.5vmin solid #2b2b3a; transform: rotate(45deg); }
+.wx-tip img { height: calc(var(--f, 1) * 10vmin); width: auto; flex: none; animation: bus-hop 1.3s ease-in-out infinite; animation-delay: calc(var(--i) * 0.4s); }
+@keyframes wx-tip { 0% { opacity: 0; transform: scale(0.6) translateY(2vmin); } 100% { opacity: 1; transform: none; } }
+@media (orientation: portrait) { .wx-top, .wx-now { flex-wrap: wrap; } .wx-say { flex-basis: 100%; } }
+@media (prefers-reduced-motion: reduce) { .wx-tip, .wx-tip img { animation: none; } }

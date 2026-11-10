@@ -640,11 +640,14 @@ test('the weather card shows the rest of today on A and the week on B, from one 
       assert.match(html, /<b>16시<\/b>[\s\S]*?70%/);
       assert.match(html, /우산이 필요합니다/);
       assert.equal((html.match(/<li /g) || []).length, 8);
+      assert.match(html, /집에 가는 길에 비가 온대요! 우산 챙겨요!/);
+      assert.match(html, /guide\/mong\/ssiat\.png/);
     } else {
       assert.equal((html.match(/<li /g) || []).length, 3);
       assert.match(html, /<b>오늘<\/b>/);
       assert.match(html, /강수 92%/);
       assert.match(html, /wx-snow/);
+      assert.match(html, /수요일엔 우산을 준비하세요!/);
     }
     assert.equal(env.state.rain.hours.length, 6);       // 버스 카드의 15~20시 강수 확률도 같은 응답에서 나온다
   }

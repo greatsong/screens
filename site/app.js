@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.0';
+  const APP_VERSION = '0.8.4';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1009,13 +1009,13 @@
     state.rainBusy = true;
     state.rainTry = Date.now();
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(r.lat) + '&longitude=' + encodeURIComponent(r.lon) +
-      '&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
-      '&current=temperature_2m,weather_code&timezone=Asia%2FSeoul&forecast_days=7';
+      '&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=7';
     fetch(url).then((x) => x.json()).then((d) => {
       const h = d.hourly || {};
       const dl = d.daily || {};
       const hourly = (h.time || []).map((tm, i) => ({ d: String(tm).slice(0, 10).replace(/-/g, ''), h: +String(tm).slice(11, 13),
-        temp: (h.temperature_2m || [])[i], pop: (h.precipitation_probability || [])[i], code: (h.weather_code || [])[i] }));
+        temp: (h.temperature_2m || [])[i], pop: (h.precipitation_probability || [])[i], code: (h.weather_code || [])[i], wind: (h.wind_speed_10m || [])[i] }));
       const daily = (dl.time || []).map((tm, i) => ({ d: String(tm).replace(/-/g, ''), code: (dl.weather_code || [])[i],
         max: (dl.temperature_2m_max || [])[i], min: (dl.temperature_2m_min || [])[i], pop: (dl.precipitation_probability_max || [])[i] }));
       if (!hourly.length) return;
@@ -1044,18 +1044,75 @@
   function wxIcon(code) {
     const k = wxKind(code)[0];
     if (!k) return '';
-    const sun = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffd166" stroke="#2b2b3a" stroke-width="5"/>`;
+    // 해 둘레는 줄 대신 작은 동그라미 여섯 개로 그린다(방사형 줄무늬 모양을 피한다)
+    const rays = (cx, cy, r) => `<g class="wx-rays" style="transform-origin:${cx}px ${cy}px">${[0, 60, 120, 180, 240, 300].map((a) => `<circle cx="${cx}" cy="${cy - r - Math.round(r * 0.5)}" r="${Math.max(3, Math.round(r * 0.17))}" transform="rotate(${a} ${cx} ${cy})" fill="#ffd166" stroke="#2b2b3a" stroke-width="3"/>`).join('')}</g>`;
+    const sun = (cx, cy, r) => rays(cx, cy, r) + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffd166" stroke="#2b2b3a" stroke-width="5"/>`;
     const cloud = (fill) => `<path d="M28 78a18 18 0 0 1 4-35 24 24 0 0 1 46-4 19 19 0 0 1 2 39z" fill="${fill}" stroke="#2b2b3a" stroke-width="5" stroke-linejoin="round"/>
       <circle cx="46" cy="60" r="3" fill="#2b2b3a"/><circle cx="64" cy="60" r="3" fill="#2b2b3a"/><path d="M51 66q4 4 8 0" fill="none" stroke="#2b2b3a" stroke-width="3" stroke-linecap="round"/>`;
-    const drops = (c) => [34, 52, 70].map((x) => `<path d="M${x} 86l-4 10" stroke="${c}" stroke-width="5" stroke-linecap="round"/>`).join('');
-    const body = k === 'sun' ? sun(50, 50, 26) + '<circle cx="42" cy="48" r="3" fill="#2b2b3a"/><circle cx="58" cy="48" r="3" fill="#2b2b3a"/><path d="M45 56q5 5 10 0" fill="none" stroke="#2b2b3a" stroke-width="3" stroke-linecap="round"/>'
-      : k === 'part' ? sun(66, 34, 18) + cloud('#ffffff')
+    const drops = (c) => [34, 52, 70].map((x, i) => `<path class="wx-drop" style="--i:${i}" d="M${x} 84l-4 10" stroke="${c}" stroke-width="5" stroke-linecap="round"/>`).join('');
+    const body = k === 'sun' ? sun(50, 54, 22) + '<circle cx="43" cy="52" r="3" fill="#2b2b3a"/><circle cx="57" cy="52" r="3" fill="#2b2b3a"/><path d="M45 59q5 5 10 0" fill="none" stroke="#2b2b3a" stroke-width="3" stroke-linecap="round"/>'
+      : k === 'part' ? sun(68, 34, 14) + cloud('#ffffff')
       : k === 'cloud' ? cloud('#dfe6f0')
       : k === 'fog' ? cloud('#eef1f6') + '<path d="M22 90h56M30 98h40" stroke="#9aa5b8" stroke-width="5" stroke-linecap="round"/>'
-      : k === 'snow' ? cloud('#ffffff') + [34, 52, 70].map((x) => `<circle cx="${x}" cy="92" r="4" fill="#bfe3ff" stroke="#2b2b3a" stroke-width="2"/>`).join('')
-      : k === 'storm' ? cloud('#c9d1de') + '<path d="M54 82l-10 12h10l-6 10" fill="none" stroke="#ffb703" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+      : k === 'snow' ? cloud('#ffffff') + [34, 52, 70].map((x, i) => `<circle class="wx-flake" style="--i:${i}" cx="${x}" cy="88" r="4" fill="#bfe3ff" stroke="#2b2b3a" stroke-width="2"/>`).join('')
+      : k === 'storm' ? cloud('#c9d1de') + '<path class="wx-bolt" d="M54 82l-10 12h10l-6 10" fill="none" stroke="#ffb703" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
       : cloud('#dfe6f0') + drops('#4dabf7');
     return `<svg class="wx-ic wx-${k}" viewBox="0 0 100 106" aria-hidden="true">${body}</svg>`;
+  }
+  // 날씨 배경 효과: 눈이 오면 눈송이가, 비가 오면 빗줄기가 내리고, 바람이 세면(초속 8m 이상) 바람 줄기와 나뭇잎이 지나간다.
+  // 맑으면 햇살이 돌고 흐리면 구름이 흘러간다. 주소에 &wx=snow|rain|storm|wind|sun|cloud|fog 를 붙이면 그 효과를 미리 본다
+  const WIND_STRONG = 8;
+  function wxFx(code, wind) {
+    const forced = /^(snow|rain|storm|wind|sun|part|cloud|fog)$/.test(params.wx || '') ? params.wx : '';
+    const k = forced === 'wind' ? 'part' : forced || wxKind(code)[0];
+    const windy = forced === 'wind' || (typeof wind === 'number' && wind >= WIND_STRONG);
+    const rnd = (i, m) => { const v = Math.sin(i * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // 두 화면이 같은 모양이 되게 번호로 만든 흩뿌림
+    const many = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
+    let html = '';
+    if (k === 'rain' || k === 'storm') html += many(34, (i) => `<i class="fx-rain" style="left:${(rnd(i, 1) * 112 - 6).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 1.2).toFixed(2)}s;animation-duration:${(0.7 + rnd(i, 3) * 0.5).toFixed(2)}s"></i>`);
+    if (k === 'storm') html += '<i class="fx-flash"></i>';
+    if (k === 'snow') html += many(30, (i) => `<i class="fx-snow" style="left:${(rnd(i, 1) * 104 - 2).toFixed(1)}%;--s:${(0.6 + rnd(i, 4) * 1.1).toFixed(2)};animation-delay:-${(rnd(i, 2) * 7).toFixed(2)}s;animation-duration:${(5 + rnd(i, 3) * 4).toFixed(2)}s"></i>`);
+    if (k === 'sun' || k === 'part') html += '<i class="fx-sun"></i>';
+    if (k === 'cloud' || k === 'part' || k === 'fog') html += many(k === 'part' ? 2 : 4, (i) => `<i class="fx-cloud" style="top:${(4 + rnd(i, 5) * 46).toFixed(1)}%;--s:${(0.7 + rnd(i, 6) * 0.9).toFixed(2)};animation-delay:-${(rnd(i, 2) * 40).toFixed(1)}s;animation-duration:${(38 + rnd(i, 3) * 26).toFixed(1)}s"></i>`);
+    if (k === 'fog') html += many(3, (i) => `<i class="fx-fog" style="top:${30 + i * 22}%;animation-delay:-${i * 4}s"></i>`);
+    if (windy) html += many(9, (i) => `<i class="fx-wind" style="top:${(6 + rnd(i, 7) * 84).toFixed(1)}%;--w:${(14 + rnd(i, 8) * 22).toFixed(0)}vmin;animation-delay:-${(rnd(i, 2) * 2.4).toFixed(2)}s;animation-duration:${(1.5 + rnd(i, 3) * 1.2).toFixed(2)}s"></i>`)
+      + many(5, (i) => `<i class="fx-leaf" style="top:${(12 + rnd(i, 9) * 70).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 4).toFixed(2)}s;animation-duration:${(3 + rnd(i, 3) * 2).toFixed(2)}s"></i>`);
+    return `<div class="wx-fx${windy ? ' is-windy' : ''}" aria-hidden="true">${html}</div>`;
+  }
+  // 캐릭터 한마디: 예보에서 학생에게 필요한 것만 골라 두 마디까지 말한다(A: 오늘, B: 이번 주)
+  function wxTips(wx, view) {
+    const today = ymd(now());
+    const k = kst(now());
+    const days = wx.daily.filter((x) => x.d >= today);
+    const t0 = days[0] || {};
+    const t1 = days[1] || null;
+    const wdOf = (d) => WD[new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8))).getUTCDay()];
+    const tips = [];
+    const cold = t1 && typeof t1.min === 'number' && (t1.min <= 0 || (typeof t0.min === 'number' && t1.min <= t0.min - 5) || (typeof t0.max === 'number' && t1.max <= t0.max - 6));
+    if (view === 'week') {
+      const wet = days.slice(1).filter((x) => x.pop >= 60)[0];
+      if (wet) tips.push(wxKind(wet.code)[0] === 'snow' ? wdOf(wet.d) + '요일엔 눈이 온대요! 따뜻하게 입어요!' : wdOf(wet.d) + '요일엔 우산을 준비하세요!');
+      if (cold) tips.push('내일은 추워요! 옷 따뜻하게 입고 오세요!');
+      if (!tips.length) tips.push('이번 주는 큰 비 소식이 없어요!');
+    } else {
+      const rest = wx.hourly.filter((x) => (x.d === today && x.h >= k.h) || x.d > today).slice(0, 8);
+      const home = wx.hourly.filter((x) => x.d === today && x.h >= Math.max(15, k.h) && x.h <= 18);
+      const wetHome = home.some((x) => x.pop >= 60);
+      const snowy = rest.some((x) => wxKind(x.code)[0] === 'snow');
+      const wind = wx.cur && typeof wx.cur.wind_speed_10m === 'number' ? wx.cur.wind_speed_10m : (rest[0] || {}).wind;
+      if (snowy) tips.push('눈이 와요! 미끄러우니 천천히 걸어요!');
+      else if (wetHome && k.h < 18) tips.push('집에 가는 길에 비가 온대요! 우산 챙겨요!');
+      else if (rest.some((x) => x.pop >= 60)) tips.push('오늘 비가 온대요! 우산 챙겨요!');
+      if (cold) tips.push('내일은 추워요! 옷 따뜻하게 입고 오세요!');
+      if (tips.length < 2 && typeof wind === 'number' && wind >= WIND_STRONG) tips.push('바람이 세요! 겉옷을 잘 여며요!');
+      if (tips.length < 2 && typeof t0.max === 'number' && t0.max >= 30) tips.push('오늘은 더워요! 물을 자주 마셔요!');
+      if (!tips.length) tips.push(wxKind((rest[0] || {}).code)[0] === 'sun' ? '오늘은 맑아요! 즐거운 하루 보내요!' : '오늘도 즐거운 하루 보내요!');
+    }
+    return tips.slice(0, 2);
+  }
+  function wxSayHTML(wx, view) {
+    const who = view === 'week' ? ['mongsil', 'ssiat'] : ['ssiat', 'mongsil'];
+    return `<div class="wx-say">${wxTips(wx, view).map((t, i) => `<div class="wx-tip" style="--i:${i}"><p>${esc(t)}</p><img src="${MONG(who[i])}" alt=""></div>`).join('')}</div>`;
   }
   const deg = (v) => (typeof v === 'number' ? Math.round(v) + '°' : '-');
   function weatherHTML(s) {
@@ -1069,7 +1126,9 @@
         <b>${i === 0 ? '오늘' : esc(ymdLabel(x.d).replace(/^\d+월 /, '').replace(/일 \((.)\)/, '일 $1'))}</b>${wxIcon(x.code)}
         <span class="wx-t"><em>${deg(x.max)}</em><i>${deg(x.min)}</i></span>
         <span class="wx-p">${typeof x.pop === 'number' ? '강수 ' + x.pop + '%' : ''}</span></li>`).join('');
-      return `<div class="card-inner wxc"><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1><ul class="wx-week">${days}</ul>${foot}</div>`;
+      const t0 = wx.daily.filter((x) => x.d === today)[0] || {};
+      const c0 = wx.cur && wx.cur.weather_code != null && Date.now() - wx.at < 3600000 ? wx.cur.weather_code : t0.code;
+      return `<div class="card-inner wxc">${wxFx(c0, wx.cur ? wx.cur.wind_speed_10m : null)}<div class="wx-top"><div><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1></div>${wxSayHTML(wx, 'week')}</div><ul class="wx-week">${days}</ul>${foot}</div>`;
     }
     const k = kst(now());
     const rest = wx.hourly.filter((x) => (x.d === today && x.h >= k.h) || x.d > today).slice(0, 8);
@@ -1079,9 +1138,11 @@
     const maxPop = Math.max.apply(null, rest.map((x) => (typeof x.pop === 'number' ? x.pop : 0)).concat([0]));
     const td = wx.daily.filter((x) => x.d === today)[0];
     const hours = rest.map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}"><b>${i === 0 ? '지금' : x.h + '시'}</b>${wxIcon(x.code)}<em>${deg(x.temp)}</em><span>${typeof x.pop === 'number' ? x.pop + '%' : ''}</span></li>`).join('');
-    return `<div class="card-inner wxc"><div class="tag">${tag}</div>
+    const wind = wx.cur && typeof wx.cur.wind_speed_10m === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.wind_speed_10m : cur.wind;
+    const windText = typeof wind === 'number' ? ' · 바람 초속 ' + Math.round(wind) + 'm' + (wind >= WIND_STRONG ? '(강함)' : '') : '';
+    return `<div class="card-inner wxc">${wxFx(code, wind)}<div class="tag">${tag}</div>
       <div class="wx-now">${wxIcon(code)}<div><h1 class="title">${deg(temp)} <small>${esc(wxKind(code)[1])}</small></h1>
-        <p class="wx-sum">${td ? '최고 ' + deg(td.max) + ' · 최저 ' + deg(td.min) + ' · ' : ''}앞으로 ${rest.length}시간 강수 확률 최대 ${maxPop}%${maxPop >= 60 ? ' · 우산이 필요합니다' : ''}</p></div></div>
+        <p class="wx-sum">${td ? '최고 ' + deg(td.max) + ' · 최저 ' + deg(td.min) + ' · ' : ''}앞으로 ${rest.length}시간 강수 확률 최대 ${maxPop}%${maxPop >= 60 ? ' · 우산이 필요합니다' : ''}${windText}</p></div>${wxSayHTML(wx, 'today')}</div>
       <ul class="wx-hours">${hours}</ul>${foot}</div>`;
   }
   // 정류장 한 곳의 지금 상태. 종점(받은 방향 이름이 정류장 이름과 같은 차)은 들어오는 차로 따로 본다
