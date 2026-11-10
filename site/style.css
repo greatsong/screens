@@ -744,6 +744,7 @@ body.is-stopped #promo { display: none !important; }
   animation: wc-rise 0.6s ease-out 0.7s both;
 }
 .wc-sign small { display: block; font-size: calc(var(--f, 1) * 3.4vmin); font-weight: 700; color: #ffe600; letter-spacing: 0.4em; text-indent: 0.4em; }
+.wc-sign small.long { font-size: calc(var(--f, 1) * 5vmin); font-weight: 800; letter-spacing: 0.02em; text-indent: 0; }
 .wc-sign strong { display: block; font-size: calc(var(--f, 1) * 10vmin); font-weight: 900; letter-spacing: -0.03em; line-height: 1.2; white-space: nowrap; }
 .wc-arrow { margin-top: calc(var(--f, 1) * 1.2vmin); animation: wc-nudge 1.8s ease-in-out infinite; }
 .wc-left .wc-arrow { transform: scaleX(-1); animation-name: wc-nudge-left; }

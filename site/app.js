@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.3';
+  const APP_VERSION = '0.7.4';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -671,6 +671,10 @@
           <div class="wc-name">${esc(st.name)}</div>
         </div></li>`;
     }).join('');
+    // 표지판: signs 에 기한(until)이 남은 안내가 있으면 그것을 먼저 보여 준다(예: 10:20까지는 방명록 장소, 그 뒤에는 수업 장소)
+    const alt = (s.signs || []).filter((x) => now() < Date.parse(x.until))[0];
+    const signLabel = alt ? alt.label : (s.placeLabel || '장소');
+    const signPlace = alt ? alt.place : (s.place || '');
     const chev = '<svg viewBox="0 0 300 44" aria-hidden="true">' +
       [0, 1, 2, 3, 4, 5, 6].map((i) => `<path style="--i:${i}" d="M${14 + i * 42} 6l17 16-17 16"/>`).join('') + '</svg>';
     const friends = (s.friends || []).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
@@ -693,7 +697,7 @@
           ${hero}
         </div>
         <div class="wc-sign">
-          <div class="wc-sign-text"><small>${esc(s.placeLabel || '장소')}</small><strong>${esc(s.place || '')}</strong></div>
+          <div class="wc-sign-text"><small${signLabel.length > 4 ? ' class="long"' : ''}>${esc(signLabel)}</small><strong>${esc(signPlace)}</strong></div>
           <div class="wc-arrow">${chev}</div>
         </div>
       </div>
