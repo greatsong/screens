@@ -719,13 +719,21 @@ test('in the evening and at weekends the weather card stays, without asking for 
   }
 });
 
-test('the weekday bars highlight today and name the busiest weekday', () => {
-  const env = screen({ time: Date.parse('2026-11-11T15:00:00+09:00') });   // 수요일
-  env.state.ride = { week: { '20507|동작11': { 월: 101.8, 화: 89.5, 수: 84.2, 목: 80.6, 금: 82.2 } } };
-  const html = env.rideWeekHTML(BUS.stops[1]);
+test('the weekday tile shows last week\'s real daily boardings with the usual average as a line, and falls back to averages', () => {
+  const env = screen({ time: Date.parse('2026-11-11T15:00:00+09:00') });   // 수요일. 지난주는 11월 2일(월)~6일(금)
+  const name = '20507|동작11';
+  env.state.ride = { week: { [name]: { 월: 101.8, 화: 89.5, 수: 84.2, 목: 80.6, 금: 82.2 } },
+    recent: { [name]: { 20261102: 109, 20261103: 75, 20261104: 88, 20261105: 67, 20261106: 83, 20261107: 58 } } };
+  let html = env.rideWeekHTML(BUS.stops[1]);
+  assert.match(html, /지난주 요일별 승차 인원 <span>실제 값 · 줄은 평소<\/span>/);
   assert.equal((html.match(/<i class/g) || []).length, 5);
-  assert.match(html, /<i class="on"><b>84<\/b><em style="height:83%"><\/em><u>수<\/u>/);
-  assert.match(html, /수요일 <b>84명<\/b> · 가장 붐비는 요일 월요일/);
+  assert.match(html, /<i class="on"><b>88<\/b><span><em style="height:81%"><\/em><s style="bottom:77%"><\/s><\/span><u>수<\/u>/);   // 88/109, 평소 84.2/109
+  assert.match(html, /지난주 수요일 <b>88명<\/b> · 평소 84명/);
+  env.state.ride.recent = {};
+  html = env.rideWeekHTML(BUS.stops[1]);
+  assert.match(html, /요일별 하루 승차 인원 <span>최근 한 달<\/span>/);
+  assert.match(html, /수요일 평균 <b>84명<\/b>/);
+  assert.doesNotMatch(html, /<s /);
   assert.equal(env.rideWeekHTML(BUS.stops[0]), '');
 });
 

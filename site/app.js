@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.3';
+  const APP_VERSION = '0.9.4';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1028,19 +1028,35 @@
     const cap = per[nowH] != null ? `지금 ${span(nowH)} <b>${Math.round(per[nowH])}명</b>${nowH === top ? ' · 가장 붐비는 시간' : ` · 가장 붐비는 시간 ${span(top)}`}` : `가장 붐비는 시간 ${span(top)}`;
     return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
   }
-  // 요일별 하루 승차 인원(최근 한 달의 평일, 일별 자료). 오늘 요일을 강조한다
+  // 지난주 요일별 승차 인원: 지난주 월~금의 실제 하루 승차 인원(일별 자료)을 막대로, 평소 그 요일의 평균을 가로줄로 그린다.
+  // 오늘과 같은 요일을 강조한다. 날짜별 시간대 자료는 공개되지 않아 요일 단위로 보여 준다.
+  // 지난주 자료가 아직 없으면 요일별 평균만 막대로 그린다
   function rideWeekHTML(stop) {
     const r = state.ride;
-    const per = r && r.week && r.week[stop.id + '|' + (stop.routes ? stop.routes[0] : '')];
-    if (!per) return '';
-    const days = ['월', '화', '수', '목', '금'].filter((d) => per[d] != null);
-    if (!days.length) return '';
-    const max = Math.max.apply(null, days.map((d) => per[d]).concat([1]));
-    const today = kst(now()).wd;
-    const top = days.reduce((a, d) => (per[d] > per[a] ? d : a), days[0]);
-    const bars = days.map((d) => `<i class="${d === today ? 'on' : ''}${d === top ? ' top' : ''}"><b>${Math.round(per[d])}</b><em style="height:${Math.max(6, per[d] / max * 100).toFixed(0)}%"></em><u>${d}</u></i>`).join('');
-    const cap = per[today] != null ? `${today}요일 <b>${Math.round(per[today])}명</b>${today === top ? ' · 가장 붐비는 요일' : ` · 가장 붐비는 요일 ${top}요일`}` : `가장 붐비는 요일 ${top}요일`;
-    return `<small>요일별 하루 승차 인원 <span>최근 한 달</span></small><div class="ride-bars ride-week">${bars}</div><p>${cap}</p>`;
+    const name = stop.id + '|' + (stop.routes ? stop.routes[0] : '');
+    const avg = (r && r.week && r.week[name]) || {};
+    const recent = (r && r.recent && r.recent[name]) || {};
+    const t = now();
+    const dow = new Date(t + 9 * 3600000).getUTCDay();                         // 0 일 ~ 6 토
+    const monday = Math.floor((t + 9 * 3600000) / 86400000) * 86400000 - ((dow + 6) % 7) * 86400000 - 7 * 86400000;   // 지난주 월요일(한국 날짜의 자정을 UTC 로 둔 값)
+    const key = (ms) => { const d = new Date(ms); return d.getUTCFullYear() + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()); };
+    const days = ['월', '화', '수', '목', '금'].map((d, i) => ({ d, real: recent[key(monday + i * 86400000)], avg: avg[d] }));
+    const real = days.filter((x) => x.real != null).length >= 3;
+    const val = (x) => (real ? x.real : x.avg);
+    const shown = days.filter((x) => val(x) != null || x.avg != null);
+    if (!shown.some((x) => val(x) != null)) return '';
+    const max = Math.max.apply(null, days.map((x) => Math.max(val(x) || 0, x.avg || 0)).concat([1]));
+    const today = kst(t).wd;
+    const bars = days.map((x) => {
+      const v = val(x);
+      const line = real && x.avg != null ? `<s style="bottom:${(x.avg / max * 100).toFixed(0)}%"></s>` : '';
+      return `<i class="${x.d === today ? 'on' : ''}"><b>${v != null ? Math.round(v) : '-'}</b><span><em style="height:${v != null ? Math.max(6, v / max * 100).toFixed(0) : 0}%"></em>${line}</span><u>${x.d}</u></i>`;
+    }).join('');
+    const me = days.filter((x) => x.d === today)[0];
+    const cap = !me || val(me) == null ? '월~금 하루 승차 인원' : real
+      ? `지난주 ${today}요일 <b>${Math.round(me.real)}명</b>${me.avg != null ? ' · 평소 ' + Math.round(me.avg) + '명' : ''}`
+      : `${today}요일 평균 <b>${Math.round(me.avg)}명</b>`;
+    return `<small>${real ? '지난주 요일별 승차 인원' : '요일별 하루 승차 인원'} <span>${real ? '실제 값 · 줄은 평소' : '최근 한 달'}</span></small><div class="ride-bars ride-week">${bars}</div><p>${cap}</p>`;
   }
   // 날씨: 30분마다 받는다. 기상청 동네예보(Apps Script 웹 앱 ?api=weather, 인증키는 그쪽에 있다)를 먼저 쓰고,
   // 기상청 단기예보가 닿지 않는 뒤쪽 날짜와 기상청을 받지 못한 때에는 Open-Meteo(키 없음)로 채운다.

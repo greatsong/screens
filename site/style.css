@@ -1111,3 +1111,8 @@ body.is-stopped #promo { display: none !important; }
 .bm-live { white-space: nowrap; }
 .bm { height: calc(var(--f, 1) * 33vmin); }
 .bm-bus { width: 4.6vmin; height: 3vmin; }
+
+/* 지난주 요일별 막대: 막대는 실제 값, 가로줄은 평소 그 요일의 평균 */
+.ride-week i span { position: relative; flex: 1 1 0; min-height: 0; width: 100%; }
+.ride-week i span em { position: absolute; left: 0; right: 0; bottom: 0; width: auto; }
+.ride-week s { position: absolute; left: -8%; right: -8%; height: 0; border-top: 0.45vmin dashed #2b2b3a; opacity: 0.7; text-decoration: none; }
