@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.9';
+  const APP_VERSION = '0.9.0';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1177,7 +1177,7 @@
   }
   function wxSayHTML(wx, view) {
     const who = view === 'week' ? ['mongsil', 'ssiat'] : ['ssiat', 'mongsil'];
-    return `<div class="wx-say">${wxTips(wx, view).map((t, i) => `<div class="wx-tip" style="--i:${i}"><p>${esc(t)}</p><img src="${MONG(who[i])}" alt=""></div>`).join('')}</div>`;
+    return `<div class="wx-say">${wxTips(wx, view).map((t, i) => `<div class="wx-tip" style="--i:${i}"><p>${esc(t)}</p><span class="wx-who"><img src="${MONG(who[i])}" alt=""></span></div>`).join('')}</div>`;
   }
   const deg = (v) => (typeof v === 'number' ? Math.round(v) + '°' : '-');
   function weatherHTML(s) {
