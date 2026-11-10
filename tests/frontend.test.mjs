@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML, rideHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML, rideHTML, rideWeekHTML, busStory };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -659,11 +659,10 @@ test('the ridership bars highlight the current hour and name the busiest one', (
   env.state.ride = { month: '2026-10', stops: { '21348|관악11': { 7: 11.1, 8: 13.9, 15: 10.7, 16: 17.8, 17: 6.1 } },
     recent: { '21348|관악11': { 20261027: 90, 20261103: 114, 20261104: 100, 20261106: 107 } } };
   const html = env.rideHTML(BUS.stops[0]);
-  assert.match(html, /10월 시간대별 승차 인원\(평일 평균\)/);
-  assert.match(html, /지난주 화요일에는 하루 동안 114명이 탔습니다\./);   // 11월 10일은 화요일, 한 주 전은 11월 3일
+  assert.match(html, /시간대별 승차 인원 <span>10월 평일 평균<\/span>/);
   assert.equal((html.match(/<i class/g) || []).length, 13);
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
-  assert.match(html, /15시대에는 하루 평균 11명이 탑니다\. 가장 많이 타는 시간은 16시대입니다\(18명\)\./);
+  assert.match(html, /지금 15시대 <b>11명<\/b> · 가장 붐비는 시간 16시대/);
   assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
 });
 
@@ -718,4 +717,29 @@ test('in the evening and at weekends the weather card stays, without asking for 
     assert.equal(calls.some((u) => /open-meteo/.test(u)), true);
     assert.equal(calls.some((u) => /api=weather/.test(u)), true);
   }
+});
+
+test('the weekday bars highlight today and name the busiest weekday', () => {
+  const env = screen({ time: Date.parse('2026-11-11T15:00:00+09:00') });   // 수요일
+  env.state.ride = { week: { '20507|동작11': { 월: 101.8, 화: 89.5, 수: 84.2, 목: 80.6, 금: 82.2 } } };
+  const html = env.rideWeekHTML(BUS.stops[1]);
+  assert.equal((html.match(/<i class/g) || []).length, 5);
+  assert.match(html, /<i class="on"><b>84<\/b><em style="height:83%"><\/em><u>수<\/u>/);
+  assert.match(html, /수요일 <b>84명<\/b> · 가장 붐비는 요일 월요일/);
+  assert.equal(env.rideWeekHTML(BUS.stops[0]), '');
+});
+
+test('the story tile tells last week\'s same weekday: real arrivals first, then the day total and an estimate for this hour', () => {
+  const env = screen({ time: Date.parse('2026-11-10T15:20:00+09:00') });   // 화요일, 한 주 전은 11월 3일
+  const stop = BUS.stops[0];
+  env.state.ride = { stops: { '21348|관악11': { 14: 5, 15: 10, 16: 25, 17: 10 } }, week: { '21348|관악11': { 화: 100 } }, recent: { '21348|관악11': { 20261103: 120 } } };
+  let html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
+  assert.match(html, /지난주 화요일엔 하루 동안 120명이 탔어요\. 15시대엔 24명쯤!/);   // 120 × 10/50
+  assert.match(html, /평소 화요일보다 붐빈 날이었어요\./);
+  env.state.bus = { recv: env.now(), now: env.now(), stops: {}, log: { 21348: { '관악11|봉천역': [{ d: '20261109', t: ['15:18'] }, { d: '20261103', t: ['14:10', '15:12', '15:26', '16:40'] }] } } };
+  html = env.busStory(stop, { logKey: '관악11|봉천역', terminus: false });
+  assert.match(html, /지난주 화요일 이 시간엔 15:12, 15:26에 버스가 왔어요!/);
+  assert.match(html, /요즘 이 시간에 도착한 시각/);
+  env.state.ride = null; env.state.bus = null;
+  assert.equal(env.busStory(stop, { logKey: '', terminus: false }), '');
 });

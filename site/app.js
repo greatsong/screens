@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.0';
+  const APP_VERSION = '0.9.2';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1024,16 +1024,22 @@
     const top = hours.reduce((a, h) => ((per[h] || 0) > (per[a] || 0) ? h : a), hours[0]);
     const bars = hours.map((h) => `<i class="${h === nowH ? 'on' : ''}${h === top ? ' top' : ''}"><em style="height:${Math.max(4, (per[h] || 0) / max * 100).toFixed(0)}%"></em><u>${h}</u></i>`).join('');
     const mon = +String(r.month || '').slice(5, 7);
-    const here = per[nowH] != null ? `${nowH}시대에는 하루 평균 ${Math.round(per[nowH])}명이 탑니다. ` : '';
-    const most = nowH === top ? '하루 중 가장 많이 타는 시간대입니다.' : `가장 많이 타는 시간은 ${top}시대입니다(${Math.round(per[top])}명).`;
-    // 최근 추세: 오늘과 같은 요일 가운데 가장 가까운 날의 실제 하루 승차 인원(자료는 사흘 전까지 올라온다)
-    const recent = (r.recent || {})[stop.id + '|' + (stop.routes ? stop.routes[0] : '')] || {};
-    const dayOf = (d) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8));
-    const today = dayOf(ymd(now()));
-    const same = Object.keys(recent).filter((d) => dayOf(d) < today && (today - dayOf(d)) % (7 * 86400000) === 0).sort().pop();
-    const wd = WD[new Date(today).getUTCDay()];
-    const past = !same ? '' : (today - dayOf(same) === 7 * 86400000 ? `지난주 ${wd}요일에는` : `${+same.slice(4, 6)}월 ${+same.slice(6, 8)}일 ${wd}요일에는`) + ` 하루 동안 ${recent[same]}명이 탔습니다.`;
-    return `<small>${mon ? mon + '월 ' : ''}시간대별 승차 인원(평일 평균)</small><div class="ride-bars">${bars}</div><p>${here}${most}${past ? '<br>' + past : ''}</p>`;
+    const cap = per[nowH] != null ? `지금 ${nowH}시대 <b>${Math.round(per[nowH])}명</b>${nowH === top ? ' · 가장 붐비는 시간' : ` · 가장 붐비는 시간 ${top}시대`}` : `가장 붐비는 시간 ${top}시대`;
+    return `<small>시간대별 승차 인원 <span>${mon ? mon + '월 ' : ''}평일 평균</span></small><div class="ride-bars">${bars}</div><p>${cap}</p>`;
+  }
+  // 요일별 하루 승차 인원(최근 한 달의 평일, 일별 자료). 오늘 요일을 강조한다
+  function rideWeekHTML(stop) {
+    const r = state.ride;
+    const per = r && r.week && r.week[stop.id + '|' + (stop.routes ? stop.routes[0] : '')];
+    if (!per) return '';
+    const days = ['월', '화', '수', '목', '금'].filter((d) => per[d] != null);
+    if (!days.length) return '';
+    const max = Math.max.apply(null, days.map((d) => per[d]).concat([1]));
+    const today = kst(now()).wd;
+    const top = days.reduce((a, d) => (per[d] > per[a] ? d : a), days[0]);
+    const bars = days.map((d) => `<i class="${d === today ? 'on' : ''}${d === top ? ' top' : ''}"><b>${Math.round(per[d])}</b><em style="height:${Math.max(6, per[d] / max * 100).toFixed(0)}%"></em><u>${d}</u></i>`).join('');
+    const cap = per[today] != null ? `${today}요일 <b>${Math.round(per[today])}명</b>${today === top ? ' · 가장 붐비는 요일' : ` · 가장 붐비는 요일 ${top}요일`}` : `가장 붐비는 요일 ${top}요일`;
+    return `<small>요일별 하루 승차 인원 <span>최근 한 달</span></small><div class="ride-bars ride-week">${bars}</div><p>${cap}</p>`;
   }
   // 날씨: 30분마다 받는다. 기상청 동네예보(Apps Script 웹 앱 ?api=weather, 인증키는 그쪽에 있다)를 먼저 쓰고,
   // 기상청 단기예보가 닿지 않는 뒤쪽 날짜와 기상청을 받지 못한 때에는 Open-Meteo(키 없음)로 채운다.
@@ -1247,11 +1253,41 @@
       const t = (d.t || []).filter((x) => Math.abs(hmMin(x) - nowMin) <= 45).slice(0, 5);
       return t.length ? `<li><b>${esc(ymdLabel(d.d).replace(/^\d+월 /, ''))}</b>${t.map((x) => `<span>${esc(x)}</span>`).join('')}</li>` : '';
     }).filter(Boolean).join('');
-    const label = v.terminus ? '지난 며칠 종점에 들어온 시각' : '지난 며칠 도착한 시각';
-    if (rows) return `<small>${label}</small><ul>${rows}</ul>`;
-    // 도착 시각은 하교 시간에만 기록한다. 그 밖의 시간에는 배차 간격을 알려 준다
-    if (state.content && !busActive(state.content, now())) return v.term ? `<small>배차 간격은 약 ${esc(v.term)}분입니다.</small>` : '';
-    return '<small>도착 시각 기록을 모으고 있습니다. 며칠 뒤부터 표시합니다.</small>';
+    const label = v.terminus ? '요즘 이 시간에 종점에 들어온 시각' : '요즘 이 시간에 도착한 시각';
+    return rows ? `<small>${label}</small><ul>${rows}</ul>` : '';
+  }
+  // 이야기 칸: 캐릭터가 지난주 같은 요일의 일을 들려준다. 실제 기록(하루 승차 인원, 버스가 온 시각)을 먼저 말하고,
+  // 시간대 인원은 하루 인원에 시간대 비율을 곱한 어림값이라 '쯤'을 붙인다
+  function busStory(stop, v) {
+    const name = stop.id + '|' + (stop.routes ? stop.routes[0] : '');
+    const r = state.ride || {};
+    const k = kst(now());
+    const dayOf = (d) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8));
+    const today = dayOf(ymd(now()));
+    const lastWeek = ymd(today - 7 * 86400000);
+    const says = [];
+    // 지난주 같은 요일 이 시간에 버스가 온 시각(서버가 남긴 실제 기록)
+    const per = state.bus && state.bus.log && state.bus.log[stop.id];
+    const logDay = ((per && v.logKey && per[v.logKey]) || []).filter((d) => d.d === lastWeek)[0];
+    const nowMin = k.h * 60 + k.mi;
+    const times = logDay ? (logDay.t || []).filter((x) => Math.abs(hmMin(x) - nowMin) <= 30).slice(0, 4) : [];
+    if (times.length) says.push(`지난주 ${k.wd}요일 이 시간엔 ${times.join(', ')}에 버스가 ${v.terminus ? '들어왔어요' : '왔어요'}!`);
+    const recent = (r.recent || {})[name] || {};
+    const hourly = (r.stops || {})[name];
+    const week = (r.week || {})[name] || {};
+    const total = recent[lastWeek];
+    if (total != null) {
+      const sum = hourly ? Object.keys(hourly).reduce((a, h) => a + hourly[h], 0) : 0;
+      const slot = hourly && sum > 0 && hourly[k.h] != null ? Math.round(total * hourly[k.h] / sum) : null;
+      says.push(`지난주 ${k.wd}요일엔 하루 동안 ${total}명이 탔어요.` + (slot ? ` ${k.h}시대엔 ${slot}명쯤!` : ''));
+      const avg = week[k.wd];
+      if (avg) says.push(total >= avg * 1.1 ? `평소 ${k.wd}요일보다 붐빈 날이었어요.` : total <= avg * 0.9 ? `평소 ${k.wd}요일보다 한산한 날이었어요.` : `평소 ${k.wd}요일과 비슷했어요.`);
+    } else if (hourly && hourly[k.h] != null) {
+      says.push(`${k.h}시대에는 하루 평균 ${Math.round(hourly[k.h])}명이 타요.`);
+    }
+    if (!says.length) return '';
+    const chips = busHistory(stop, v);
+    return `<div class="story-top"><img src="${MONG(stop.teller || stop.walker || 'chorong')}" alt=""><div class="story-say">${says.slice(0, 3).map((t, i) => `<p style="--i:${i}">${esc(t)}</p>`).join('')}</div></div>${chips ? `<div class="bus-hist">${chips}</div>` : ''}`;
   }
   function rainHTML() {
     const r = state.rain;
@@ -1303,22 +1339,28 @@
       </div></div>` : '';
     const waiters = (stop.friends || ['mongsil', 'gori']).slice(0, 2).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
     return `<div class="card-inner busc" style="--bc:${esc(stop.color || '#a8e6cf')}">
-      <div class="bus-main">
-        <div class="tag">하교 버스</div>
-        <h1 class="title"><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b>${esc(stop.toward || '')}</h1>
-        <div class="bus-where">${esc(stop.name)} 정류장${stop.walkMin ? ' · 걸어서 약 ' + esc(stop.walkMin) + '분' : ''}</div>
-        <div class="bus-time"><strong id="busBig"></strong><span id="busNext"></span></div>
-        <div class="bus-lane">
-          <div class="bus-car" id="busCar">${busSVG(stop)}</div>
-          <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
-          <div class="bus-road"></div>
+      <div class="bus-top">
+        <div class="bus-main">
+          <div class="tag">하교 버스</div>
+          <h1 class="title"><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b>${esc(stop.toward || '')}</h1>
+          <div class="bus-where">${esc(stop.name)} 정류장${stop.walkMin ? ' · 걸어서 약 ' + esc(stop.walkMin) + '분' : ''}</div>
+          <div class="bus-time"><strong id="busBig"></strong><span id="busNext"></span></div>
+          <div class="bus-lane">
+            <div class="bus-car" id="busCar">${busSVG(stop)}</div>
+            <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
+            <div class="bus-road"></div>
+          </div>
         </div>
-        <div class="bus-info"><div class="bus-hist" id="busHist"></div><div class="bus-ride" id="busRide"></div></div>
+        <div class="bus-side">
+          ${mapHTML}
+          <div class="bus-rain" id="busRain"></div>
+          <div class="bus-other" id="busOther"></div>
+        </div>
       </div>
-      <div class="bus-side">
-        ${mapHTML}
-        <div class="bus-rain" id="busRain"></div>
-        <div class="bus-other" id="busOther"></div>
+      <div class="bus-tiles">
+        <div class="bus-tile bus-ride" id="busRide"></div>
+        <div class="bus-tile bus-ride bus-week" id="busWeek"></div>
+        <div class="bus-tile bus-story" id="busStory"></div>
       </div>
     </div>`;
   }
@@ -1365,10 +1407,12 @@
     const far = Math.min(1, Math.max(0, (h.pos || 0) / 600));
     $('busCar').style.left = h.pos == null ? '-45%' : (44 - far * 44).toFixed(1) + '%';
     $('busCar').className = 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : '');
-    const hist = busHistory(stop, v);
-    if (state.busHist !== hist || !$('busHist').innerHTML) { state.busHist = hist; $('busHist').innerHTML = hist; }
+    const story = busStory(stop, v);
+    if ($('busStory') && (state.busStoryHTML !== story || (story && !$('busStory').innerHTML))) { state.busStoryHTML = story; $('busStory').innerHTML = story; fitCard(); }
     const ride = rideHTML(stop);
-    if ($('busRide') && (state.busRide !== ride || (ride && !$('busRide').innerHTML))) { state.busRide = ride; $('busRide').innerHTML = ride; }
+    if ($('busRide') && (state.busRide !== ride || (ride && !$('busRide').innerHTML))) { state.busRide = ride; $('busRide').innerHTML = ride; fitCard(); }
+    const week = rideWeekHTML(stop);
+    if ($('busWeek') && (state.busWeek !== week || (week && !$('busWeek').innerHTML))) { state.busWeek = week; $('busWeek').innerHTML = week; fitCard(); }
     const rain = rainHTML();
     if (state.busRain !== rain || (rain && !$('busRain').innerHTML)) { state.busRain = rain; $('busRain').innerHTML = rain; }
     const other = stops.filter((x) => x !== stop).map((x) => {

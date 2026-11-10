@@ -523,10 +523,10 @@ function busDetect_(id, cur, cache) {
   });
 }
 
-// 오늘과 그 전 수업일 며칠의 도착 시각. {정류장: {"노선|방향": [{d: 'yyyyMMdd', t: ['15:42', …]}, …]}} 최근 날짜가 앞
+// 남겨 둔 날들의 도착 시각. {정류장: {"노선|방향": [{d: 'yyyyMMdd', t: ['15:42', …]}, …]}} 최근 날짜가 앞
 function busLog_(ids) {
   const all = JSON.parse(prop_('BUS_LOG') || '{}');
-  const days = Object.keys(all).sort().reverse().slice(0, BUS.SHOW_DAYS + 1);
+  const days = Object.keys(all).sort().reverse();   // 남겨 둔 날 전부(열흘). 화면이 최근 며칠과 지난주 같은 요일을 골라 쓴다
   const out = {};
   ids.forEach((id) => {
     const per = out[id] = {};
