@@ -474,7 +474,7 @@ test('a guide day alternates the welcome card with meal, calendar, news and proj
     assert.equal(env.state.sched.some((e) => e.item && e.item.id === 'guide-open'), false);
     assert.equal(env.state.sched.some((e) => e.promo), true);
   }
-  const before = screen({ time: Date.parse('2026-11-10T15:00:00+09:00') });
+  const before = screen({ time: Date.parse('2026-11-09T15:00:00+09:00') });
   before.applyContent(data, false);
   assert.equal(before.state.sched.some((e) => e.item && e.item.id === 'guide-open'), false);
 });
