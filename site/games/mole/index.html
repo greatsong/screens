@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
 <style>
-/* 스탠바이미 화면 안에서 실행하는 두더지 잡기(30초). 점수가 TOP 10 안이면 QR을 띄워 휴대폰으로 닉네임을 받는다.
+/* 스탠바이미 화면 안에서 실행하는 두더지 잡기(30초). 점수가 TOP 10 안이면 닉네임을 받는다. QR을 찍어 휴대폰으로 적거나, 화면 키보드로 바로 적는다.
  * 기록·순위는 Apps Script 웹 앱(content.json 의 vote.api, ?api=games)에 둔다. 이름·연락처는 받지 않는다.
  * webOS 브라우저(구형 Chromium)에서도 돌도록 ?. · flex gap · inset · aspect-ratio 는 사용하지 않는다 */
 :root {
@@ -134,8 +134,33 @@ button { font: inherit; cursor: pointer; }
 .claim .qr svg { width: 100%; height: 100%; display: block; }
 .claim b { display: block; font-size: 3.4vmin; margin-bottom: 0.6vmin; }
 .claim span { font-size: 2.4vmin; color: var(--soft); font-weight: 600; line-height: 1.5; }
+.mini { display: block; margin-top: 1.4vmin; border: 0; border-radius: 99px; padding: 1.1vmin 2.8vmin; font-size: 2.9vmin; font-weight: 900; color: #fff;
+  background: linear-gradient(180deg, #8f73ff, #6a4cf0); box-shadow: 0 0.6vmin 0 #4a32b8; }
 .again { margin-top: 0.4vmin; }
 .note { margin-top: 2vmin !important; font-size: 2.2vmin !important; color: var(--muted) !important; }
+
+/* ---------- 화면에서 닉네임 적기: 화면 키보드(한글 두벌식·영어·숫자). 시스템 키보드에 기대지 않으려고 입력 칸(input)을 두지 않는다 ---------- */
+.nick { z-index: 12; background: rgba(33, 58, 38, 0.6); }
+.nick .sheet { width: 96vmin; max-width: 96vmin; padding: 3vmin 3vmin 3.4vmin; }
+.sheet .ntitle { font-size: 3.6vmin; font-weight: 900; color: var(--text); }
+.ntitle small { font-size: 2.4vmin; color: var(--muted); font-weight: 700; margin-left: 1vmin; }
+.nfield { height: 11vmin; margin: 1.6vmin 0 0.6vmin; border-radius: 2.4vmin; border: 0.5vmin solid #ffd08a; background: #fffaf0; display: flex; align-items: center; justify-content: center;
+  font-size: 6.4vmin; font-weight: 900; white-space: pre; }
+.nfield i { width: 0.5vmin; height: 6.4vmin; margin-left: 0.5vmin; background: var(--accent); animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.nfield.empty span::before { content: '닉네임'; color: #cfc8ba; }
+.sheet .nmsg { min-height: 4vmin; font-size: 2.6vmin; font-weight: 800; color: var(--bad); }
+.sheet .nmsg.ok { color: #2f8a3d; }
+.krow { display: flex; justify-content: center; }
+.k { width: 7.8vmin; height: 9.2vmin; margin: 0.45vmin; padding: 0; border: 0; border-radius: 1.6vmin; background: #f1f3f8; color: var(--text); font-size: 4.4vmin; font-weight: 800; box-shadow: 0 0.5vmin 0 #cdd3df; }
+.k.dn { background: #ffe29a; box-shadow: 0 0.2vmin 0 #e0b84f; transform: translateY(0.3vmin); }
+.k.fn { width: 11.6vmin; background: #dde2ec; font-size: 3.6vmin; }
+.k.fn.wide { width: 17vmin; font-size: 3vmin; }
+.k.fn.on { background: #7c5cff; color: #fff; box-shadow: 0 0.5vmin 0 #5a3fd6; }
+.k.space { width: 44vmin; font-size: 2.8vmin; color: var(--muted); }
+.nact { display: flex; justify-content: center; align-items: center; margin-top: 2vmin; }
+.nact .big { font-size: 4.2vmin; padding: 1.5vmin 6vmin; margin: 0 1.4vmin; }
+.big.ghost { background: #eef1f6; color: var(--soft); box-shadow: 0 1vmin 0 #c9cfdb; }
 
 @media (orientation: portrait) {
   .app { flex-direction: column; }
@@ -194,10 +219,23 @@ button { font: inherit; cursor: pointer; }
     <div class="rank" id="rRank"></div>
     <div class="claim" id="claim" hidden>
       <div class="qr" id="qr"></div>
-      <div><b>📱 휴대폰으로 닉네임 적기</b><span>QR을 찍으면 명예의 전당에 내 이름을 올릴 수 있습니다. 15분 안에 한 번만 적을 수 있습니다.</span></div>
+      <div><b>✏️ 명예의 전당에 닉네임 올리기</b><span>휴대폰으로 QR을 찍거나, 아래 버튼을 눌러 화면에서 바로 적습니다. 15분 안에 한 번만 적을 수 있습니다.</span>
+        <button class="mini" id="typeHere">⌨️ 화면에서 바로 적기</button></div>
     </div>
     <button class="big again" id="again">🔁 다시 하기</button>
     <p class="note" id="rNote"></p>
+  </div>
+</div>
+<div class="overlay nick" id="nick" hidden>
+  <div class="sheet">
+    <p class="ntitle">✏️ 명예의 전당에 올릴 닉네임<small>8글자까지</small></p>
+    <div class="nfield empty" id="nField"><span id="nText"></span><i></i></div>
+    <p class="nmsg" id="nMsg"></p>
+    <div class="krow" id="kb1"></div>
+    <div class="krow" id="kb2"></div>
+    <div class="krow"><button class="k fn" id="kShift">⇧</button><span class="krow" id="kb3"></span><button class="k fn" id="kDel">⌫</button></div>
+    <div class="krow"><button class="k fn wide" id="kMode">123</button><button class="k fn wide" id="kLang">한/영</button><button class="k space" id="kSpace">띄어쓰기</button></div>
+    <div class="nact"><button class="big ghost" id="nClose">닫기</button><button class="big" id="nSend">올리기 🚀</button></div>
   </div>
 </div>
 
@@ -315,13 +353,15 @@ button { font: inherit; cursor: pointer; }
   }
   // 버튼은 손가락이 닿는 순간(pointerdown)에 반응한다. click 은 손가락 하나로 짧게, 미끄러지지 않고 눌렀을 때만 생긴다.
   // 그래서 다른 손가락이 화면에 닿아 있거나 누르다 손이 조금 미끄러지면 「시작」「다시 하기」가 눌리지 않았다. click 은 리모컨·키보드 입력용으로 남긴다
+  // 누른 시각은 버튼마다 따로 두지 않고 하나로 둔다. 누르는 순간 겹창이 열리거나 닫히면, 뒤따라오는 click 은 손가락 아래에 새로 놓인
+  // 다른 버튼으로 간다(「화면에서 바로 적기」를 누르면 그 아래 키가 한 글자 입력되고, 「닫기」를 누르면 아래의 「다시 하기」가 눌렸다)
+  let pressAt = 0;   // 손가락·마우스로 누른 시각. 바로 뒤따라오는 click 은 같은 누름이므로 건너뛴다
+  const markPress = () => { pressAt = Date.now(); };
   function onPress(el, fn) {
-    let at = 0;   // 손가락·마우스로 누른 시각. 바로 뒤따라오는 click 은 같은 누름이므로 건너뛴다
-    const mark = () => { at = Date.now(); };
-    el.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); mark(); fn(); });
-    el.addEventListener('pointerup', mark);
-    el.addEventListener('pointercancel', mark);
-    el.addEventListener('click', () => { if (Date.now() - at > 700) fn(); });
+    el.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); markPress(); fn(); });
+    el.addEventListener('pointerup', markPress);
+    el.addEventListener('pointercancel', markPress);
+    el.addEventListener('click', () => { if (Date.now() - pressAt > 700) fn(); });
   }
   onPress($('music'), () => setMusic(!bgm.on));
 
@@ -337,7 +377,8 @@ button { font: inherit; cursor: pointer; }
     holes.push(h);
   }
 
-  const S = { playing: false, score: 0, combo: 0, start: 0, spawnTimer: null, frame: 0, api: '', board: null, lastCode: '' };
+  // code: 방금 끝난 판의 닉네임 등록 코드(TOP 10 안일 때만). claimAt: 닉네임 안내가 표시된 시각
+  const S = { playing: false, score: 0, combo: 0, start: 0, spawnTimer: null, frame: 0, api: '', board: null, code: '', claimAt: 0, seq: 0 };
   setMusic(bgm.on);
 
   function show(h, kind, stay) {
@@ -421,6 +462,7 @@ button { font: inherit; cursor: pointer; }
 
   function begin() {
     if (S.playing || !$('countdown').hidden) return;   // 이미 세는 중이거나 하는 중이면 다시 시작하지 않는다
+    closeNick(); S.code = '';
     $('ready').hidden = true; $('result').hidden = true;
     S.score = 0; S.combo = 0; setCombo(0); $('score').textContent = '0'; $('bar').style.transform = 'scaleX(1)'; $('timer').classList.remove('hurry');
     let n = 3;
@@ -466,8 +508,9 @@ button { font: inherit; cursor: pointer; }
   function setPlays(n) { $('plays').textContent = '👑 TOP 10' + (n ? ' · 지금까지 ' + n + '판 🎮' : ''); }
   function loadBoard() {
     if (!S.api) return;
+    const seq = S.seq;   // 받는 사이에 점수나 닉네임을 올렸으면, 그보다 먼저 떠난 이 응답은 예전 순위이므로 버린다
     fetch(S.api + '?api=games&game=mole&t=' + Date.now()).then((r) => r.json()).then((d) => {
-      if (d && d.ok) { S.board = d.top; renderFame(d.top); setPlays(d.plays); }
+      if (d && d.ok && seq === S.seq) { S.board = d.top; renderFame(d.top); setPlays(d.plays); }
     }).catch(() => { $('plays').textContent = 'TOP 10 · 기록을 불러오지 못했습니다'; });
   }
   function countUp(to) {
@@ -477,6 +520,7 @@ button { font: inherit; cursor: pointer; }
   }
   function showResult() {
     const score = S.score;
+    closeNick(); S.code = '';
     $('result').hidden = false; $('claim').hidden = true; $('rNote').textContent = '';
     // 판이 끝난 줄 모르고 계속 두드리던 손가락이 「다시 하기」에 닿아 결과와 QR이 바로 사라지지 않게, 잠깐 동안은 받지 않는다
     $('again').classList.add('wait');
@@ -489,6 +533,7 @@ button { font: inherit; cursor: pointer; }
     fetch(S.api, { method: 'POST', body: JSON.stringify({ api: 'game', game: 'mole', score: score, dev: devId() }) })
       .then((r) => r.json()).then((d) => {
         if (!d || !d.ok) { $('rRank').textContent = (d && d.error) || '기록을 저장하지 못했습니다'; return; }
+        S.seq++;
         if (d.board) { S.board = d.board; setPlays(d.plays); }
         renderFame(d.board);
         if (d.top && d.code) {
@@ -497,6 +542,7 @@ button { font: inherit; cursor: pointer; }
           const url = new URL('../name.html?g=mole&c=' + d.code, location.href).href;
           $('qr').innerHTML = qrSVG(url);
           $('claim').hidden = false;
+          S.code = d.code; S.claimAt = Date.now();
         } else {
           const last = named(d.board)[9];
           $('rRank').textContent = d.rank + '등' + (last ? ' · TOP 10까지 ' + (last.s - score + 1) + '점 남았습니다' : '');
@@ -508,6 +554,116 @@ button { font: inherit; cursor: pointer; }
     try { const q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
     catch (e) { return '<p>QR을 만들 수 없습니다</p>'; }
   }
+
+  // ---------- 화면에서 닉네임 적기 ----------
+  // 누른 낱자를 그대로 모아 두고, 그릴 때마다 처음부터 글자로 조합한다(두벌식). 지우기는 낱자 하나를 지운다
+  const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+  const JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+  const VV = { 'ㅗㅏ': 'ㅘ', 'ㅗㅐ': 'ㅙ', 'ㅗㅣ': 'ㅚ', 'ㅜㅓ': 'ㅝ', 'ㅜㅔ': 'ㅞ', 'ㅜㅣ': 'ㅟ', 'ㅡㅣ': 'ㅢ' };   // 겹모음
+  const CC = { 'ㄱㅅ': 'ㄳ', 'ㄴㅈ': 'ㄵ', 'ㄴㅎ': 'ㄶ', 'ㄹㄱ': 'ㄺ', 'ㄹㅁ': 'ㄻ', 'ㄹㅂ': 'ㄼ', 'ㄹㅅ': 'ㄽ', 'ㄹㅌ': 'ㄾ', 'ㄹㅍ': 'ㄿ', 'ㄹㅎ': 'ㅀ', 'ㅂㅅ': 'ㅄ' };   // 겹받침
+  function compose(keys) {
+    let out = '', cho = '', jung = '', jong = '';   // jong 은 낱자 하나 또는 둘. 겹받침 뒤에 모음이 오면 뒤 낱자가 다음 글자의 첫소리로 넘어간다
+    const flush = () => {
+      if (cho && jung) out += String.fromCharCode(0xAC00 + (CHO.indexOf(cho) * 21 + JUNG.indexOf(jung)) * 28 + JONG.indexOf(jong.length > 1 ? CC[jong] : jong));
+      else out += cho + jung;
+      cho = jung = jong = '';
+    };
+    keys.forEach((k) => {
+      if (JUNG.indexOf(k) >= 0) {
+        if (jong) { const next = jong.slice(-1); jong = jong.slice(0, -1); flush(); cho = next; jung = k; }
+        else if (jung && VV[jung + k]) jung = VV[jung + k];
+        else if (cho && !jung) jung = k;
+        else { flush(); jung = k; }
+      } else if (CHO.indexOf(k) >= 0) {
+        if (cho && jung && !jong && JONG.indexOf(k) > 0) jong = k;
+        else if (cho && jung && jong.length === 1 && CC[jong + k]) jong += k;
+        else { flush(); cho = k; }
+      } else { flush(); out += k; }
+    });
+    flush();
+    return out;
+  }
+  const NICK_MAX = 8;   // 서버(Apps Script GAME.NAME_MAX)와 같은 값. 받는 글자도 서버가 받는 범위 안에서만 둔다
+  const KEYS = {
+    ko: ['ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ'], koShift: ['ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ'],
+    en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], enShift: ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'],
+    num: ['1234567890', '-_.~!♥★', '']
+  };
+  const N = { keys: [], lang: 'ko', num: false, shift: false, busy: false, idle: null, slots: [] };
+  [10, 10, 7].forEach((n, r) => {
+    const row = [];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('button');
+      el.className = 'k';
+      $('kb' + (r + 1)).appendChild(el);
+      onPress(el, () => typeKey(el, el.textContent));
+      row.push(el);
+    }
+    N.slots.push(row);
+  });
+  function paintKeys() {
+    const set = N.num ? KEYS.num : KEYS[N.lang + (N.shift ? 'Shift' : '')];
+    N.slots.forEach((row, r) => row.forEach((el, i) => { const ch = set[r].charAt(i); el.textContent = ch; el.hidden = !ch; }));
+    $('kShift').classList.toggle('on', N.shift);
+    $('kShift').style.visibility = N.num ? 'hidden' : '';
+    $('kMode').textContent = N.num ? (N.lang === 'ko' ? '가나다' : 'ABC') : '123';
+  }
+  function nickSay(t, ok) { $('nMsg').textContent = t; $('nMsg').className = 'nmsg' + (ok ? ' ok' : ''); }
+  function paintNick() {
+    const t = compose(N.keys);
+    $('nText').textContent = t;
+    $('nField').classList.toggle('empty', !t);
+    nickSay('');
+  }
+  function flash(el) { el.classList.add('dn'); setTimeout(() => el.classList.remove('dn'), 130); tone(1250, 1200, 35, 'sine', 0.03); }
+  // 적다가 자리를 뜨면 1분 뒤 키보드를 닫아, 다음 사람이 결과 화면에서 「다시 하기」를 누를 수 있게 한다
+  function armIdle() { clearTimeout(N.idle); N.idle = setTimeout(closeNick, 60000); }
+  function typeKey(el, ch) {
+    flash(el); armIdle();
+    if (!ch || N.busy) return;
+    if (ch === ' ' && (!N.keys.length || N.keys[N.keys.length - 1] === ' ')) return;
+    const next = N.keys.concat(ch);
+    if (Array.from(compose(next)).length > NICK_MAX) { nickSay('닉네임은 ' + NICK_MAX + '글자까지입니다'); return; }
+    N.keys = next;
+    if (N.shift) { N.shift = false; paintKeys(); }   // 쌍자음·대문자는 한 글자만
+    paintNick();
+  }
+  function openNick() {
+    // 닉네임 안내가 표시된 직후의 누름은 받지 않는다(판이 끝난 줄 모르고 두드리던 손가락)
+    if (!S.code || !S.api || Date.now() - S.claimAt < 900) return;
+    N.keys = []; N.lang = 'ko'; N.num = false; N.shift = false; N.busy = false;
+    $('nSend').classList.remove('wait');
+    paintKeys(); paintNick();
+    $('nick').hidden = false;
+    armIdle();
+  }
+  function closeNick() { clearTimeout(N.idle); $('nick').hidden = true; }
+  function sendNick() {
+    armIdle();
+    if (N.busy) return;
+    const name = compose(N.keys).trim();
+    if (!name) { nickSay('닉네임을 적어 주세요'); return; }
+    N.busy = true; $('nSend').classList.add('wait'); nickSay('올리는 중입니다', true);
+    const done = () => { N.busy = false; $('nSend').classList.remove('wait'); };
+    fetch(S.api, { method: 'POST', body: JSON.stringify({ api: 'gamename', code: S.code, name: name }) }).then((r) => r.json()).then((d) => {
+      done();
+      if (!d || !d.ok) { nickSay((d && d.error) || '올리지 못했습니다'); return; }   // 금칙어, 15분 지남, 이미 휴대폰으로 적음 등은 서버가 알려 준다
+      S.code = ''; S.seq++; closeNick(); $('claim').hidden = true;
+      if (d.board) { S.board = d.board; renderFame(d.board); }   // 방금 올린 기록이 강조된다
+      const at = named(d.board).findIndex((r) => r.n === d.name && r.s === d.score);
+      $('rRank').textContent = '🏆 ' + d.name + ' · 명예의 전당 ' + (at >= 0 ? at + 1 : d.rank) + '위! 🎉';
+      sfx.fanfare();
+    }).catch(() => { done(); nickSay('연결이 불안정합니다. 잠시 뒤 다시 눌러 주세요'); });
+  }
+  onPress($('typeHere'), openNick);
+  onPress($('kShift'), () => { flash($('kShift')); armIdle(); if (N.num) return; N.shift = !N.shift; paintKeys(); });
+  onPress($('kDel'), () => { flash($('kDel')); armIdle(); if (N.busy) return; N.keys = N.keys.slice(0, -1); paintNick(); });
+  onPress($('kMode'), () => { flash($('kMode')); armIdle(); N.num = !N.num; N.shift = false; paintKeys(); });
+  onPress($('kLang'), () => { flash($('kLang')); armIdle(); N.lang = N.lang === 'ko' ? 'en' : 'ko'; N.num = false; N.shift = false; paintKeys(); });
+  onPress($('kSpace'), () => typeKey($('kSpace'), ' '));
+  onPress($('nClose'), closeNick);
+  onPress($('nSend'), sendNick);
+  paintKeys();
 
   onPress($('start'), begin);
   onPress($('again'), () => { if (!$('again').classList.contains('wait')) begin(); });

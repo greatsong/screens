@@ -82,8 +82,23 @@ function page(source, { board = [], search = '', scoreReply = null, hiddenAtStar
     },
   };
 }
-const mole = (opts) => page(moleSource, Object.assign({ hiddenAtStart: ['countdown', 'result', 'claim'] }, opts));
+const mole = (opts) => page(moleSource, Object.assign({ hiddenAtStart: ['countdown', 'result', 'claim', 'nick'] }, opts));
 const rows = (html) => (html.match(/<li/g) || []).length;
+// 한 판을 끝까지 한다: 시작을 누르고, 결과가 표시될 때까지 올라온 두더지를 모두 누른다
+async function playRound(env) {
+  env.$('start').fire('pointerdown');
+  env.advance(3 * 800);
+  for (let t = 0; t < 40000 && env.$('result').hidden; t += 50) {
+    env.holes().filter((h) => h.classList.contains('up') && !h.classList.contains('hit')).forEach((h) => h.fire('pointerdown'));
+    env.advance(50);
+  }
+  await env.settle();
+}
+// 화면 키보드: 지금 표시된 키 가운데 그 글자가 적힌 키를 누른다
+const keyOf = (env, label) => ['kb1', 'kb2', 'kb3'].flatMap((id) => env.$(id).children).find((k) => !k.hidden && k.textContent === label);
+const type = (env, text) => Array.from(text).forEach((ch) => { const k = keyOf(env, ch); assert.ok(k, '키가 없음: ' + ch); k.fire('pointerdown'); });
+const press = (env, id, times = 1) => { for (let i = 0; i < times; i++) env.$(id).fire('pointerdown'); };
+const typed = (env) => env.$('nText').textContent;
 
 test('the start button reacts to the finger touching it, because a second finger on the screen or a sliding tap never becomes a click', () => {
   const env = mole();
@@ -136,13 +151,7 @@ test('after a round the rank counts named records only, the new nickname is high
   const env = mole({ board: before, scoreReply: (b) => ({ ok: true, top: true, code: '0123456789abcdef', rank: 3, plays: 8,
     board: [{ n: '', s: 400 }, { n: '연유', s: 399 }, { n: '', s: b.score }, { n: '석리송', s: 2 }] }) });
   await env.settle();
-  env.$('start').fire('pointerdown');
-  env.advance(3 * 800);
-  for (let t = 0; t < 40000 && env.$('result').hidden; t += 50) {   // 결과가 뜰 때까지 올라온 두더지를 모두 누른다
-    env.holes().filter((h) => h.classList.contains('up') && !h.classList.contains('hit')).forEach((h) => h.fire('pointerdown'));
-    env.advance(50);
-  }
-  await env.settle();
+  await playRound(env);
   assert.equal(env.$('result').hidden, false);
   assert.equal(env.posts.length, 1);
   assert.ok(env.posts[0].score > 10 && env.posts[0].score < 399);
@@ -165,6 +174,148 @@ test('after a round the rank counts named records only, the new nickname is high
 
   env.$('again').fire('pointerdown');
   assert.equal(env.$('result').hidden, true);
+  assert.equal(env.$('countdown').hidden, false);
+});
+
+// 닉네임을 화면에서 바로 적는 판: 순위 안에 든 결과 화면까지 간다
+async function claimRound() {
+  let mine = 0;
+  const env = mole({
+    board: [{ n: '연유', s: 399 }, { n: '석리송', s: 2 }],
+    scoreReply: (b) => {
+      if (b.api === 'game') { mine = b.score; return { ok: true, top: true, code: '0123456789abcdef', rank: 2, plays: 8, board: [{ n: '연유', s: 399 }, { n: '', s: mine }, { n: '석리송', s: 2 }] }; }
+      if (/시발/.test(b.name)) return { ok: false, error: '쓸 수 없는 말이 들어 있습니다. 다른 닉네임을 적어 주세요' };
+      return { ok: true, name: b.name, score: mine, rank: 2, board: [{ n: '연유', s: 399 }, { n: b.name, s: mine }, { n: '석리송', s: 2 }] };
+    },
+  });
+  await env.settle();
+  await playRound(env);
+  assert.equal(env.$('claim').hidden, false);
+  return env;
+}
+
+test('the screen keyboard puts Korean letters together the way a two-set keyboard does', async () => {
+  const env = await claimRound();
+  press(env, 'typeHere');                                   // 안내가 표시된 직후의 누름은 받지 않는다
+  assert.equal(env.$('nick').hidden, true);
+  env.advance(1000);
+  press(env, 'typeHere');
+  assert.equal(env.$('nick').hidden, false);
+  assert.equal(typed(env), '');
+
+  type(env, 'ㄷㅜㄷㅓㅈㅣ');
+  assert.equal(typed(env), '두더지');
+  press(env, 'kDel');                                       // 지우기는 낱자 하나. 남은 ㅈ은 모음이 오기 전까지 앞 글자의 받침이다
+  assert.equal(typed(env), '두덪');
+  press(env, 'kDel', 5);
+  assert.equal(typed(env), '');
+
+  type(env, 'ㄷㅏㄹㄱ');                                     // 겹받침
+  assert.equal(typed(env), '닭');
+  type(env, 'ㅣ');                                          // 뒤에 모음이 오면 뒤 낱자가 다음 글자의 첫소리로 넘어간다
+  assert.equal(typed(env), '달기');
+  press(env, 'kDel', 5);
+  type(env, 'ㅇㅗㅏㅇㅡㅣ');                                 // 겹모음
+  assert.equal(typed(env), '와의');
+  press(env, 'kDel', 6);
+  type(env, 'ㅎㅎ');                                        // 낱자만 적어도 된다
+  assert.equal(typed(env), 'ㅎㅎ');
+  press(env, 'kDel', 2);
+
+  press(env, 'kShift');                                     // 쌍자음은 한 글자만
+  type(env, 'ㄲㅜㅁ');
+  assert.equal(typed(env), '꿈');
+  assert.equal(keyOf(env, 'ㄲ'), undefined);
+  press(env, 'kMode');                                      // 숫자
+  assert.equal(env.$('kMode').textContent, '가나다');
+  type(env, '7');
+  press(env, 'kLang');                                      // 영어
+  type(env, 'a');
+  press(env, 'kShift');
+  type(env, 'B');
+  press(env, 'kSpace', 2);                                  // 띄어쓰기는 한 칸만
+  type(env, 'c');
+  assert.equal(typed(env), '꿈7aB c');
+  press(env, 'kDel', 9);
+  assert.equal(typed(env), '');
+
+  press(env, 'kLang');
+  type(env, 'ㄱㅏㄱㅏㄱㅏㄱㅏㄱㅏㄱㅏㄱㅏㄱㅏ');             // 8글자까지
+  type(env, 'ㄴ');                                          // 여덟째 글자의 받침은 된다
+  assert.equal(typed(env), '가가가가가가가간');
+  type(env, 'ㅏ');                                          // 아홉째 글자가 되는 낱자는 받지 않는다
+  assert.equal(typed(env), '가가가가가가가간');
+  assert.equal(env.$('nMsg').textContent, '닉네임은 8글자까지입니다');
+  assert.equal(env.posts.length, 1);                        // 적는 동안에는 서버로 보내지 않는다
+});
+
+test('a nickname typed on the screen is sent with the same one-time code as the QR, and the result shows the new rank', async () => {
+  const env = await claimRound();
+  env.advance(1000);
+  press(env, 'typeHere');
+  press(env, 'nSend');                                      // 빈 닉네임은 보내지 않는다
+  assert.equal(env.$('nMsg').textContent, '닉네임을 적어 주세요');
+  assert.equal(env.posts.length, 1);
+
+  type(env, 'ㅅㅣㅂㅏㄹ');
+  press(env, 'nSend');
+  await env.settle();
+  assert.deepEqual(env.posts[1], { api: 'gamename', code: '0123456789abcdef', name: '시발' });
+  assert.equal(env.$('nick').hidden, false);                // 서버가 받지 않으면 이유를 보여 주고 그대로 둔다
+  assert.match(env.$('nMsg').textContent, /쓸 수 없는 말/);
+
+  press(env, 'kDel', 5);
+  type(env, 'ㄷㅜㄷㅓㅈㅣㅇㅗㅏㅇ');
+  press(env, 'nSend');
+  press(env, 'nSend');                                      // 올리는 중에 다시 눌러도 한 번만 보낸다
+  await env.settle();
+  assert.equal(env.posts.length, 3);
+  assert.equal(env.posts[2].name, '두더지왕');
+  assert.equal(env.$('nick').hidden, true);
+  assert.equal(env.$('claim').hidden, true);                // 적은 뒤에는 QR도 내린다(한 기록에 한 번)
+  assert.equal(env.$('rRank').textContent, '🏆 두더지왕 · 명예의 전당 2위! 🎉');
+  assert.match(env.$('fame').innerHTML, /<li class="r2 me">.*두더지왕/);
+  press(env, 'typeHere');
+  assert.equal(env.$('nick').hidden, true);
+});
+
+test('the click that follows a press does not land on whatever appears under the finger', async () => {
+  // 누르는 순간 겹창이 열리거나 닫히면 브라우저는 뒤따라오는 click 을 손가락 아래에 새로 놓인 버튼으로 보낸다
+  const env = await claimRound();
+  env.advance(1000);
+  press(env, 'typeHere');
+  keyOf(env, 'ㅍ').fire('click');                           // 「화면에서 바로 적기」 아래에 놓인 키
+  assert.equal(typed(env), '');
+  type(env, 'ㄷㅜ');
+  press(env, 'nClose');
+  env.$('again').fire('click');                             // 「닫기」 아래에 놓인 「다시 하기」
+  assert.equal(env.$('result').hidden, false);
+  assert.equal(env.$('countdown').hidden, true);
+  env.advance(1000);
+  env.$('again').fire('click');                             // 누름 없이 온 click(리모컨 확인 버튼)은 받는다
+  assert.equal(env.$('countdown').hidden, false);
+});
+
+test('the screen keyboard closes by itself when nobody types, and when the next round starts', async () => {
+  const env = await claimRound();
+  env.advance(1000);
+  press(env, 'typeHere');
+  type(env, 'ㄷㅜ');
+  env.advance(59000);
+  assert.equal(env.$('nick').hidden, false);
+  type(env, 'ㄷ');                                          // 누를 때마다 다시 1분
+  env.advance(59000);
+  assert.equal(env.$('nick').hidden, false);
+  env.advance(2000);
+  assert.equal(env.$('nick').hidden, true);
+  assert.equal(env.$('result').hidden, false);              // 결과 화면과 QR은 그대로
+  assert.equal(env.$('claim').hidden, false);
+
+  press(env, 'typeHere');
+  assert.equal(typed(env), '');                             // 다시 열면 처음부터
+  press(env, 'nClose');
+  assert.equal(env.$('nick').hidden, true);
+  press(env, 'again');
   assert.equal(env.$('countdown').hidden, false);
 });
 
