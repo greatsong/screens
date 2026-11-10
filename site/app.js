@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.1';
+  const APP_VERSION = '0.7.2';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -105,7 +105,9 @@
     clock.offset = Math.round((lo + hi) / 2);
     clock.err = Math.round((hi - lo) / 2);
   }
-  const now = () => Date.now() + clock.offset;
+  // 미리 보기: ?at=2026-11-11T10:12:00+09:00 처럼 시각을 주면 그 시각의 화면을 보여 준다(특정 날짜에만 나오는 안내 확인용)
+  const atShift = params.at && !isNaN(Date.parse(params.at)) ? Date.parse(params.at) - Date.now() : 0;
+  const now = () => Date.now() + clock.offset + atShift;
 
   const state = {
     content: null, netOk: false, lastOk: 0, lastErr: 0, errors: 0, errMsg: '',
@@ -575,6 +577,7 @@
     (c.events || []).forEach((event) => boundary(Date.parse(event.until || '')));
     (c.news || []).forEach((n) => boundary(newsExpiry(n)));
     (c.promos || []).forEach((p) => { boundary(Date.parse(p.from || '')); boundary(Date.parse(p.until || '')); });
+    (c.guides || []).forEach((g) => { boundary(Date.parse(g.from || '')); boundary(Date.parse(g.until || '')); });
     state.nextContentAt = next;
     if (invalidate) state.slot = -1;
     renderNotice();
@@ -616,6 +619,8 @@
     const events = (c.events || []).filter((event) => Date.parse(event.until) > t).map(eventItem);
     const items = events.concat(news.length > 1 ? [NEWS_DIGEST] : [], news.map(newsItem), live.filter((x) => !(x.every > 1)));
     const projs = c.projects || [];
+    const guide = activeGuide(c, t);
+    if (guide) return guideSchedule(guide, recurring, items, projs);
     const every = Math.max(1, c.projectEvery || 2);
     const out = [];
     let p = 0;
@@ -625,6 +630,76 @@
     });
     while (p < projs.length) out.push({ project: projs[p++] }); // 모든 작품이 한 바퀴에 한 번은 나오게
     return insertRecurring(insertPromos(out, c, t), recurring);
+  }
+
+  // ---------- 행사 안내(content.guides): 정한 기간(from~until)에만 두 칸에 한 번 나오는 안내 카드 ----------
+  // 안내가 켜진 동안의 순서: 안내 → 급식 → 안내 → 학사일정 → 안내 → 소식(뉴스) → 안내 → 작품.
+  // 소식과 작품은 바퀴마다 다음 것으로 바뀐다. 손님이 계신 시간이라 소리가 나는 홍보 영상은 넣지 않는다
+  function activeGuide(c, t) {
+    return (c.guides || []).filter((g) => (!g.from || Date.parse(g.from) <= t) && (!g.until || Date.parse(g.until) > t))[0] || null;
+  }
+  function guideItem(g) {
+    const arrow = g.arrow || {};
+    return { id: 'guide-' + g.id, a: { ...g, auto: 'welcome', arrow: arrow.a || 'right', greet: 'solo' }, b: { ...g, auto: 'welcome', arrow: arrow.b || 'left', greet: 'friends' } };
+  }
+  function guideSchedule(guide, recurring, items, projs) {
+    const g = { item: guideItem(guide) };
+    const groups = recurring.map((r) => [{ item: r }])
+      .concat([items.map((it) => ({ item: it })), projs.map((p) => ({ project: p }))]).filter((x) => x.length);
+    if (!groups.length) return [g];
+    const rounds = Math.max.apply(null, groups.map((x) => x.length));
+    const out = [];
+    for (let r = 0; r < rounds; r++) groups.forEach((x) => { out.push(g, x[r % x.length]); });
+    return out;
+  }
+  // 안내 카드: 환영 인사, 장소와 방향 화살표(A는 오른쪽, B는 왼쪽), 시간표. 두근두근 당곡 캐릭터가 함께 나온다.
+  // A 화면은 낭만당곡이가 손을 흔들고(팔만 따로 그려 흔든다), B 화면은 친구들이 돌아가며 인사한다
+  // 시간표는 지금 시각에 맞춰 진행 중인 순서를 강조하고 끝난 순서는 흐리게 한다
+  const MONG = (name) => 'guide/mong/' + String(name || 'ssiat').replace(/[^a-z-]/g, '') + '.png';
+  function welcomeHTML(s) {
+    const k = kst(now());
+    const nowMin = k.h * 60 + k.mi;
+    const min = (hm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(hm || ''); return m ? +m[1] * 60 + +m[2] : NaN; };
+    const steps = (s.steps || []).map((st, i) => {
+      const phase = nowMin >= min(st.end) ? 'done' : nowMin >= min(st.start) ? 'now' : 'next';
+      return `<li class="wc-step is-${phase}" style="--i:${i}">
+        <span class="wc-face"><img src="${MONG(st.mong)}" alt=""></span>
+        <div class="wc-step-text">
+          <div class="wc-time"><b>${esc(st.start)} ~ ${esc(st.end)}</b><span class="wc-room">${esc(st.place)}</span>${phase === 'now' ? '<em>지금</em>' : ''}</div>
+          <div class="wc-name">${esc(st.name)}</div>
+        </div></li>`;
+    }).join('');
+    const chev = '<svg viewBox="0 0 300 44" aria-hidden="true">' +
+      [0, 1, 2, 3, 4, 5, 6].map((i) => `<path style="--i:${i}" d="M${14 + i * 42} 6l17 16-17 16"/>`).join('') + '</svg>';
+    const friends = (s.friends || []).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
+    // 말풍선: 4초씩 돌아가며 나온다(카드 한 번에 세 마디). B 화면은 말하는 친구가 차례로 바뀐다
+    const says = (s.says || []).slice(0, 3);
+    const say = says.length ? `<div class="wc-say wc-say-${says.length}">${says.map((t, i) => `<p style="--k:${i}">${esc(t)}</p>`).join('')}</div>` : '';
+    const hero = s.greet === 'friends'
+      ? `<div class="wc-crowd">${(s.friends || []).slice(0, 5).map((m, i) => `<span style="--i:${i}"><img src="${MONG(m)}" alt=""></span>`).join('')}</div>`
+      : `<div class="wc-hero"><span class="wc-band"><img src="${MONG('dugeun-band-wave')}" alt=""><i></i></span></div>`;
+    const confetti = Array.from({ length: 10 }, (_, i) => `<i style="--i:${i}"></i>`).join('');
+    return `<div class="wc wc-${s.arrow === 'left' ? 'left' : 'right'} is-${s.greet === 'friends' ? 'crowd' : 'solo'}">
+      <div class="wc-confetti">${confetti}</div>
+      <div class="wc-main">
+        <div class="wc-hello">
+          <div class="wc-words">
+            <div class="wc-eyebrow">${esc(s.eyebrow || '')}</div>
+            <h1 class="wc-title"><span>${esc(s.lead || '')}</span><b>${esc(s.title || '')}</b></h1>
+          </div>
+          ${say}
+          ${hero}
+        </div>
+        <div class="wc-sign">
+          <div class="wc-sign-text"><small>${esc(s.placeLabel || '장소')}</small><strong>${esc(s.place || '')}</strong></div>
+          <div class="wc-arrow">${chev}</div>
+        </div>
+      </div>
+      <div class="wc-side">
+        <ol class="wc-steps">${steps}</ol>
+        ${s.greet === 'friends' ? '' : `<div class="wc-friends">${friends}</div>`}
+      </div>
+    </div>`;
   }
 
   // 주기 카드: every 칸마다 한 번(급식 3, 학사일정 5). 같은 칸에 겹치면 content.items 앞쪽(급식)이 먼저 나오고
@@ -761,9 +836,10 @@
         : auto === 'newsread' ? newsReadHTML(side)
         : auto === 'schedule' ? scheduleHTML(side)
         : auto === 'calendar' ? calendarHTML(side)
-        : auto === 'mealrank' ? mealRankHTML(side) : cardHTML(side);
+        : auto === 'mealrank' ? mealRankHTML(side)
+        : auto === 'welcome' ? welcomeHTML(side) : cardHTML(side);
       // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
-      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' ? 'sun'
+      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' || auto === 'welcome' ? 'sun'
         : entry.project ? 'lilac' : auto === 'newsread' || (entry.item && /^news-/.test(entry.item.id)) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
@@ -1163,7 +1239,8 @@
 
   function renderDots(idx, n) {
     let html = '';
-    for (let i = 0; i < n; i++) html += '<i class="' + (i === idx ? 'on' : '') + '"></i>';
+    // 칸이 많은 날(행사 안내가 사이사이 들어간 날)에는 점이 줄을 넘치므로 번호만 보여 준다
+    for (let i = 0; i < n && n <= 24; i++) html += '<i class="' + (i === idx ? 'on' : '') + '"></i>';
     $('dots').innerHTML = html + '<span class="count">' + (idx + 1) + ' / ' + n + '</span>';
   }
 

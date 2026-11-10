@@ -448,3 +448,33 @@ test('public events join both screens, use the signup QR and expire without poll
     assert.equal(env.state.sched.some((e) => e.item?.id === 'event-source:event'), false);
   }
 });
+
+test('a guide day alternates the welcome card with meal, calendar, news and projects, and only inside its dates', () => {
+  const day = Date.parse('2026-11-11T10:12:00+09:00');
+  const guide = { id: 'open', from: '2026-11-11T00:00:00+09:00', until: '2026-11-12T00:00:00+09:00', title: '환영합니다!', place: 'SW1실',
+    says: ['<b>hi</b>'], steps: [{ start: '10:10', end: '10:20', name: '방명록 등록', place: 'AI 랩실', mong: 'arong' }, { start: '10:20', end: '11:10', name: '수업', place: 'SW1실', mong: '../x' }] };
+  const data = content({ guides: [guide], promos: [{ id: 'promo', src: 'promo.mp4', every: 1, seconds: 15 }],
+    items: [{ id: 'meal', every: 3, a: { title: 'Meal' } }, { id: 'schedule', every: 5, a: { title: 'Calendar' } }, { id: 'n1', a: { title: 'N1' } }, { id: 'n2', a: { title: 'N2' } }],
+    projects: [{ id: 'p1', title: 'P1', images: {} }] });
+  const kind = (e) => e.project ? e.project.id : e.item.id;
+  for (const role of ['a', 'b']) {
+    const env = screen({ role, time: day });
+    env.applyContent(data, false);
+    assert.equal(env.state.sched.map(kind).join(' '), ['guide-open', 'meal', 'guide-open', 'schedule', 'guide-open', 'n1', 'guide-open', 'p1',
+      'guide-open', 'meal', 'guide-open', 'schedule', 'guide-open', 'n2', 'guide-open', 'p1'].join(' '));
+    env.setTime(Math.floor(day / (16 * 12000)) * 16 * 12000);   // 한 바퀴의 첫 칸 = 안내
+    env.tick();
+    const html = env.element('card').innerHTML;
+    assert.match(html, role === 'a' ? /wc-right is-solo/ : /wc-left is-crowd/);
+    assert.match(html, /&lt;b&gt;hi&lt;\/b&gt;/);
+    assert.doesNotMatch(html, /\.\.\/x/);
+    // 끝나는 시각이 되면 새 편성을 받지 않아도 평소 순서로 돌아간다
+    env.setTime(Date.parse(guide.until));
+    env.tick();
+    assert.equal(env.state.sched.some((e) => e.item && e.item.id === 'guide-open'), false);
+    assert.equal(env.state.sched.some((e) => e.promo), true);
+  }
+  const before = screen({ time: Date.parse('2026-11-10T15:00:00+09:00') });
+  before.applyContent(data, false);
+  assert.equal(before.state.sched.some((e) => e.item && e.item.id === 'guide-open'), false);
+});

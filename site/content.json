@@ -1,7 +1,7 @@
 {
-  "version": 61,
-  "publishedAt": "2026-11-10T13:20:36+09:00",
-  "appVersion": "0.7.1",
+  "version": 62,
+  "publishedAt": "2026-11-10T13:40:37+09:00",
+  "appVersion": "0.7.2",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -334,5 +334,57 @@
   "vote": {
     "api": "https://script.google.com/macros/s/AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA/exec"
   },
-  "events": []
+  "events": [],
+  "guides": [
+    {
+      "id": "openclass-1111",
+      "from": "2026-11-11T00:00:00+09:00",
+      "until": "2026-11-12T00:00:00+09:00",
+      "eyebrow": "AI중점학교 공개 수업",
+      "lead": "참관 오신 선생님들",
+      "title": "환영합니다!",
+      "placeLabel": "장소",
+      "place": "정보관 2층 SW1실",
+      "arrow": {
+        "a": "right",
+        "b": "left"
+      },
+      "steps": [
+        {
+          "start": "10:10",
+          "end": "10:20",
+          "name": "방명록 등록",
+          "place": "AI 랩실",
+          "mong": "arong"
+        },
+        {
+          "start": "10:20",
+          "end": "11:10",
+          "name": "수업 참관 및 참관록 작성",
+          "place": "SW1실",
+          "mong": "chorong"
+        },
+        {
+          "start": "11:10",
+          "end": "11:30",
+          "name": "수업 나눔 간담회",
+          "place": "AI 랩실",
+          "mong": "doran"
+        }
+      ],
+      "friends": [
+        "mongsil",
+        "drum",
+        "ssiat",
+        "salang",
+        "ttukttak",
+        "gori"
+      ],
+      "says": [
+        "AI중점학교 공개 수업에 오신 선생님들을 환영합니다!",
+        "높은 언덕 오르시느라 힘드셨죠?!",
+        "수업은 10:20에 SW1실에서 시작됩니다!"
+      ]
+    }
+  ]
 }
