@@ -1125,3 +1125,63 @@ body.is-stopped #promo { display: none !important; }
 .bus-stop { bottom: 4.6vmin; z-index: 1; }
 .bus-road { z-index: 1; }
 .bus-car { z-index: 3; bottom: 0.9vmin; }
+
+/* ---------- 세로 화면(기본 설치 방향) 하교 버스 카드: 지도 옆에 강수 확률과 다른 노선을 두고, 아래 세 칸은 위아래로 쌓는다 ---------- */
+@media (orientation: portrait) {
+  .bus-top .bus-side { display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto auto 1fr; column-gap: 3.4vmin; row-gap: calc(var(--f, 1) * 2vmin); align-items: center; }
+  .bus-top .bus-side .bus-map { grid-row: 1 / 5; grid-column: 1; }
+  .bus-top .bus-side .bus-rain { grid-row: 2; grid-column: 2; flex-direction: column; align-items: stretch; gap: 1vmin; }
+  .bus-top .bus-side .bus-other { grid-row: 3; grid-column: 2; }
+  .bm { height: calc(var(--f, 1) * 44vmin); margin: 0; }
+  .rain-text { flex-direction: row; align-items: baseline; gap: 1.6vmin; font-size: calc(var(--f, 1) * 3vmin); }
+  .rain-bars { flex: none; height: calc(var(--f, 1) * 11vmin); }
+  .bus-other { font-size: calc(var(--f, 1) * 3.2vmin); }
+  .bus-other span { row-gap: 0.4vmin; }
+  .bus-time strong { font-size: calc(var(--f, 1) * 17vmin); }
+  .bus-time span { font-size: calc(var(--f, 1) * 4.2vmin); }
+  .busc .title { font-size: calc(var(--f, 1) * 7.4vmin); }
+  .bus-where { font-size: calc(var(--f, 1) * 4.2vmin); }
+  .bus-lane { height: calc(var(--f, 1) * 22vmin); }
+  .bus-car { width: calc(var(--f, 1) * 27vmin); }
+  .bus-wait img { height: calc(var(--f, 1) * 10vmin); }
+  .bus-sign { font-size: calc(var(--f, 1) * 3.2vmin); }
+  .bus-tile small { font-size: calc(var(--f, 1) * 3.2vmin); }
+  .bus-tile p { font-size: calc(var(--f, 1) * 3.2vmin); white-space: normal; }
+  .bus-tile .ride-bars { height: calc(var(--f, 1) * 15vmin); padding-bottom: 3.6vmin; }
+  .ride-bars u { font-size: 2.6vmin; }
+  .ride-week b { font-size: calc(var(--f, 1) * 3vmin); }
+  .ride-week u { font-size: 3vmin; }
+  .story-top img { height: calc(var(--f, 1) * 15vmin); }
+  .story-say p { font-size: calc(var(--f, 1) * 3.6vmin); }
+  .bus-story .bus-hist { font-size: calc(var(--f, 1) * 2.8vmin); }
+  .bm-live { font-size: 2.4vmin; }
+  .bm-pin b { font-size: 2.8vmin; }
+  /* 안내 띠는 버튼과 같은 줄 왼쪽에 둔다(카드 아래쪽 칸을 가리지 않게) */
+  .peek-note, body.role-b .peek-note { bottom: 9.6vmin; max-width: 46vw; font-size: 2.8vmin; }
+  .bus-toast { top: 18vmin; max-width: 94%; }
+}
+
+/* 세로 화면 날씨 카드: 남는 높이를 쓰도록 그림과 글자를 키운다 */
+@media (orientation: portrait) {
+  .wx-now { align-items: center; }
+  .wx-now .wx-ic { width: calc(var(--f, 1) * 30vmin); }
+  .wx-now .title { font-size: calc(var(--f, 1) * 20vmin); }
+  .wx-sum { font-size: calc(var(--f, 1) * 4.6vmin); line-height: 1.4; }
+  .wxc .title { font-size: calc(var(--f, 1) * 11vmin); }
+  .wx-hours, .wx-week { gap: 2vmin; margin-top: calc(var(--f, 1) * 3vmin); }
+  .wx-hours li, .wx-week li { flex: 0 0 calc(25% - 1.5vmin); padding: calc(var(--f, 1) * 2.6vmin) 0.6vmin; gap: 1vmin; }
+  .wx-hours b, .wx-week b { font-size: calc(var(--f, 1) * 4.2vmin); }
+  .wx-hours .wx-ic { width: calc(var(--f, 1) * 13vmin); }
+  .wx-week .wx-ic { width: calc(var(--f, 1) * 15vmin); }
+  .wx-hours em { font-size: calc(var(--f, 1) * 6vmin); }
+  .wx-hours span, .wx-p { font-size: calc(var(--f, 1) * 3.6vmin); }
+  .wx-t em { font-size: calc(var(--f, 1) * 5.6vmin); }
+  .wx-t i { font-size: calc(var(--f, 1) * 4.2vmin); }
+  .wx-tip p { font-size: calc(var(--f, 1) * 4.4vmin); }
+  .wx-tip img { height: calc(var(--f, 1) * 14vmin); }
+  .wx-say { margin-top: calc(var(--f, 1) * 2vmin); }
+  .wx-foot { margin-top: calc(var(--f, 1) * 3vmin); align-items: flex-end; }
+  .wx-bus { font-size: calc(var(--f, 1) * 4vmin); flex-direction: column; gap: 1vmin; }
+}
+
+.wx-bus span { white-space: nowrap; }
