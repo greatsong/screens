@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.5';
+  const APP_VERSION = '0.8.6';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -986,6 +986,7 @@
     const mode = c && c.mode !== 'stop' ? busMode(c, t) : '';
     if (!mode) return;
     maybeLoadRain(c.bus);
+    maybeLoadRide(c.bus);
     // 하교 시간에는 30초, 그 밖에는 60초마다(그 밖의 시간에는 서버가 3분 동안 같은 결과를 준다)
     if (state.busBusy || Date.now() - (state.busTry || 0) < (mode === 'peak' ? 30000 : 60000)) return;
     state.busBusy = true;
@@ -1000,6 +1001,29 @@
       busPaint();
     }).catch(() => { if (!state.busErr) { state.busErr = true; logEvent('버스 도착 정보를 받지 못함'); } })
       .then(() => { clearTimeout(timer); state.busBusy = false; });
+  }
+  // 시간대별 승차 인원: scripts/build_ridership.py 가 서울 열린데이터광장 월 자료에서 뽑아 둔 파일(bus/ridership.json)을 하루에 한 번 읽는다
+  function maybeLoadRide(b) {
+    if (b.ride === false || state.rideBusy || Date.now() - (state.rideTry || 0) < 6 * 3600000) return;
+    state.rideBusy = true;
+    state.rideTry = Date.now();
+    fetch('bus/ridership.json?t=' + ymd(now())).then((x) => x.json()).then((d) => { if (d && d.stops) { state.ride = d; busPaint(); } })
+      .catch(() => {}).then(() => { state.rideBusy = false; });
+  }
+  // 7~19시 막대그래프. 지금 시간대를 강조하고 그 시간대의 하루 평균을 문장으로 적는다
+  function rideHTML(stop) {
+    const r = state.ride;
+    const per = r && r.stops && r.stops[stop.id + '|' + (stop.routes ? stop.routes[0] : '')];
+    if (!per) return '';
+    const hours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    const max = Math.max.apply(null, hours.map((h) => per[h] || 0).concat([1]));
+    const nowH = kst(now()).h;
+    const top = hours.reduce((a, h) => ((per[h] || 0) > (per[a] || 0) ? h : a), hours[0]);
+    const bars = hours.map((h) => `<i class="${h === nowH ? 'on' : ''}${h === top ? ' top' : ''}"><em style="height:${Math.max(4, (per[h] || 0) / max * 100).toFixed(0)}%"></em><u>${h}</u></i>`).join('');
+    const mon = +String(r.month || '').slice(5, 7);
+    const here = per[nowH] != null ? `${nowH}시대에는 하루 평균 ${Math.round(per[nowH])}명이 탑니다. ` : '';
+    const most = nowH === top ? '하루 중 가장 많이 타는 시간대입니다.' : `가장 많이 타는 시간은 ${top}시대입니다(${Math.round(per[top])}명).`;
+    return `<small>${mon ? mon + '월 ' : ''}시간대별 승차 인원</small><div class="ride-bars">${bars}</div><p>${here}${most}</p>`;
   }
   // 날씨: Open-Meteo(키 없음)에서 30분마다 시간별·일별 예보를 받는다. 하교 시간에는 버스 카드의 강수 확률 막대에,
   // 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 사용한다
@@ -1259,7 +1283,7 @@
           <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
           <div class="bus-road"></div>
         </div>
-        <div class="bus-hist" id="busHist"></div>
+        <div class="bus-info"><div class="bus-hist" id="busHist"></div><div class="bus-ride" id="busRide"></div></div>
       </div>
       <div class="bus-side">
         ${mapHTML}
@@ -1308,11 +1332,13 @@
     $('busBig').textContent = h.big;
     $('busNext').textContent = h.sub;
     // 버스 위치: 10분 이상 남으면 길 왼쪽 끝, 도착하면 정류장 앞. 정보가 없으면 길 밖에서 기다린다
-    const far = h.pos == null ? 1.25 : Math.min(1, Math.max(0, h.pos / 600));
-    $('busCar').style.left = (44 - far * 44).toFixed(1) + '%';
+    const far = Math.min(1, Math.max(0, (h.pos || 0) / 600));
+    $('busCar').style.left = h.pos == null ? '-45%' : (44 - far * 44).toFixed(1) + '%';
     $('busCar').className = 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : '');
     const hist = busHistory(stop, v);
     if (state.busHist !== hist || !$('busHist').innerHTML) { state.busHist = hist; $('busHist').innerHTML = hist; }
+    const ride = rideHTML(stop);
+    if ($('busRide') && (state.busRide !== ride || (ride && !$('busRide').innerHTML))) { state.busRide = ride; $('busRide').innerHTML = ride; }
     const rain = rainHTML();
     if (state.busRain !== rain || (rain && !$('busRain').innerHTML)) { state.busRain = rain; $('busRain').innerHTML = rain; }
     const other = stops.filter((x) => x !== stop).map((x) => {

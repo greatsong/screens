@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus, busAlert, weatherHTML, rideHTML };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -519,7 +519,7 @@ test('each screen shows its own stop, counts the remaining time down, and treats
     env.maybeLoadBus(env.now());
     env.maybeLoadBus(env.now());                       // 30초 안에는 다시 부르지 않는다
     for (let i = 0; i < 6; i++) await Promise.resolve();
-    assert.deepEqual(calls, ['https://example.invalid/exec?api=bus&stops=21348,20507']);
+    assert.deepEqual(calls.filter((u) => /api=bus/.test(u)), ['https://example.invalid/exec?api=bus&stops=21348,20507']);
     const stop = BUS.stops[role === 'a' ? 0 : 1];
     const view = env.busView(stop);
     if (role === 'a') {
@@ -541,7 +541,7 @@ test('a closed or failed bus reply leaves the card in its waiting state and outs
   const env = screen({ time: Date.parse('2026-11-10T15:20:00+09:00') });
   let calls = 0;
   env.setFetch(() => { calls++; return Promise.resolve({ json: () => Promise.resolve({ ok: false, closed: true }) }); });
-  env.applyContent(content({ bus: { ...BUS, rain: null } }), false);
+  env.applyContent(content({ bus: { ...BUS, rain: null, ride: false } }), false);
   env.maybeLoadBus(env.now());
   for (let i = 0; i < 6; i++) await Promise.resolve();
   assert.equal(calls, 1);
@@ -651,4 +651,15 @@ test('the weather card shows the rest of today on A and the week on B, from one 
     }
     assert.equal(env.state.rain.hours.length, 6);       // 버스 카드의 15~20시 강수 확률도 같은 응답에서 나온다
   }
+});
+
+test('the ridership bars highlight the current hour and name the busiest one', () => {
+  const env = screen({ time: Date.parse('2026-11-10T15:20:00+09:00') });
+  env.state.ride = { month: '2026-10', stops: { '21348|관악11': { 7: 11.1, 8: 13.9, 15: 10.7, 16: 17.8, 17: 6.1 } } };
+  const html = env.rideHTML(BUS.stops[0]);
+  assert.match(html, /10월 시간대별 승차 인원/);
+  assert.equal((html.match(/<i class/g) || []).length, 13);
+  assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
+  assert.match(html, /15시대에는 하루 평균 11명이 탑니다\. 가장 많이 타는 시간은 16시대입니다\(18명\)\./);
+  assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
 });
