@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.8';
+  const APP_VERSION = '0.8.9';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -950,18 +950,20 @@
   // 남은 시간은 받은 값에서 1초씩 줄여 보여 주고 30초마다 새로 받는다. 지난 며칠의 도착 시각도 함께 온다.
   // 강수 확률은 Open-Meteo(키 없음)에서 30분마다 받는다
   const hmMin = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : NaN; };
-  // 'peak': 하교 시간(bus.from~until, 버스 카드가 자주 나온다) · 'off': 그 밖의 운영 시간(bus.allDay, 가끔 나온다) · '': 나오지 않는다
+  // 'peak': 하교 시간(bus.from~until, 버스 카드가 자주 나온다) · 'off': 그 밖의 운영 시간(bus.allDay, 날씨 카드에 버스 줄이 붙는다)
+  // 'wx': 저녁·주말·휴업일(날씨 카드만 나오고 버스 정보는 받지 않는다. bus.rain 이 있을 때) · '': 나오지 않는다
   function busMode(c, t) {
     const b = c && c.bus;
     if (!b || !b.api || !(b.stops || []).length) return '';
+    const rest = b.rain && b.weatherAlways !== false ? 'wx' : '';
     const d = new Date(t + 9 * 3600000);
-    if ((b.days || [1, 2, 3, 4, 5]).indexOf(d.getUTCDay()) < 0) return '';
+    if ((b.days || [1, 2, 3, 4, 5]).indexOf(d.getUTCDay()) < 0) return rest;
     const iso = d.toISOString().slice(0, 10);
-    if ((c.schedule || []).some((e) => e.holiday && e.start <= iso && e.end >= iso)) return '';   // 휴업일에는 내지 않는다
+    if ((c.schedule || []).some((e) => e.holiday && e.start <= iso && e.end >= iso)) return rest;   // 휴업일에는 버스를 내지 않는다
     const min = d.getUTCHours() * 60 + d.getUTCMinutes();
     const inside = (from, until) => min >= hmMin(from) && min < hmMin(until);
     if (inside(b.from || '15:00', b.until || '17:00')) return 'peak';
-    return b.allDay && inside(b.allDay.from || '07:30', b.allDay.until || '19:00') ? 'off' : '';
+    return b.allDay && inside(b.allDay.from || '07:30', b.allDay.until || '19:00') ? 'off' : rest;
   }
   function busActive(c, t) { return busMode(c, t) === 'peak'; }
   function busBoundaries(c, t, boundary) {
@@ -986,6 +988,7 @@
     const mode = c && c.mode !== 'stop' ? busMode(c, t) : '';
     if (!mode) return;
     maybeLoadRain(c.bus);
+    if (mode === 'wx') return;   // 저녁·주말에는 날씨만 받는다(버스 호출 한도를 아낀다)
     maybeLoadRide(c.bus);
     // 하교 시간에는 30초, 그 밖에는 60초마다(그 밖의 시간에는 서버가 3분 동안 같은 결과를 준다)
     if (state.busBusy || Date.now() - (state.busTry || 0) < (mode === 'peak' ? 30000 : 60000)) return;
@@ -1347,7 +1350,7 @@
     if (!s || !b) return;
     const stops = b.stops || [];
     if (s.auto === 'weather') {
-      const line = stops.map((x) => `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)}<em>${esc(busHeadline(busView(x)).big)}</em></span>`).join('');
+      const line = busMode(state.content, now()) !== 'off' ? '' : stops.map((x) => `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)}<em>${esc(busHeadline(busView(x)).big)}</em></span>`).join('');
       if ($('wxBus') && (state.wxBus !== line || !$('wxBus').innerHTML)) { state.wxBus = line; $('wxBus').innerHTML = line; }
       return;
     }

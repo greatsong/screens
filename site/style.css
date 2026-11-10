@@ -1036,3 +1036,5 @@ body.is-stopped #promo { display: none !important; }
 
 /* 기상청 예보가 닿지 않아 Open-Meteo 로 채운 날짜는 점선 테두리로 구분한다 */
 .wx-week li.is-om { border-style: dashed; }
+
+.wx-bus:empty { display: none; }

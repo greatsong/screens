@@ -701,3 +701,21 @@ test('the weather office forecast takes over, and only the days beyond it come f
     }
   }
 });
+
+test('in the evening and at weekends the weather card stays, without asking for bus arrivals', async () => {
+  const om = { current: { temperature_2m: 5, weather_code: 3, wind_speed_10m: 1 }, hourly: { time: ['2026-11-14T21:00'], temperature_2m: [5], precipitation_probability: [0], weather_code: [3], wind_speed_10m: [1] }, daily: { time: ['2026-11-14'], weather_code: [3], temperature_2m_max: [9], temperature_2m_min: [2], precipitation_probability_max: [0] } };
+  for (const time of ['2026-11-14T21:00:00+09:00', '2026-11-10T21:00:00+09:00']) {      // 토요일 밤, 화요일 밤
+    const env = screen({ time: Date.parse(time) });
+    const calls = [];
+    env.setFetch((url) => { calls.push(String(url)); return Promise.resolve({ json: () => Promise.resolve(String(url).includes('open-meteo') ? om : { ok: false }) }); });
+    env.applyContent(content({ bus: { ...BUS, rain: { lat: 37.49, lon: 126.93 }, allDay: { from: '07:30', until: '19:00' } },
+      items: Array.from({ length: 6 }, (_, i) => ({ id: 'c' + i, a: { title: 'Card ' + i } })) }), false);
+    assert.equal(Array.from(env.state.sched, (e) => e.item && e.item.id).includes('weather'), true);
+    env.maybeLoadBus(env.now());
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.equal(calls.some((u) => /api=bus/.test(u)), false);
+    assert.equal(calls.some((u) => /ridership/.test(u)), false);
+    assert.equal(calls.some((u) => /open-meteo/.test(u)), true);
+    assert.equal(calls.some((u) => /api=weather/.test(u)), true);
+  }
+});
