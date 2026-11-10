@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.7.6';
+  const APP_VERSION = '0.7.7';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -457,6 +457,8 @@
       maybeLoadVotes();
     }
     renderPlayer();
+    maybeLoadBus(t);
+    if (k.s !== state.busSec) { state.busSec = k.s; busPaint(); }
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) $('gallery').hidden = true;
 
     const c = state.content;
@@ -578,6 +580,7 @@
     (c.news || []).forEach((n) => boundary(newsExpiry(n)));
     (c.promos || []).forEach((p) => { boundary(Date.parse(p.from || '')); boundary(Date.parse(p.until || '')); });
     (c.guides || []).forEach((g) => { boundary(Date.parse(g.from || '')); boundary(Date.parse(g.until || '')); });
+    busBoundaries(c, t, boundary);
     state.nextContentAt = next;
     if (invalidate) state.slot = -1;
     renderNotice();
@@ -615,7 +618,8 @@
     // AI 뉴스(「AI 뉴스」 워크플로가 고른 기사)를 소식 앞에 둔다. 오래된 소식은 내린다
     const news = activeNews(c, t);
     const live = (c.items || []).filter((x) => !x.until || Date.parse(x.until) > t);
-    const recurring = live.filter((x) => x.every > 1);   // 급식·학사일정: 카드 몇 장마다 한 번
+    // 급식·학사일정: 카드 몇 장마다 한 번. 하교 시간에는 버스 카드가 그 앞에 선다
+    const recurring = (busActive(c, t) ? [busItem(c.bus)] : []).concat(live.filter((x) => x.every > 1));
     const events = (c.events || []).filter((event) => Date.parse(event.until) > t).map(eventItem);
     const items = events.concat(news.length > 1 ? [NEWS_DIGEST] : [], news.map(newsItem), live.filter((x) => !(x.every > 1)));
     const projs = c.projects || [];
@@ -846,9 +850,11 @@
         : auto === 'schedule' ? scheduleHTML(side)
         : auto === 'calendar' ? calendarHTML(side)
         : auto === 'mealrank' ? mealRankHTML(side)
+        : auto === 'bus' ? busHTML(side)
         : auto === 'welcome' ? welcomeHTML(side) : cardHTML(side);
+      if (auto === 'bus') busPaint();
       // 밝은 화면의 빛 색: 급식·학사일정 살구, 뉴스 하늘, 오늘의 AI 뉴스 목록 레몬, 작품 라벤더
-      setTone(/^(meal|mealweek|schedule|calendar)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' || auto === 'welcome' ? 'sun'
+      setTone(/^(meal|mealweek|schedule|calendar|bus)$/.test(auto || '') ? '' : auto === 'newsdigest' || auto === 'mealrank' || auto === 'welcome' ? 'sun'
         : entry.project ? 'lilac' : auto === 'newsread' || (entry.item && /^news-/.test(entry.item.id)) ? 'sky' : '');
       drawSlideQR(entry);
       fitCard();
@@ -931,6 +937,208 @@
       <ul class="sc-list">${rows}</ul>
       <div class="source">나이스 교육정보 개방 포털</div>
     </div></div>`;
+  }
+
+  // ---------- 하교 버스(content.bus): 평일 하교 시간에만 나오는 버스 도착 카드 ----------
+  // A 화면은 첫째 정류장(bus.stops[0]), B 화면은 둘째 정류장을 크게 보여 주고 다른 쪽은 아래에 한 줄로 붙인다.
+  // 도착 정보는 Apps Script 웹 앱(bus.api, ?api=bus)이 서울 버스 API를 대신 불러 준다(인증키는 그쪽 스크립트 속성에 있다).
+  // 남은 시간은 받은 값에서 1초씩 줄여 보여 주고 30초마다 새로 받는다. 지난 며칠의 도착 시각도 함께 온다.
+  // 강수 확률은 Open-Meteo(키 없음)에서 30분마다 받는다
+  const hmMin = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : NaN; };
+  function busActive(c, t) {
+    const b = c && c.bus;
+    if (!b || !b.api || !(b.stops || []).length) return false;
+    const d = new Date(t + 9 * 3600000);
+    if ((b.days || [1, 2, 3, 4, 5]).indexOf(d.getUTCDay()) < 0) return false;
+    const min = d.getUTCHours() * 60 + d.getUTCMinutes();
+    if (!(min >= hmMin(b.from || '15:00') && min < hmMin(b.until || '17:00'))) return false;
+    const iso = d.toISOString().slice(0, 10);
+    return !(c.schedule || []).some((e) => e.holiday && e.start <= iso && e.end >= iso);   // 휴업일에는 내지 않는다
+  }
+  function busBoundaries(c, t, boundary) {
+    const b = c.bus;
+    if (!b) return;
+    const day0 = Math.floor((t + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000;
+    [0, 1].forEach((k) => [b.from || '15:00', b.until || '17:00'].forEach((v) => boundary(day0 + k * 86400000 + hmMin(v) * 60000)));
+  }
+  function busItem(b) { return { id: 'bus', every: Math.max(2, b.every || 3), a: { auto: 'bus', pick: 0 }, b: { auto: 'bus', pick: 1 } }; }
+  function busOnScreen() {
+    const cur = state.sched[state.idx];
+    const side = cur && entrySide(cur);
+    return side && side.auto === 'bus' ? side : null;
+  }
+  function maybeLoadBus(t) {
+    const c = state.content;
+    if (!c || c.mode === 'stop' || !busActive(c, t)) return;
+    maybeLoadRain(c.bus);
+    if (state.busBusy || Date.now() - (state.busTry || 0) < 30000) return;
+    state.busBusy = true;
+    state.busTry = Date.now();
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, FETCH_TIMEOUT);
+    const ids = c.bus.stops.map((s) => String(s.id).replace(/\D/g, '')).join(',');
+    fetch(c.bus.api + '?api=bus&stops=' + ids, ctrl ? { signal: ctrl.signal } : {}).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok) { if (!(d && d.closed) && !state.busErr) { state.busErr = true; logEvent('버스 도착 정보를 받지 못함' + (d && d.error ? ' (' + d.error + ')' : '')); } return; }
+      state.busErr = false;
+      state.bus = { recv: Date.now(), now: d.now, stops: d.stops || {}, log: d.log || {} };
+      busPaint();
+    }).catch(() => { if (!state.busErr) { state.busErr = true; logEvent('버스 도착 정보를 받지 못함'); } })
+      .then(() => { clearTimeout(timer); state.busBusy = false; });
+  }
+  function maybeLoadRain(b) {
+    const r = b.rain;
+    if (!r || state.rainBusy || Date.now() - (state.rainTry || 0) < 1800000) return;
+    state.rainBusy = true;
+    state.rainTry = Date.now();
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(r.lat) + '&longitude=' + encodeURIComponent(r.lon) +
+      '&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=1';
+    fetch(url).then((x) => x.json()).then((d) => {
+      const hours = [];
+      const from = r.from == null ? 15 : r.from;
+      const until = r.until == null ? 20 : r.until;
+      ((d.hourly || {}).time || []).forEach((tm, i) => {
+        const h = +String(tm).slice(11, 13);
+        const p = d.hourly.precipitation_probability[i];
+        if (h >= from && h <= until && typeof p === 'number') hours.push({ h, p });
+      });
+      if (hours.length) state.rain = { day: ymd(now()), hours };
+      busPaint();
+    }).catch(() => {}).then(() => { state.rainBusy = false; });
+  }
+  // 정류장 한 곳의 지금 상태. 종점(받은 방향 이름이 정류장 이름과 같은 차)은 들어오는 차로 따로 본다
+  function busView(stop) {
+    const bus = state.bus && Date.now() - state.bus.recv < 150000 ? state.bus : null;
+    const sd = bus && bus.stops[stop.id];
+    if (!sd || !sd.at) return { ready: false };
+    const age = (bus.now - sd.at) / 1000 + (Date.now() - bus.recv) / 1000;
+    const left = (sec) => (sec == null ? null : sec - age);
+    const mine = (sd.buses || []).filter((x) => !stop.routes || stop.routes.indexOf(x.route) >= 0);
+    const out = mine.filter((x) => x.dir !== stop.name)[0] || null;
+    const inb = mine.filter((x) => x.dir === stop.name)[0] || null;
+    const src = out && out.sec1 != null ? out : null;
+    return { ready: true, out, inb, left1: src ? left(src.sec1) : null, left2: src ? left(src.sec2) : null,
+      inLeft: inb ? left(inb.sec1) : null, msg: out ? out.msg1 : (inb ? '출발대기' : ''), term: (out || inb || {}).term || null,
+      logKey: src ? out.route + '|' + out.dir : inb ? inb.route + '|' + inb.dir : '', terminus: !src && !!inb };
+  }
+  const busMin = (sec) => { const m = Math.floor(sec / 60); const s = Math.floor(sec % 60); return m > 0 ? m + '분 ' + p2(s) + '초' : s + '초'; };
+  function busHeadline(v) {
+    if (!v.ready) return { big: '확인 중', sub: '도착 정보를 확인하고 있습니다', pos: null };
+    if (v.left1 != null) {
+      if (v.left1 <= 0) return { big: '도착', sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: 0 };
+      return { big: v.left1 <= 60 ? '곧 도착' : busMin(v.left1), sub: v.left2 > 0 ? '다음 버스는 ' + Math.ceil(v.left2 / 60) + '분 뒤에 옵니다' : '', pos: v.left1 };
+    }
+    if (v.inLeft != null && v.inLeft > 0) return { big: busMin(v.inLeft), sub: '이 시간 뒤 종점에 들어온 차가 다시 출발합니다', pos: v.inLeft };
+    if (/운행종료/.test(v.msg)) return { big: '운행 종료', sub: '', pos: null };
+    return { big: '출발 대기', sub: v.term ? '배차 간격은 약 ' + v.term + '분입니다' : '', pos: null };
+  }
+  // 지난 며칠의 도착 시각 가운데 지금 시각 앞뒤 45분 안의 것만 고른다
+  function busHistory(stop, v) {
+    const per = state.bus && state.bus.log && state.bus.log[stop.id];
+    const days = (per && v.logKey && per[v.logKey]) || [];
+    const k = kst(now());
+    const nowMin = k.h * 60 + k.mi;
+    const today = ymd(now());
+    const rows = days.filter((d) => d.d !== today).slice(0, 3).map((d) => {
+      const t = (d.t || []).filter((x) => Math.abs(hmMin(x) - nowMin) <= 45).slice(0, 5);
+      return t.length ? `<li><b>${esc(ymdLabel(d.d).replace(/^\d+월 /, ''))}</b>${t.map((x) => `<span>${esc(x)}</span>`).join('')}</li>` : '';
+    }).filter(Boolean).join('');
+    const label = v.terminus ? '지난 며칠 종점에 들어온 시각' : '지난 며칠 도착한 시각';
+    return rows ? `<small>${label}</small><ul>${rows}</ul>` : '<small>도착 시각 기록을 모으고 있습니다. 며칠 뒤부터 표시합니다.</small>';
+  }
+  function rainHTML() {
+    const r = state.rain;
+    if (!r || r.day !== ymd(now())) return '';
+    const max = Math.max.apply(null, r.hours.map((x) => x.p));
+    const bars = r.hours.map((x) => `<i><em style="height:${Math.max(6, x.p)}%"></em><u>${x.h}시</u></i>`).join('');
+    return `<div class="rain-text"><small>${r.hours[0].h}~${r.hours[r.hours.length - 1].h}시 강수 확률</small><b>최대 ${max}%</b>${max >= 60 ? '<span>우산이 필요합니다</span>' : ''}</div><div class="rain-bars">${bars}</div>`;
+  }
+  // 귀여운 마을버스(두근두근 당곡 그림체: 굵은 테두리, 파스텔, 볼 터치). 창문에는 친구가 탄다
+  function busSVG(stop) {
+    const rider = MONG(stop.rider || 'ssiat');
+    return `<svg viewBox="0 0 260 150" aria-hidden="true">
+      <rect x="8" y="14" width="244" height="104" rx="26" fill="var(--bc)" stroke="#2b2b3a" stroke-width="6"/>
+      <rect x="8" y="78" width="244" height="40" rx="0" fill="rgba(255,255,255,0.55)" stroke="none"/>
+      <rect x="8" y="14" width="244" height="104" rx="26" fill="none" stroke="#2b2b3a" stroke-width="6"/>
+      <rect x="24" y="30" width="62" height="40" rx="10" fill="#eaf6ff" stroke="#2b2b3a" stroke-width="5"/>
+      <rect x="96" y="30" width="62" height="40" rx="10" fill="#eaf6ff" stroke="#2b2b3a" stroke-width="5"/>
+      <image href="${rider}" x="34" y="32" width="42" height="38" preserveAspectRatio="xMidYMax meet"/>
+      <rect x="170" y="26" width="70" height="50" rx="12" fill="#fffdf5" stroke="#2b2b3a" stroke-width="5"/>
+      <circle cx="192" cy="48" r="4.5" fill="#2b2b3a"/><circle cx="220" cy="48" r="4.5" fill="#2b2b3a"/>
+      <path d="M198 57q8 8 16 0" fill="none" stroke="#2b2b3a" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="182" cy="58" rx="7" ry="4.5" fill="#ffb3c1"/><ellipse cx="230" cy="58" rx="7" ry="4.5" fill="#ffb3c1"/>
+      <text x="92" y="106" text-anchor="middle" font-size="26" font-weight="900" fill="#2b2b3a">${esc(stop.routes ? stop.routes[0] : '')}</text>
+      <circle cx="240" cy="96" r="7" fill="#fff3b0" stroke="#2b2b3a" stroke-width="4"/>
+      <g class="bus-wheel" style="transform-origin:66px 122px"><circle cx="66" cy="122" r="20" fill="#4a4a5e" stroke="#2b2b3a" stroke-width="6"/><path d="M66 108v28M52 122h28" stroke="#d9d9e6" stroke-width="5" stroke-linecap="round"/></g>
+      <g class="bus-wheel" style="transform-origin:196px 122px"><circle cx="196" cy="122" r="20" fill="#4a4a5e" stroke="#2b2b3a" stroke-width="6"/><path d="M196 108v28M182 122h28" stroke="#d9d9e6" stroke-width="5" stroke-linecap="round"/></g>
+    </svg>`;
+  }
+  function busHTML(s) {
+    const b = (state.content && state.content.bus) || {};
+    const stops = b.stops || [];
+    const stop = stops[s.pick] || stops[0];
+    if (!stop) return cardHTML({ tag: '하교 버스', title: '버스 정보를 준비하고 있습니다' });
+    const map = b.map || {};
+    const bd = map.bounds;
+    const pos = (p) => (bd && p && p.lat ? `left:${((p.lon - bd.west) / (bd.east - bd.west) * 100).toFixed(2)}%;top:${((bd.north - p.lat) / (bd.north - bd.south) * 100).toFixed(2)}%` : 'display:none');
+    const xy = (p) => (bd && p && p.lat ? [((p.lon - bd.west) / (bd.east - bd.west) * 100), ((bd.north - p.lat) / (bd.north - bd.south) * 100)] : [50, 50]);
+    const sc = xy(b.school);
+    const st = xy(stop);
+    const others = stops.filter((x) => x !== stop).map((x) => `<span class="bm-pin is-other" style="${pos(x)}"><i></i><b>${esc(x.name)}</b></span>`).join('');
+    const mapHTML = map.src && bd ? `<div class="bus-map"><div class="bm" style="--x0:${sc[0].toFixed(2)}%;--y0:${sc[1].toFixed(2)}%;--x1:${st[0].toFixed(2)}%;--y1:${st[1].toFixed(2)}%">
+        <img class="bm-img" src="${esc(map.src)}" alt="" draggable="false">
+        <svg class="bm-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="${sc[0].toFixed(2)}" y1="${sc[1].toFixed(2)}" x2="${st[0].toFixed(2)}" y2="${st[1].toFixed(2)}"/></svg>
+        ${others}
+        <span class="bm-pin is-school" style="${pos(b.school)}"><i></i><b>${esc((b.school || {}).name || '학교')}</b></span>
+        <span class="bm-pin is-stop" style="${pos(stop)}"><i></i><b>${esc(stop.name)}</b></span>
+        <img class="bm-walker" src="${MONG(stop.walker || 'chorong')}" alt="">
+        <small class="bm-credit">© OpenStreetMap</small>
+      </div></div>` : '';
+    const waiters = (stop.friends || ['mongsil', 'gori']).slice(0, 2).map((m, i) => `<img src="${MONG(m)}" alt="" style="--i:${i}">`).join('');
+    return `<div class="card-inner busc" style="--bc:${esc(stop.color || '#a8e6cf')}">
+      <div class="bus-main">
+        <div class="tag">하교 버스</div>
+        <h1 class="title"><b class="bus-route">${esc(stop.routes ? stop.routes[0] : '')}</b>${esc(stop.toward || '')}</h1>
+        <div class="bus-where">${esc(stop.name)} 정류장${stop.walkMin ? ' · 걸어서 약 ' + esc(stop.walkMin) + '분' : ''}</div>
+        <div class="bus-time"><strong id="busBig"></strong><span id="busNext"></span></div>
+        <div class="bus-lane">
+          <div class="bus-car" id="busCar">${busSVG(stop)}</div>
+          <div class="bus-stop"><span class="bus-sign"><b>${esc(stop.name)}</b></span><span class="bus-wait">${waiters}</span></div>
+          <div class="bus-road"></div>
+        </div>
+        <div class="bus-hist" id="busHist"></div>
+      </div>
+      <div class="bus-side">
+        ${mapHTML}
+        <div class="bus-rain" id="busRain"></div>
+        <div class="bus-other" id="busOther"></div>
+      </div>
+    </div>`;
+  }
+  // 보이는 버스 카드의 숫자와 버스 위치만 바꾼다(카드를 다시 그리면 움직임이 처음부터 다시 시작한다)
+  function busPaint() {
+    const s = busOnScreen();
+    const b = state.content && state.content.bus;
+    if (!s || !b || !$('busBig')) return;
+    const stops = b.stops || [];
+    const stop = stops[s.pick] || stops[0];
+    if (!stop) return;
+    const v = busView(stop);
+    const h = busHeadline(v);
+    $('busBig').textContent = h.big;
+    $('busNext').textContent = h.sub;
+    // 버스 위치: 10분 이상 남으면 길 왼쪽 끝, 도착하면 정류장 앞. 정보가 없으면 길 밖에서 기다린다
+    const far = h.pos == null ? 1.25 : Math.min(1, Math.max(0, h.pos / 600));
+    $('busCar').style.left = (44 - far * 44).toFixed(1) + '%';
+    $('busCar').className = 'bus-car' + (h.pos == null ? ' is-away' : h.pos <= 60 ? ' is-near' : '');
+    const hist = busHistory(stop, v);
+    if (state.busHist !== hist || !$('busHist').innerHTML) { state.busHist = hist; $('busHist').innerHTML = hist; }
+    const rain = rainHTML();
+    if (state.busRain !== rain || (rain && !$('busRain').innerHTML)) { state.busRain = rain; $('busRain').innerHTML = rain; }
+    const other = stops.filter((x) => x !== stop).map((x) => {
+      const o = busHeadline(busView(x));
+      return `<span><b style="background:${esc(x.color || '#a8e6cf')}">${esc(x.routes ? x.routes[0] : '')}</b>${esc(x.name)} · ${esc(x.toward || '')}<em>${esc(o.big)}</em></span>`;
+    }).join('');
+    if (state.busOther !== other || (other && !$('busOther').innerHTML)) { state.busOther = other; $('busOther').innerHTML = other; }
   }
 
   // ---------- 급식: 나이스(NEIS) 급식식단정보를 화면이 직접 받는다 ----------

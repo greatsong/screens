@@ -1,7 +1,7 @@
 {
   "version": 68,
   "publishedAt": "2026-11-10T19:48:02+09:00",
-  "appVersion": "0.7.6",
+  "appVersion": "0.7.7",
   "mode": "normal",
   "notice": "",
   "school": "당곡고등학교",
@@ -402,5 +402,69 @@
       ],
       "otherSeconds": 7
     }
-  ]
+  ],
+  "bus": {
+    "api": "https://script.google.com/macros/s/AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xlc0-5SAL2iQnmo8fJuA/exec",
+    "from": "15:00",
+    "until": "17:00",
+    "every": 3,
+    "school": {
+      "name": "당곡고",
+      "lat": 37.49168,
+      "lon": 126.93471
+    },
+    "map": {
+      "src": "bus/map.webp",
+      "bounds": {
+        "north": 37.49445,
+        "south": 37.49045,
+        "west": 126.93235,
+        "east": 126.93765
+      }
+    },
+    "rain": {
+      "lat": 37.4917,
+      "lon": 126.9347,
+      "from": 15,
+      "until": 20
+    },
+    "stops": [
+      {
+        "id": "21348",
+        "name": "당곡중고교",
+        "routes": [
+          "관악11"
+        ],
+        "toward": "봉천역(2호선) 방향",
+        "lat": 37.4911376,
+        "lon": 126.9339322,
+        "walkMin": 3,
+        "color": "#a8e6cf",
+        "rider": "ssiat",
+        "walker": "chorong",
+        "friends": [
+          "mongsil",
+          "gori"
+        ]
+      },
+      {
+        "id": "20507",
+        "name": "사자암",
+        "routes": [
+          "동작11"
+        ],
+        "toward": "신대방삼거리역(7호선) 방향",
+        "lat": 37.4937689,
+        "lon": 126.936319,
+        "walkMin": 6,
+        "color": "#a5d8ff",
+        "rider": "salang",
+        "walker": "doran",
+        "friends": [
+          "arong",
+          "ttukttak"
+        ]
+      }
+    ]
+  }
 }

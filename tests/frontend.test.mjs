@@ -87,7 +87,7 @@ function screen(options) {
   const env = browser(options);
   const bootstrap = appSource.lastIndexOf('  if (role) startScreen();');
   assert.notEqual(bootstrap, -1, 'screen bootstrap must be found before VM instrumentation');
-  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML };\n})();', env.context);
+  vm.runInContext(appSource.slice(0, bootstrap) + '\n  globalThis.review = { state, applyContent, tick, act, locate, newsExpiry, newsDigestHTML, fetchWithin, contBeat, startExperience, mealRankHTML, slideQR, cardHTML, castVote, browse, projectHTML, newsReadHTML, busActive, busView, busHeadline, busPaint, maybeLoadBus };\n})();', env.context);
   return { ...env, ...env.context.review };
 }
 
@@ -478,4 +478,77 @@ test('a guide day alternates the welcome card with meal, calendar, news and proj
   const before = screen({ time: Date.parse('2026-11-09T15:00:00+09:00') });
   before.applyContent(data, false);
   assert.equal(before.state.sched.some((e) => e.item && e.item.id === 'guide-open'), false);
+});
+
+const BUS = { api: 'https://example.invalid/exec', from: '15:00', until: '17:00', every: 3,
+  stops: [{ id: '21348', name: '당곡중고교', routes: ['관악11'], toward: '봉천역 방향', walkMin: 3 },
+    { id: '20507', name: '사자암', routes: ['동작11'], toward: '7호선 방향', walkMin: 6 }] };
+
+test('the bus card joins the rotation only on weekdays between 15:00 and 17:00, and never on a school holiday', () => {
+  const data = content({ bus: BUS, items: Array.from({ length: 6 }, (_, i) => ({ id: 'c' + i, a: { title: 'Card ' + i } })) });
+  const has = (env) => env.state.sched.some((e) => e.item && e.item.id === 'bus');
+  const tue = screen({ time: Date.parse('2026-11-10T14:59:59+09:00') });
+  tue.setFetch(() => new Promise(() => {}));
+  tue.applyContent(data, false);
+  assert.equal(has(tue), false);
+  tue.advance(SECOND); tue.tick();                     // 15:00 정각에 새 편성 없이도 들어온다
+  assert.equal(has(tue), true);
+  assert.equal(Array.from(tue.state.sched, (e) => e.item && e.item.id).indexOf('bus'), 2);
+  tue.setTime(Date.parse('2026-11-10T17:00:00+09:00')); tue.tick();
+  assert.equal(has(tue), false);
+  const sat = screen({ time: Date.parse('2026-11-14T15:30:00+09:00') });
+  sat.applyContent(data, false);
+  assert.equal(has(sat), false);
+  const off = screen({ time: Date.parse('2026-11-10T15:30:00+09:00') });
+  off.applyContent({ ...data, schedule: [{ name: '재량휴업일', start: '2026-11-10', end: '2026-11-10', holiday: true }] }, false);
+  assert.equal(has(off), false);
+});
+
+test('each screen shows its own stop, counts the remaining time down, and treats a terminus by its inbound bus', async () => {
+  const at = Date.parse('2026-11-10T15:20:00+09:00');
+  const reply = (now) => ({ ok: true, now, stops: {
+    21348: { at: now - 10000, buses: [{ route: '관악11', dir: '봉천역', msg1: '4분후', sec1: 250, sec2: 1200, term: 16 }, { route: '다른노선', dir: '어딘가', msg1: '1분후', sec1: 60 }] },
+    20507: { at: now, buses: [{ route: '동작11', dir: '노량진역', msg1: '출발대기', sec1: null, sec2: null, term: 14 }, { route: '동작11', dir: '사자암', msg1: '7분후', sec1: 420 }] } },
+    log: { 21348: { '관악11|봉천역': [{ d: '20261110', t: ['15:01'] }, { d: '20261109', t: ['13:00', '15:18', '15:35'] }] } } });
+  for (const role of ['a', 'b']) {
+    const env = screen({ role, time: at });
+    const calls = [];
+    env.setFetch((url) => { calls.push(String(url)); return Promise.resolve({ json: () => Promise.resolve(reply(env.now())) }); });
+    env.applyContent(content({ bus: BUS }), false);
+    env.state.idx = Array.from(env.state.sched, (e) => e.item && e.item.id).indexOf('bus');
+    env.maybeLoadBus(env.now());
+    env.maybeLoadBus(env.now());                       // 30초 안에는 다시 부르지 않는다
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    assert.deepEqual(calls, ['https://example.invalid/exec?api=bus&stops=21348,20507']);
+    const stop = BUS.stops[role === 'a' ? 0 : 1];
+    const view = env.busView(stop);
+    if (role === 'a') {
+      assert.equal(Math.round(view.left1), 240);       // 서버가 10초 전에 받은 값이므로 250 - 10
+      assert.equal(env.busHeadline(view).big, '4분 00초');
+      env.advance(20 * SECOND);
+      assert.equal(env.busHeadline(env.busView(stop)).big, '3분 40초');
+      env.advance(170 * SECOND);                       // 받은 지 150초가 넘으면 오래된 값으로 보고 쓰지 않는다
+      assert.equal(env.busView(stop).ready, false);
+    } else {
+      assert.equal(view.terminus, true);
+      assert.equal(env.busHeadline(view).big, '7분 00초');
+      assert.match(env.busHeadline(view).sub, /종점/);
+    }
+  }
+});
+
+test('a closed or failed bus reply leaves the card in its waiting state and outside the window nothing is requested', async () => {
+  const env = screen({ time: Date.parse('2026-11-10T15:20:00+09:00') });
+  let calls = 0;
+  env.setFetch(() => { calls++; return Promise.resolve({ json: () => Promise.resolve({ ok: false, closed: true }) }); });
+  env.applyContent(content({ bus: { ...BUS, rain: null } }), false);
+  env.maybeLoadBus(env.now());
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  assert.equal(calls, 1);
+  assert.equal(env.busHeadline(env.busView(BUS.stops[0])).big, '확인 중');
+  const late = screen({ time: Date.parse('2026-11-10T18:00:00+09:00') });
+  late.setFetch(() => { calls++; return Promise.resolve({ json: () => Promise.resolve({}) }); });
+  late.applyContent(content({ bus: BUS }), false);
+  late.maybeLoadBus(late.now());
+  assert.equal(calls, 1);
 });

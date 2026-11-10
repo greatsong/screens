@@ -71,6 +71,7 @@ clasp update-deployment AKfycbzB-wjnRBZgbcumLMfQlc3-EZVv7LXr-rKBPY5QzJSf63OKr4Xl
 | `GITHUB_TOKEN` | 1단계에서 만든 토큰 | 필수 |
 | `REQUIRE_SCHOOL_LOGIN` | 학교 워크스페이스 계정에 설치하고 학생에게 학교 계정이 있으면 `true`. 학교 계정으로 로그인해야 제출할 수 있습니다. 넣지 않으면 로그인 없이 제출하고 설문에 이메일 문항이 생깁니다. | 선택 |
 | `ADMIN_EMAILS` | 관리 화면을 함께 사용할 선생님 이메일 (쉼표로 구분) | 선택 |
+| `SEOUL_BUS_API_KEY` | 공공데이터포털 「서울특별시_정류소정보조회 서비스」 일반 인증키(Encoding). 하교 버스 카드가 사용합니다. 넣지 않으면 카드에 '확인 중'만 표시됩니다. | 선택 |
 
 `WEBAPP_URL`은 5단계에서 넣습니다.
 

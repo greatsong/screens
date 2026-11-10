@@ -118,6 +118,7 @@
 | `site/meal/` | 급식 카드 음식 아이콘(Codex 이미지 생성, WebP) |
 | `site/meal-icons.js` | 메뉴 이름 → 음식 그림 규칙(화면·투표 페이지 공용) |
 | `site/vote.html` | 휴대폰 급식 메뉴 투표 |
+| `site/bus/map.webp`, `scripts/build_bus_map.py` | 하교 버스 카드의 배경 지도와 만드는 스크립트 |
 | `site/promo/` | 홍보 영상(가로·세로)과 영상만 따로 트는 페이지 |
 | `projects/registry.json` | 작품 등록부. 관리 시트와 사람이 씁니다. |
 | `projects/control.json` | 화면 제어(긴급 정지, 공지, B 원격 시연). 관리 화면과 휴대폰 수동 실행이 씁니다. |
@@ -144,6 +145,7 @@
 - 게임 명예의 전당: 화면 안 게임(`site/games/<게임>/`, 지금은 DG다 잡기 챌린지)은 작품처럼 등록부(`projects/registry.json`)에 올려 「체험 시작」으로 실행합니다. 게임이 끝나면 점수를 Apps Script 웹 앱(`vote.api`, `api: 'game'`)으로 보내고, TOP 10 안이면 일회용 코드가 담긴 QR을 띄웁니다. 학생은 휴대폰(`site/games/name.html`)으로 15분 안에 한 번 닉네임(8글자, 금칙어 거름)을 적습니다. 순위 밖 점수는 시트에 남기지 않고 판 수만 셉니다. 기록은 관리 시트 '게임기록' 탭에 남고, 관리 화면 「게임 명예의 전당」에서 숨기거나 다시 보이게 합니다.
 - 홍보 영상 소리: A 화면은 홍보 영상을 소리와 함께 틀어 봅니다(`promoSound`, 기본 켬). 브라우저가 막으면 소리 없이 틀고 「화면을 한 번 누르면 소리가 나요」를 띄우며, 한 번 누른 뒤에는 소리가 납니다.
 
+- 하교 버스: 평일 15:00~17:00에 버스 카드가 세 칸에 한 번 나옵니다(`content.json`의 `bus`, 휴업일 제외). A 화면은 당곡중고교 정류장의 관악11(봉천역 방향), B 화면은 사자암 정류장의 동작11(신대방삼거리역 방향)을 크게 보여 주고, 다른 노선은 아래에 한 줄로 표시합니다. 남은 시간은 1초마다 줄어들고 30초마다 새로 받습니다. 사자암은 종점이라 출발 시각이 오지 않으므로, 종점으로 들어오는 차의 남은 시간을 보여 줍니다. 도착 정보는 Apps Script 학생용 웹 앱(`?api=bus`)이 서울 버스 정류소정보 API를 대신 호출해 전달합니다. 인증키는 스크립트 속성 `SEOUL_BUS_API_KEY`에 두고 저장소에는 넣지 않습니다. 웹 앱은 평일 14:50~17:10에만 호출하고, 정류장마다 30초 동안 결과를 함께 사용하며, 하루 800회에서 멈춥니다(개발계정 한도 1,000회). 표시 시간을 바꾸려면 `content.json`의 `bus.from`·`bus.until`과 `apps-script/Code.gs`의 `BUS.FROM`·`BUS.UNTIL`을 함께 바꿉니다. 버스가 정류장에 들어온 시각은 스크립트 속성 `BUS_LOG`에 열흘 동안 남기고, 카드에 지난 사흘의 같은 시간대 도착 시각을 표시합니다. 기록은 화면이 켜져 있는 동안에만 쌓입니다. 강수 확률(15~20시)은 화면이 Open-Meteo에서 30분마다 받습니다. 배경 지도(`site/bus/map.webp`)는 `scripts/build_bus_map.py`로 OpenStreetMap 타일에서 한 번 만들어 둔 그림입니다.
 - 급식 메뉴 투표: 화면에서 메뉴를 누르거나, B 화면 일주일 급식 카드의 QR로 휴대폰 투표 페이지(`site/vote.html`)를 열어 하트를 보냅니다. 받는 곳은 Apps Script 학생용 웹 앱(`content.json`의 `vote.api`)입니다. 이름·연락처는 받지 않고 기기마다 무작위 번호의 해시로만 중복을 막습니다(휴대폰: 같은 날 같은 메뉴는 6시간에 한 번, 화면: 누른 만큼 바로 올라가고 1초씩 모아 보냄, 전체 1분에 120번 요청). 집계는 스크립트 속성 `MEAL_VOTES`, 기록은 관리 시트 '급식투표' 탭에 남습니다. 메뉴 이름→그림 규칙은 `site/meal-icons.js`를 화면과 투표 페이지가 함께 씁니다.
 
 ## 알아 둘 점
@@ -158,7 +160,7 @@
 - 미리보기(`?preview`)와 검토 화면의 미리보기는 실행 기록을 남기지 않습니다.
 - 실행 기록은 각 스탠바이미의 브라우저 저장소에 남습니다. 진단 정보의 「기록 지우기」로 지웁니다.
 - 로컬에서 작품을 검사하려면 Playwright(파이썬)가 필요합니다. `python3 scripts/check_projects.py --all`
-- 회귀 검사: `node --test tests/frontend.test.mjs`, `python3 -m unittest discover -s tests -v`
+- 회귀 검사: `node --test tests/frontend.test.mjs tests/apps_bus.test.mjs`, `python3 -m unittest discover -s tests -v`
 - Apps Script 흐름은 구글 서비스를 흉내 낸 오프라인 시험으로 확인합니다. `node apps-script/test/run_test.mjs <임시 폴더>` (실제 작품 네트워크 검사를 포함하려면 `--network-checks`). 모의 시험의 메일·커밋은 실제로 발송하거나 저장소에 쓰지 않습니다.
 
 ## 다른 학교 프로젝트의 행사 안내

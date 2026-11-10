@@ -403,6 +403,7 @@ function teacherDigest_(waiting, changed) {
 function doGet(e) {
   if (e && e.parameter && e.parameter.api === 'votes') return json_(mealVotes_());
   if (e && e.parameter && e.parameter.api === 'games') return json_(gameBoard_(String(e.parameter.game || '')));
+  if (e && e.parameter && e.parameter.api === 'bus') return json_(busArrivals_(String(e.parameter.stops || '')));
   const page = (e && e.parameter && e.parameter.page) || 'status';
   if (page === 'admin') {
     if (!isAdmin_()) return HtmlService.createHtmlOutput('<p style="font-family:sans-serif">관리 권한이 없습니다.</p>');
@@ -412,6 +413,128 @@ function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile('Status');
   tpl.token = (e && e.parameter && e.parameter.t) || '';
   return tpl.evaluate().setTitle('내 작품 상태').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// ======================================================================
+// 하교 버스 — 스탠바이미 화면이 하교 시간에 부른다(?api=bus&stops=21348,20507).
+// 서울 버스 정류소정보 API(getStationByUid)를 대신 불러 인증키를 화면에 드러내지 않는다. 키는 스크립트 속성 SEOUL_BUS_API_KEY.
+// 호출 한도(개발계정 하루 1,000회)를 지키려고 정류장마다 30초 동안 결과를 함께 쓰고, 평일 하교 시간에만 부르며, 하루 상한을 둔다.
+// 버스가 정류장에 들어온 시각을 스크립트 속성 BUS_LOG {yyyyMMdd: {"정류장|노선|방향": ["15:42", …]}}에 남겨 지난 며칠의 도착 시각을 함께 돌려준다.
+// 화면의 표시 시간(content.json 의 bus.from·until)을 바꾸면 여기 FROM·UNTIL 도 함께 바꾼다.
+// ======================================================================
+const BUS = { STOPS: ['21348', '20507', '20522', '20951'], TTL: 30, FROM: 14 * 60 + 50, UNTIL: 17 * 60 + 10, DAY_MAX: 800, KEEP_DAYS: 10, SHOW_DAYS: 3 };
+const BUS_ENDPOINT = 'http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid';
+
+function busArrivals_(stopsParam) {
+  const ids = String(stopsParam || '').split(',').filter((s, i, a) => BUS.STOPS.indexOf(s) >= 0 && a.indexOf(s) === i).slice(0, 3);
+  if (!ids.length) return { ok: false, error: '정류장 오류' };
+  const d = now_();
+  const min = Number(fmt_(d, 'H')) * 60 + Number(fmt_(d, 'm'));
+  if (Number(fmt_(d, 'u')) > 5 || min < BUS.FROM || min >= BUS.UNTIL) return { ok: false, closed: true };
+  const key = prop_('SEOUL_BUS_API_KEY');
+  if (!key) return { ok: false, error: '인증키 없음' };
+  const cache = CacheService.getScriptCache();
+  const stops = {};
+  ids.forEach((id) => { stops[id] = busStop_(id, key, cache); });
+  return { ok: true, now: Date.now(), stops: stops, log: busLog_(ids) };
+}
+
+// 정류장 한 곳: 30초 안에 받은 결과가 있으면 그것을, 없으면 새로 받는다. 실패하면 마지막으로 받은 결과(10분 이내)를 준다
+function busStop_(id, key, cache) {
+  const hit = cache.get('bus:' + id);
+  if (hit) return JSON.parse(hit);
+  const last = () => { const v = cache.get('busl:' + id); return v ? JSON.parse(v) : { at: 0, buses: [], error: '받지 못함' }; };
+  const dayKey = 'busn:' + fmt_(now_(), 'yyyyMMdd');
+  const used = Number(cache.get(dayKey) || 0);
+  if (used >= BUS.DAY_MAX) return last();
+  cache.put(dayKey, String(used + 1), 21600);
+  let items;
+  try {
+    const kp = key.indexOf('%') >= 0 ? key : encodeURIComponent(key);
+    const res = UrlFetchApp.fetch(BUS_ENDPOINT + '?serviceKey=' + kp + '&arsId=' + id + '&resultType=json', { muteHttpExceptions: true });
+    const data = JSON.parse(res.getContentText());
+    const code = String(data.msgHeader && data.msgHeader.headerCd);
+    if (code !== '0' && code !== '4') throw new Error('코드 ' + code);   // 4: 결과 없음(운행 종료 등)
+    const list = (data.msgBody && data.msgBody.itemList) || [];
+    items = Array.isArray(list) ? list : [list];
+  } catch (err) {
+    return last();
+  }
+  const out = { at: Date.now(), buses: items.map(busItem_) };
+  busDetect_(id, out, cache);
+  const text = JSON.stringify(out);
+  cache.put('bus:' + id, text, BUS.TTL);
+  cache.put('busl:' + id, text, 600);
+  return out;
+}
+
+// 원본 한 건 → 화면용. 남은 초는 traTime 이 0보다 클 때만 쓴다(arrmsgSec 는 초가 아니라 문구다)
+function busItem_(it) {
+  const txt = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const hasTime = (m) => /\d+\s*(분|초)|\[\d+번째\s*전\]/.test(m);
+  const pick = (a, b) => { a = txt(a); b = txt(b); return b && hasTime(b) && !hasTime(a) ? b : (a || b); };
+  const sec = (t, m) => { const n = Number(t); return /운행종료|출발대기/.test(m) || !(n > 0) ? null : n; };
+  const m1 = pick(it.arrmsg1, it.arrmsgSec1);
+  const m2 = pick(it.arrmsg2, it.arrmsgSec2);
+  const away = /\[(\d+)번째\s*전\]/.exec(m1);
+  const last = txt(it.lastTm);
+  return { route: txt(it.rtNm || it.busRouteAbrv), dir: txt(it.adirection), next: txt(it.nxtStn),
+    msg1: m1, sec1: sec(it.traTime1, m1), away: away ? Number(away[1]) : null,
+    msg2: m2, sec2: sec(it.traTime2, m2), term: Number(it.term) || null,
+    last: /^\d{4}$/.test(last) ? last.slice(0, 2) + ':' + last.slice(2) : '' };
+}
+
+// 도착 기록: 직전에 받은 남은 시간이 150초 이하였는데 이번에 크게 늘었거나 사라졌으면, 그 사이에 버스가 들어온 것으로 본다.
+// 도착 시각은 직전 조회 시각 + 직전 남은 초(지금 시각을 넘지 않게). 같은 노선의 3분 안 기록은 한 번으로 친다
+function busDetect_(id, cur, cache) {
+  const prevText = cache.get('busp:' + id);
+  const state = {};
+  cur.buses.forEach((b) => { state[b.route + '|' + b.dir] = b.sec1; });
+  cache.put('busp:' + id, JSON.stringify({ at: cur.at, sec: state }), 600);
+  if (!prevText) return;
+  const prev = JSON.parse(prevText);
+  if (cur.at - prev.at > 180000) return;
+  const arrived = [];
+  Object.keys(prev.sec).forEach((k) => {
+    const was = prev.sec[k];
+    const is = state[k];
+    if (was == null || was > 150) return;
+    if (is == null || is > was + 120) arrived.push({ k: id + '|' + k, at: Math.min(cur.at, prev.at + was * 1000) });
+  });
+  if (!arrived.length) return;
+  withLock_(() => {
+    const all = JSON.parse(prop_('BUS_LOG') || '{}');
+    const today = fmt_(now_(), 'yyyyMMdd');
+    Object.keys(all).forEach((d) => { if (dayDiff_(d, today) > BUS.KEEP_DAYS) delete all[d]; });
+    const day = all[today] = all[today] || {};
+    arrived.forEach((a) => {
+      const list = day[a.k] = day[a.k] || [];
+      const hm = fmt_(new Date(a.at), 'HH:mm');
+      const lastHm = list[list.length - 1];
+      const mins = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+      if (lastHm && mins(hm) - mins(lastHm) < 3) return;
+      list.push(hm);
+    });
+    setProp_('BUS_LOG', JSON.stringify(all));
+  });
+}
+
+// 오늘과 그 전 수업일 며칠의 도착 시각. {정류장: {"노선|방향": [{d: 'yyyyMMdd', t: ['15:42', …]}, …]}} 최근 날짜가 앞
+function busLog_(ids) {
+  const all = JSON.parse(prop_('BUS_LOG') || '{}');
+  const days = Object.keys(all).sort().reverse().slice(0, BUS.SHOW_DAYS + 1);
+  const out = {};
+  ids.forEach((id) => {
+    const per = out[id] = {};
+    days.forEach((d) => {
+      Object.keys(all[d]).forEach((k) => {
+        if (k.indexOf(id + '|') !== 0) return;
+        const name = k.slice(id.length + 1);
+        (per[name] = per[name] || []).push({ d: d, t: all[d][k] });
+      });
+    });
+  });
+  return out;
 }
 
 // ======================================================================
