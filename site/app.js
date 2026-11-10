@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.4';
+  const APP_VERSION = '0.8.5';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1062,9 +1062,19 @@
   // 날씨 배경 효과: 눈이 오면 눈송이가, 비가 오면 빗줄기가 내리고, 바람이 세면(초속 8m 이상) 바람 줄기와 나뭇잎이 지나간다.
   // 맑으면 햇살이 돌고 흐리면 구름이 흘러간다. 주소에 &wx=snow|rain|storm|wind|sun|cloud|fog 를 붙이면 그 효과를 미리 본다
   const WIND_STRONG = 8;
+  // 눈오리: 노란 눈오리 집게가 내려와 눈을 꾹 찍고 올라가면 하얀 눈오리가 남는다. 눈이 보통 이상으로 내릴 때만 나온다.
+  // 눈오리는 온몸이 눈이라 테두리와 눈 없이 둥근 머리, 작은 부리, 살짝 올라간 꼬리만 있다
+  const DUCK_SHAPE = '<path d="M24 60C16 84 32 98 62 98C94 98 110 86 106 60L108 50C100 57 92 60 84 58C76 56 68 56 60 59Z"/><path d="M19 37L4 42L19 49Z"/><circle cx="44" cy="36" r="27"/>';
+  const duckSVG = (mold) => (mold
+    ? `<svg viewBox="0 0 150 104" aria-hidden="true"><path d="M96 62L146 30" stroke="#f0b400" stroke-width="12" stroke-linecap="round"/><path d="M100 74L148 50" stroke="#ffd43b" stroke-width="12" stroke-linecap="round"/>
+        <g fill="#ffd43b" stroke="#e8a800" stroke-width="3" stroke-linejoin="round">${DUCK_SHAPE}</g><circle cx="34" cy="30" r="4" fill="#e8a800"/><ellipse cx="36" cy="22" rx="10" ry="5" fill="rgba(255,255,255,0.55)"/></svg>`
+    : `<svg viewBox="0 0 150 104" aria-hidden="true"><defs><linearGradient id="dkg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe2f5"/></linearGradient></defs>
+        <ellipse cx="66" cy="99" rx="50" ry="5" fill="rgba(110,150,195,0.3)"/><g fill="url(#dkg)" stroke="#bcd6ee" stroke-width="2" stroke-linejoin="round">${DUCK_SHAPE}</g>
+        <path d="M28 66q30 12 70 0" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.8"/></svg>`);
   function wxFx(code, wind) {
-    const forced = /^(snow|rain|storm|wind|sun|part|cloud|fog)$/.test(params.wx || '') ? params.wx : '';
-    const k = forced === 'wind' ? 'part' : forced || wxKind(code)[0];
+    const forced = /^(snow|ducks|rain|storm|wind|sun|part|cloud|fog)$/.test(params.wx || '') ? params.wx : '';
+    const k = forced === 'wind' ? 'part' : forced === 'ducks' ? 'snow' : forced || wxKind(code)[0];
+    const ducks = forced === 'ducks' || (!forced && (code === 73 || code === 75 || code === 86));   // 보통 이상으로 내리는 눈
     const windy = forced === 'wind' || (typeof wind === 'number' && wind >= WIND_STRONG);
     const rnd = (i, m) => { const v = Math.sin(i * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // 두 화면이 같은 모양이 되게 번호로 만든 흩뿌림
     const many = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
@@ -1072,12 +1082,13 @@
     if (k === 'rain' || k === 'storm') html += many(34, (i) => `<i class="fx-rain" style="left:${(rnd(i, 1) * 112 - 6).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 1.2).toFixed(2)}s;animation-duration:${(0.7 + rnd(i, 3) * 0.5).toFixed(2)}s"></i>`);
     if (k === 'storm') html += '<i class="fx-flash"></i>';
     if (k === 'snow') html += many(30, (i) => `<i class="fx-snow" style="left:${(rnd(i, 1) * 104 - 2).toFixed(1)}%;--s:${(0.6 + rnd(i, 4) * 1.1).toFixed(2)};animation-delay:-${(rnd(i, 2) * 7).toFixed(2)}s;animation-duration:${(5 + rnd(i, 3) * 4).toFixed(2)}s"></i>`);
+    if (ducks) html += '<i class="fx-pile"></i>' + many(5, (i) => `<i class="fx-duck" style="left:${(8 + i * 18).toFixed(1)}%;--d:${(2.5 + i * 2.2).toFixed(1)}s"><span class="dk-snow">${duckSVG(false)}</span><span class="dk-mold">${duckSVG(true)}</span></i>`);
     if (k === 'sun' || k === 'part') html += '<i class="fx-sun"></i>';
     if (k === 'cloud' || k === 'part' || k === 'fog') html += many(k === 'part' ? 2 : 4, (i) => `<i class="fx-cloud" style="top:${(4 + rnd(i, 5) * 46).toFixed(1)}%;--s:${(0.7 + rnd(i, 6) * 0.9).toFixed(2)};animation-delay:-${(rnd(i, 2) * 40).toFixed(1)}s;animation-duration:${(38 + rnd(i, 3) * 26).toFixed(1)}s"></i>`);
     if (k === 'fog') html += many(3, (i) => `<i class="fx-fog" style="top:${30 + i * 22}%;animation-delay:-${i * 4}s"></i>`);
     if (windy) html += many(9, (i) => `<i class="fx-wind" style="top:${(6 + rnd(i, 7) * 84).toFixed(1)}%;--w:${(14 + rnd(i, 8) * 22).toFixed(0)}vmin;animation-delay:-${(rnd(i, 2) * 2.4).toFixed(2)}s;animation-duration:${(1.5 + rnd(i, 3) * 1.2).toFixed(2)}s"></i>`)
       + many(5, (i) => `<i class="fx-leaf" style="top:${(12 + rnd(i, 9) * 70).toFixed(1)}%;animation-delay:-${(rnd(i, 2) * 4).toFixed(2)}s;animation-duration:${(3 + rnd(i, 3) * 2).toFixed(2)}s"></i>`);
-    return `<div class="wx-fx${windy ? ' is-windy' : ''}" aria-hidden="true">${html}</div>`;
+    return `<div class="wx-fx${windy ? ' is-windy' : ''}${ducks ? ' has-ducks' : ''}" aria-hidden="true">${html}</div>`;
   }
   // 캐릭터 한마디: 예보에서 학생에게 필요한 것만 골라 두 마디까지 말한다(A: 오늘, B: 이번 주)
   function wxTips(wx, view) {

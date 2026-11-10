@@ -999,3 +999,19 @@ body.is-stopped #promo { display: none !important; }
 @keyframes wx-tip { 0% { opacity: 0; transform: scale(0.6) translateY(2vmin); } 100% { opacity: 1; transform: none; } }
 @media (orientation: portrait) { .wx-top, .wx-now { flex-wrap: wrap; } .wx-say { flex-basis: 100%; } }
 @media (prefers-reduced-motion: reduce) { .wx-tip, .wx-tip img { animation: none; } }
+
+/* 눈오리: 눈이 쌓이고, 노란 집게가 내려와 꾹 찍고 올라가면 눈오리가 남는다 */
+.wx-fx.has-ducks ~ .wx-foot { margin-bottom: calc(var(--f, 1) * 11vmin); }
+.fx-pile { left: -4%; right: -4%; bottom: 0; height: 7vmin; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(#fff, #e7f1fb); box-shadow: 0 0 2vmin rgba(165, 216, 255, 0.7);
+  transform-origin: 50% 100%; animation: fx-pile 2.4s ease-out both; }
+.fx-duck { bottom: 4vmin; width: 15vmin; height: 10.4vmin; }
+.fx-duck span { position: absolute; inset: 0; display: block; transform-origin: 50% 100%; animation-duration: 2.6s; animation-delay: var(--d); animation-fill-mode: both; }
+.fx-duck svg { display: block; width: 100%; height: 100%; }
+.dk-snow { animation-name: dk-snow; }
+.dk-mold { animation-name: dk-mold; animation-timing-function: ease-in-out; }
+@keyframes fx-pile { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+@keyframes dk-mold { 0% { transform: translateY(-34vmin) rotate(8deg); opacity: 0; } 12% { opacity: 1; } 28% { transform: translateY(0) rotate(0); }
+  36% { transform: translateY(0.6vmin) scale(1.07, 0.9); } 44% { transform: translateY(0) scale(1); } 50% { transform: translateY(0) scale(1); opacity: 1; }
+  78% { transform: translateY(-30vmin) rotate(-8deg); opacity: 1; } 100% { transform: translateY(-36vmin) rotate(-8deg); opacity: 0; } }
+@keyframes dk-snow { 0%, 49% { opacity: 0; transform: scale(1); } 50% { opacity: 1; transform: scale(1); } 60% { transform: scale(1.12, 0.86); } 70% { transform: scale(0.94, 1.1); } 80% { transform: scale(1.04, 0.97); } 100% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .dk-mold { display: none; } .dk-snow, .fx-pile { animation: none; } }
