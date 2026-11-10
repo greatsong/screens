@@ -620,7 +620,7 @@ test('five minutes before arrival a toast appears once during the peak, and neve
   assert.equal(off.made.length, 0);
 });
 
-test('the weather card shows the rest of today on A and the week on B, from one forecast reply', async () => {
+test('without the weather office the card shows the rest of today on A and the week on B from Open-Meteo', async () => {
   const at = Date.parse('2026-11-10T10:00:00+09:00');
   const hours = Array.from({ length: 48 }, (_, i) => i);
   const forecast = { current: { temperature_2m: 7.4, weather_code: 0 },
@@ -650,6 +650,7 @@ test('the weather card shows the rest of today on A and the week on B, from one 
       assert.match(html, /수요일엔 우산을 준비하세요!/);
     }
     assert.equal(env.state.rain.hours.length, 6);       // 버스 카드의 15~20시 강수 확률도 같은 응답에서 나온다
+    assert.match(html, /Open-Meteo 예보/);
   }
 });
 
@@ -664,4 +665,39 @@ test('the ridership bars highlight the current hour and name the busiest one', (
   assert.match(html, /<i class="on"><em style="height:60%"><\/em><u>15<\/u>/);
   assert.match(html, /15시대에는 하루 평균 11명이 탑니다\. 가장 많이 타는 시간은 16시대입니다\(18명\)\./);
   assert.equal(env.rideHTML(BUS.stops[1]), '');          // 자료가 없는 정류장은 비워 둔다
+});
+
+test('the weather office forecast takes over, and only the days beyond it come from Open-Meteo', async () => {
+  const at = Date.parse('2026-11-10T10:00:00+09:00');
+  const om = { current: { temperature_2m: 20, weather_code: 0, wind_speed_10m: 1 },
+    hourly: { time: ['2026-11-10T10:00'], temperature_2m: [20], precipitation_probability: [0], weather_code: [0], wind_speed_10m: [1] },
+    daily: { time: ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13'], weather_code: [0, 0, 0, 71], temperature_2m_max: [20, 20, 20, 2], temperature_2m_min: [10, 10, 10, -4], precipitation_probability_max: [0, 0, 0, 70] } };
+  const kma = { ok: true, cur: { temp: 7.9, code: 61, wind: 9 },
+    hourly: [10, 11, 12, 13, 14, 15, 16, 17].map((h) => ({ d: '20261110', h, temp: 8, pop: h >= 15 ? 80 : 20, code: h >= 15 ? 61 : 3, wind: 9 })),
+    daily: [{ d: '20261110', code: 61, max: 9, min: 5, pop: 80 }, { d: '20261111', code: 3, max: 12, min: -1, pop: 30 }] };
+  for (const withKma of [true, false]) {
+    const env = screen({ time: at });
+    env.setFetch((url) => (String(url).includes('open-meteo') ? Promise.resolve({ json: () => Promise.resolve(om) })
+      : String(url).includes('api=weather') ? (withKma ? Promise.resolve({ json: () => Promise.resolve(kma) }) : Promise.reject(new Error('down')))
+        : Promise.resolve({ json: () => Promise.resolve({ ok: false, closed: true }) })));
+    env.applyContent(content({ bus: { ...BUS, ride: false, rain: { lat: 37.49, lon: 126.93 }, allDay: { from: '07:30', until: '19:00' } } }), false);
+    env.maybeLoadBus(env.now());
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    const today = env.weatherHTML({ auto: 'weather', view: 'today' });
+    const week = env.weatherHTML({ auto: 'weather', view: 'week' });
+    if (withKma) {
+      assert.match(today, /8° <small>비/);                       // 지금 날씨는 기상청 실황
+      assert.match(today, /집에 가는 길에 비가 온대요! 우산 챙겨요!/);
+      assert.match(today, /바람 초속 9m\(강함\)/);
+      assert.match(week, /기상청 동네예보 · 뒤 2일은 Open-Meteo/);
+      assert.equal((week.match(/<li /g) || []).length, 4);
+      assert.equal((week.match(/is-om/g) || []).length, 2);
+      assert.match(week, /내일은 추워요! 옷 따뜻하게 입고 오세요!/);   // 기상청 내일 최저 -1도
+      assert.equal(env.state.rain.hours.length, 3);              // 15~17시 강수 확률도 기상청 값
+    } else {
+      assert.match(today, /20° <small>맑음/);
+      assert.match(week, /Open-Meteo 예보/);
+      assert.doesNotMatch(week, /is-om/);
+    }
+  }
 });

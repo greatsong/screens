@@ -1033,3 +1033,6 @@ body.is-stopped #promo { display: none !important; }
 @keyframes ride-grow { from { transform: scaleY(0); } }
 @media (orientation: portrait) { .bus-info { flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { .ride-bars em { animation: none; } }
+
+/* 기상청 예보가 닿지 않아 Open-Meteo 로 채운 날짜는 점선 테두리로 구분한다 */
+.wx-week li.is-om { border-style: dashed; }

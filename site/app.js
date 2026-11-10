@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.8.7';
+  const APP_VERSION = '0.8.8';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -1032,8 +1032,9 @@
     const past = !same ? '' : (today - dayOf(same) === 7 * 86400000 ? `지난주 ${wd}요일에는` : `${+same.slice(4, 6)}월 ${+same.slice(6, 8)}일 ${wd}요일에는`) + ` 하루 동안 ${recent[same]}명이 탔습니다.`;
     return `<small>${mon ? mon + '월 ' : ''}시간대별 승차 인원(평일 평균)</small><div class="ride-bars">${bars}</div><p>${here}${most}${past ? '<br>' + past : ''}</p>`;
   }
-  // 날씨: Open-Meteo(키 없음)에서 30분마다 시간별·일별 예보를 받는다. 하교 시간에는 버스 카드의 강수 확률 막대에,
-  // 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 사용한다
+  // 날씨: 30분마다 받는다. 기상청 동네예보(Apps Script 웹 앱 ?api=weather, 인증키는 그쪽에 있다)를 먼저 쓰고,
+  // 기상청 단기예보가 닿지 않는 뒤쪽 날짜와 기상청을 받지 못한 때에는 Open-Meteo(키 없음)로 채운다.
+  // 하교 시간에는 버스 카드의 강수 확률 막대에, 그 밖의 시간에는 날씨 카드(A: 오늘 이 시간 이후, B: 일주일)에 사용한다
   function maybeLoadRain(b) {
     const r = b.rain;
     if (!r || state.rainBusy || Date.now() - (state.rainTry || 0) < 1800000) return;
@@ -1042,24 +1043,43 @@
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(r.lat) + '&longitude=' + encodeURIComponent(r.lon) +
       '&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
       '&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=7';
-    fetch(url).then((x) => x.json()).then((d) => {
-      const h = d.hourly || {};
-      const dl = d.daily || {};
-      const hourly = (h.time || []).map((tm, i) => ({ d: String(tm).slice(0, 10).replace(/-/g, ''), h: +String(tm).slice(11, 13),
-        temp: (h.temperature_2m || [])[i], pop: (h.precipitation_probability || [])[i], code: (h.weather_code || [])[i], wind: (h.wind_speed_10m || [])[i] }));
-      const daily = (dl.time || []).map((tm, i) => ({ d: String(tm).replace(/-/g, ''), code: (dl.weather_code || [])[i],
-        max: (dl.temperature_2m_max || [])[i], min: (dl.temperature_2m_min || [])[i], pop: (dl.precipitation_probability_max || [])[i] }));
-      if (!hourly.length) return;
+    const quiet = (p) => p.then((x) => x.json()).catch(() => null);
+    const kma = b.api && r.kma !== false ? quiet(fetch(b.api + '?api=weather')) : Promise.resolve(null);
+    Promise.all([quiet(fetch(url)), kma]).then((got) => {
+      const wx = mergeWeather(openMeteo(got[0]), got[1] && got[1].ok && (got[1].hourly || []).length ? got[1] : null);
+      if (!wx) return;
       const today = ymd(now());
       const from = r.from == null ? 15 : r.from;
       const until = r.until == null ? 20 : r.until;
-      const hours = hourly.filter((x) => x.d === today && x.h >= from && x.h <= until && typeof x.pop === 'number').map((x) => ({ h: x.h, p: x.pop }));
-      state.wx = { at: Date.now(), hourly, daily, cur: d.current || null };
+      const hours = wx.hourly.filter((x) => x.d === today && x.h >= from && x.h <= until && typeof x.pop === 'number').map((x) => ({ h: x.h, p: x.pop }));
+      state.wx = wx;
       if (hours.length) state.rain = { day: today, hours };
       const side = busOnScreen();
       if (side && side.auto === 'weather') state.slot = -1;   // 날씨 카드를 보고 있으면 새 예보로 다시 그린다
       busPaint();
     }).catch(() => {}).then(() => { state.rainBusy = false; });
+  }
+  function openMeteo(d) {
+    const h = d && d.hourly;
+    if (!h || !(h.time || []).length) return null;
+    const dl = d.daily || {};
+    const c = d.current || {};
+    return {
+      hourly: h.time.map((tm, i) => ({ d: String(tm).slice(0, 10).replace(/-/g, ''), h: +String(tm).slice(11, 13),
+        temp: (h.temperature_2m || [])[i], pop: (h.precipitation_probability || [])[i], code: (h.weather_code || [])[i], wind: (h.wind_speed_10m || [])[i] })),
+      daily: (dl.time || []).map((tm, i) => ({ d: String(tm).replace(/-/g, ''), code: (dl.weather_code || [])[i],
+        max: (dl.temperature_2m_max || [])[i], min: (dl.temperature_2m_min || [])[i], pop: (dl.precipitation_probability_max || [])[i] })),
+      cur: typeof c.temperature_2m === 'number' ? { temp: c.temperature_2m, code: c.weather_code, wind: c.wind_speed_10m } : null
+    };
+  }
+  // 기상청 값이 있으면 그것을 쓰고, 기상청 일별 예보가 끝난 뒤의 날짜만 Open-Meteo 로 잇는다(그 날짜에는 om 표시를 남긴다)
+  function mergeWeather(om, kma) {
+    if (!kma) return om ? { at: Date.now(), source: 'Open-Meteo 예보', hourly: om.hourly, daily: om.daily, cur: om.cur } : null;
+    const last = kma.daily.length ? kma.daily[kma.daily.length - 1].d : '';
+    const tail = om ? om.daily.filter((x) => x.d > last).map((x) => ({ ...x, om: true })) : [];
+    const daily = kma.daily.concat(tail).slice(0, 7);
+    const extra = daily.filter((x) => x.om).length;
+    return { at: Date.now(), source: '기상청 동네예보' + (extra ? ' · 뒤 ' + extra + '일은 Open-Meteo' : ''), hourly: kma.hourly, daily, cur: kma.cur || (om && om.cur) };
   }
   // 날씨 그림(두근두근 당곡 그림체). WMO 날씨 코드를 일곱 가지로 묶는다
   function wxKind(code) {
@@ -1141,7 +1161,7 @@
       const home = wx.hourly.filter((x) => x.d === today && x.h >= Math.max(15, k.h) && x.h <= 18);
       const wetHome = home.some((x) => x.pop >= 60);
       const snowy = rest.some((x) => wxKind(x.code)[0] === 'snow');
-      const wind = wx.cur && typeof wx.cur.wind_speed_10m === 'number' ? wx.cur.wind_speed_10m : (rest[0] || {}).wind;
+      const wind = wx.cur && typeof wx.cur.wind === 'number' ? wx.cur.wind : (rest[0] || {}).wind;
       if (snowy) tips.push('눈이 와요! 미끄러우니 천천히 걸어요!');
       else if (wetHome && k.h < 18) tips.push('집에 가는 길에 비가 온대요! 우산 챙겨요!');
       else if (rest.some((x) => x.pop >= 60)) tips.push('오늘 비가 온대요! 우산 챙겨요!');
@@ -1160,27 +1180,27 @@
   function weatherHTML(s) {
     const wx = state.wx && Date.now() - state.wx.at < 3 * 3600000 ? state.wx : null;
     const tag = s.view === 'week' ? '일주일 날씨' : '오늘 날씨';
-    const foot = '<div class="wx-foot"><div class="wx-bus" id="wxBus"></div><div class="source">Open-Meteo 예보</div></div>';
     if (!wx) return cardHTML({ tag, title: '날씨 예보를 확인하고 있습니다' });
+    const foot = `<div class="wx-foot"><div class="wx-bus" id="wxBus"></div><div class="source">${esc(wx.source || '')}</div></div>`;
     const today = ymd(now());
     if (s.view === 'week') {
-      const days = wx.daily.filter((x) => x.d >= today).slice(0, 7).map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}">
+      const days = wx.daily.filter((x) => x.d >= today).slice(0, 7).map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}${x.om ? ' is-om' : ''}" style="--i:${i}">
         <b>${i === 0 ? '오늘' : esc(ymdLabel(x.d).replace(/^\d+월 /, '').replace(/일 \((.)\)/, '일 $1'))}</b>${wxIcon(x.code)}
         <span class="wx-t"><em>${deg(x.max)}</em><i>${deg(x.min)}</i></span>
         <span class="wx-p">${typeof x.pop === 'number' ? '강수 ' + x.pop + '%' : ''}</span></li>`).join('');
       const t0 = wx.daily.filter((x) => x.d === today)[0] || {};
-      const c0 = wx.cur && wx.cur.weather_code != null && Date.now() - wx.at < 3600000 ? wx.cur.weather_code : t0.code;
-      return `<div class="card-inner wxc">${wxFx(c0, wx.cur ? wx.cur.wind_speed_10m : null)}<div class="wx-top"><div><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1></div>${wxSayHTML(wx, 'week')}</div><ul class="wx-week">${days}</ul>${foot}</div>`;
+      const c0 = wx.cur && wx.cur.code != null && Date.now() - wx.at < 3600000 ? wx.cur.code : t0.code;
+      return `<div class="card-inner wxc">${wxFx(c0, wx.cur ? wx.cur.wind : null)}<div class="wx-top"><div><div class="tag">${tag}</div><h1 class="title">이번 주 날씨</h1></div>${wxSayHTML(wx, 'week')}</div><ul class="wx-week">${days}</ul>${foot}</div>`;
     }
     const k = kst(now());
     const rest = wx.hourly.filter((x) => (x.d === today && x.h >= k.h) || x.d > today).slice(0, 8);
     const cur = rest[0] || {};
-    const temp = wx.cur && typeof wx.cur.temperature_2m === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.temperature_2m : cur.temp;
-    const code = wx.cur && wx.cur.weather_code != null && Date.now() - wx.at < 3600000 ? wx.cur.weather_code : cur.code;
+    const temp = wx.cur && typeof wx.cur.temp === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.temp : cur.temp;
+    const code = wx.cur && wx.cur.code != null && Date.now() - wx.at < 3600000 ? wx.cur.code : cur.code;
     const maxPop = Math.max.apply(null, rest.map((x) => (typeof x.pop === 'number' ? x.pop : 0)).concat([0]));
     const td = wx.daily.filter((x) => x.d === today)[0];
     const hours = rest.map((x, i) => `<li class="${x.pop >= 60 ? 'is-wet' : ''}" style="--i:${i}"><b>${i === 0 ? '지금' : x.h + '시'}</b>${wxIcon(x.code)}<em>${deg(x.temp)}</em><span>${typeof x.pop === 'number' ? x.pop + '%' : ''}</span></li>`).join('');
-    const wind = wx.cur && typeof wx.cur.wind_speed_10m === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.wind_speed_10m : cur.wind;
+    const wind = wx.cur && typeof wx.cur.wind === 'number' && Date.now() - wx.at < 3600000 ? wx.cur.wind : cur.wind;
     const windText = typeof wind === 'number' ? ' · 바람 초속 ' + Math.round(wind) + 'm' + (wind >= WIND_STRONG ? '(강함)' : '') : '';
     return `<div class="card-inner wxc">${wxFx(code, wind)}<div class="tag">${tag}</div>
       <div class="wx-now">${wxIcon(code)}<div><h1 class="title">${deg(temp)} <small>${esc(wxKind(code)[1])}</small></h1>

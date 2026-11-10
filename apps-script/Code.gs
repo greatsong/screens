@@ -404,6 +404,7 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.api === 'votes') return json_(mealVotes_());
   if (e && e.parameter && e.parameter.api === 'games') return json_(gameBoard_(String(e.parameter.game || '')));
   if (e && e.parameter && e.parameter.api === 'bus') return json_(busArrivals_(String(e.parameter.stops || '')));
+  if (e && e.parameter && e.parameter.api === 'weather') return json_(weather_());
   const page = (e && e.parameter && e.parameter.page) || 'status';
   if (page === 'admin') {
     if (!isAdmin_()) return HtmlService.createHtmlOutput('<p style="font-family:sans-serif">관리 권한이 없습니다.</p>');
@@ -538,6 +539,105 @@ function busLog_(ids) {
     });
   });
   return out;
+}
+
+// ======================================================================
+// 날씨 — 기상청 API허브의 동네예보(초단기실황·단기예보)를 대신 불러 화면용으로 정리한다(?api=weather).
+// 인증키는 스크립트 속성 KMA_AUTH_KEY. 결과는 20분 동안 함께 쓴다(단기예보는 3시간마다 발표된다).
+// 돌려주는 모양: {ok, at, cur: {temp, code, wind}, hourly: [{d, h, temp, pop, code, wind}], daily: [{d, code, max, min, pop}]}
+// code 는 화면이 쓰는 날씨 코드(WMO): 0 맑음 · 2 구름 많음 · 3 흐림 · 61 비 · 80 소나기 · 71 눈 · 75 많은 눈 · 95 뇌우
+// ======================================================================
+const KMA = { BASE: 'https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/', NX: 59, NY: 125, TTL: 1200, ISSUES: [2, 5, 8, 11, 14, 17, 20, 23] };
+
+function weather_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('wx');
+  if (hit) return JSON.parse(hit);
+  const key = prop_('KMA_AUTH_KEY');
+  if (!key) return { ok: false, error: '인증키 없음' };
+  const now = now_();
+  const day = (d) => fmt_(d, 'yyyyMMdd');
+  // 단기예보: 발표 15분 뒤부터 그 회차를 쓴다. 오늘 02시 발표분도 함께 받아 오늘의 최저·최고 기온과 지나간 시각을 채운다
+  const t = new Date(now.getTime() - 15 * 60000);
+  const hour = Number(fmt_(t, 'H'));
+  const issue = KMA.ISSUES.filter((h) => h <= hour).pop();
+  const base = issue == null ? { date: day(new Date(t.getTime() - 86400000)), time: '2300' } : { date: day(t), time: (issue < 10 ? '0' : '') + issue + '00' };
+  const obs = new Date(now.getTime() - 20 * 60000);
+  const q = (fn, date, time, rows) => KMA.BASE + fn + '?pageNo=1&numOfRows=' + rows + '&dataType=JSON&base_date=' + date + '&base_time=' + time +
+    '&nx=' + KMA.NX + '&ny=' + KMA.NY + '&authKey=' + encodeURIComponent(key);
+  const urls = [q('getVilageFcst', base.date, base.time, 1500), q('getUltraSrtNcst', day(obs), fmt_(obs, 'HH') + '00', 20)];
+  if (issue != null && issue > 2) urls.push(q('getVilageFcst', day(t), '0200', 400));
+  let res;
+  try {
+    res = UrlFetchApp.fetchAll(urls.map((u) => ({ url: u, muteHttpExceptions: true }))).map(kmaItems_);
+  } catch (err) {
+    return { ok: false, error: '기상청 연결 실패' };
+  }
+  if (!res[0].length) return { ok: false, error: '예보 없음' };
+  const out = kmaBuild_(res[0], res[1], res[2] || [], day(now));
+  out.at = Date.now();
+  out.base = base.date + base.time;
+  cache.put('wx', JSON.stringify(out), KMA.TTL);
+  return out;
+}
+function kmaItems_(r) {
+  try {
+    const d = JSON.parse(r.getContentText());
+    const body = d.response && d.response.body;
+    const it = body && body.items && body.items.item;
+    return Array.isArray(it) ? it : [];
+  } catch (err) {
+    return [];
+  }
+}
+// 하늘 상태(SKY)와 강수 형태(PTY)를 날씨 코드로. 시간당 적설이 1cm 이상이면 많은 눈
+function kmaCode_(v) {
+  const pty = Number(v.PTY || 0);
+  if (pty === 3 || pty === 7) return (parseFloat(v.SNO) || 0) >= 1 ? 75 : 71;
+  if (pty === 4) return 80;
+  if (pty > 0) return 61;
+  const sky = Number(v.SKY || 0);
+  return sky >= 4 ? 3 : sky === 3 ? 2 : 0;
+}
+function kmaBuild_(latest, obsItems, early, today) {
+  const slots = {};
+  const days = {};
+  const put = (it) => {
+    if (it.category === 'TMN' || it.category === 'TMX') { (days[it.fcstDate] = days[it.fcstDate] || {})[it.category] = Number(it.fcstValue); return; }
+    const k = it.fcstDate + it.fcstTime;
+    (slots[k] = slots[k] || { d: it.fcstDate, h: Number(it.fcstTime.slice(0, 2)) })[it.category] = it.fcstValue;
+  };
+  early.forEach(put);    // 오늘 02시 발표분을 먼저 넣고
+  latest.forEach(put);   // 최신 발표분으로 덮어쓴다
+  const hourly = Object.keys(slots).sort().map((k) => {
+    const v = slots[k];
+    return { d: v.d, h: v.h, temp: Number(v.TMP), pop: Number(v.POP), code: kmaCode_(v), wind: Number(v.WSD) };
+  }).filter((x) => !isNaN(x.temp));
+  const rank = (c) => (c >= 71 && c <= 77 ? 4 : c >= 95 ? 5 : c === 61 || c === 80 ? 3 : c === 3 ? 2 : c === 2 ? 1 : 0);
+  const daily = [];
+  hourly.forEach((x) => {
+    let d = daily[daily.length - 1];
+    if (!d || d.d !== x.d) { d = { d: x.d, code: 0, max: -99, min: 99, pop: 0, n: 0 }; daily.push(d); }
+    d.n++;
+    d.max = Math.max(d.max, x.temp);
+    d.min = Math.min(d.min, x.temp);
+    if (!isNaN(x.pop)) d.pop = Math.max(d.pop, x.pop);
+    if (x.h >= 6 && x.h <= 21 && rank(x.code) > rank(d.code)) d.code = x.code;   // 낮 시간의 가장 궂은 날씨를 그날의 날씨로
+  });
+  daily.forEach((d) => {
+    const t = days[d.d] || {};
+    if (t.TMX != null) d.max = t.TMX;
+    if (t.TMN != null) d.min = t.TMN;
+  });
+  const obs = {};
+  obsItems.forEach((it) => { obs[it.category] = it.obsrValue; });
+  const near = hourly.filter((x) => x.d === today)[0] || hourly[0] || {};
+  const k = fmt_(now_(), 'H');
+  const nowSlot = hourly.filter((x) => x.d === today && x.h === Number(k))[0] || near;
+  const pty = Number(obs.PTY || 0);
+  const cur = obs.T1H == null ? null : { temp: Number(obs.T1H), wind: Number(obs.WSD),
+    code: pty === 3 || pty === 7 ? 71 : pty > 0 ? 61 : (nowSlot.code >= 61 ? 3 : nowSlot.code || 0) };
+  return { ok: true, source: '기상청', cur: cur, hourly: hourly, daily: daily.filter((d) => d.n >= 8 || d.d === today).map((d) => ({ d: d.d, code: d.code, max: d.max, min: d.min, pop: d.pop })) };
 }
 
 // ======================================================================

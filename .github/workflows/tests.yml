@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: 화면 동작
-        run: node --test tests/frontend.test.mjs
+        run: node --test tests/frontend.test.mjs tests/apps_bus.test.mjs tests/apps_weather.test.mjs
       - name: 작품 검사·편성·뉴스 정책
         run: python3 -m unittest discover -s tests -v
       - name: Apps Script 등록·승인·보안 흐름 (오프라인)
