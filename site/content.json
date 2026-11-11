@@ -1,6 +1,6 @@
 {
-  "version": 69,
-  "publishedAt": "2026-11-11T00:07:10+09:00",
+  "version": 70,
+  "publishedAt": "2026-11-11T11:04:38+09:00",
   "appVersion": "0.9.10",
   "mode": "normal",
   "notice": "",
@@ -173,24 +173,34 @@
   },
   "news": [
     {
-      "id": "f8be96ab85",
+      "id": "e197084f0e",
       "cat": "tech",
-      "title": "엔비디아 긴 문맥 논문, 대화 요약으로 줄여도 에이전트 성능 거의 유지",
-      "summary": "AI 모델이 기억하는 대화 분량을 늘릴수록 성능이 좋아진다는 통념과 다른 연구 결과가 공개됐다.",
-      "source": "ZDNet Korea",
+      "title": "[CES 2027] 최고혁신상 60% 韓 차지…로봇·AI칩 '왕좌'는 中·美",
+      "summary": "한국 기업이 'CES 2027' 최고혁신상 절반 이상을 휩쓸었다.",
+      "source": "전자신문",
       "date": "2026-11-10",
-      "link": "https://zdnet.co.kr/view/?no=20261110210319",
-      "until": "2026-11-13T21:03:19+09:00"
+      "link": "https://www.etnews.com/20261110000251",
+      "until": "2026-11-13T16:00:00+09:00"
     },
     {
-      "id": "e3dc5ee48d",
+      "id": "92979d74eb",
       "cat": "society",
-      "title": "개보위, 앤트로픽 '클로드' 개인정보 유출 사고 정식 조사 착수",
-      "summary": "개인정보보호위원회가 미국 앤트로픽의 생성형 인공지능 서비스 '클로드' 이용 국내 기업의 계정 정보 유출...",
+      "title": "SK하이닉스, 저전력 D램 안전·보안 국제인증…피지컬 AI 공략",
+      "summary": "SK하이닉스는 저전력 D램인 LPDDR5X 제품에 대해 산업용 기능안전 국제표준인 'IEC 61508'의 안전...",
       "source": "연합뉴스",
-      "date": "2026-11-10",
-      "link": "https://www.yna.co.kr/view/AKR20261110142600530",
-      "until": "2026-11-13T16:22:26+09:00"
+      "date": "2026-11-11",
+      "link": "https://www.yna.co.kr/view/AKR20261111067600003",
+      "until": "2026-11-14T10:43:51+09:00"
+    },
+    {
+      "id": "33c331d927",
+      "cat": "economy",
+      "title": "CJ제일제당, 식음료 제조 AI 개발…공정·품질·안전까지 자동 제어",
+      "summary": "CJ제일제당이 식음료 제조 현장에 특화된 인공지능 자율제조 기술 개발에 나선다.",
+      "source": "ZDNet Korea",
+      "date": "2026-11-11",
+      "link": "https://zdnet.co.kr/view/?no=20261111094107",
+      "until": "2026-11-14T09:53:28+09:00"
     },
     {
       "id": "d8398b084a",
@@ -201,16 +211,6 @@
       "date": "2026-11-10",
       "link": "https://www.aitimes.com/news/articleView.html?idxno=217240",
       "until": "2026-11-13T16:15:00+09:00"
-    },
-    {
-      "id": "b62a58d34f",
-      "cat": "culture",
-      "title": "AI로 선율 입힌 셰익스피어詩…용호성 前차관, 첫 정규앨범 발표",
-      "summary": "인공지능을 활용한 음악을 선보여 온 용호성 문화체육관광부 전 차관이 10일 예명 '닥터 드래곤'...",
-      "source": "연합뉴스",
-      "date": "2026-11-10",
-      "link": "https://www.yna.co.kr/view/AKR20261110091700005",
-      "until": "2026-11-13T12:17:50+09:00"
     }
   ],
   "promoSound": true,
