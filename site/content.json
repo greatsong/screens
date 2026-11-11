@@ -1,6 +1,6 @@
 {
-  "version": 71,
-  "publishedAt": "2026-11-11T11:16:24+09:00",
+  "version": 72,
+  "publishedAt": "2026-11-11T19:23:40+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,44 +173,44 @@
   },
   "news": [
     {
-      "id": "e197084f0e",
+      "id": "c599c18b0a",
       "cat": "tech",
-      "title": "[CES 2027] 최고혁신상 60% 韓 차지…로봇·AI칩 '왕좌'는 中·美",
-      "summary": "한국 기업이 'CES 2027' 최고혁신상 절반 이상을 휩쓸었다.",
-      "source": "전자신문",
-      "date": "2026-11-10",
-      "link": "https://www.etnews.com/20261110000251",
-      "until": "2026-11-13T16:00:00+09:00"
+      "title": "구글, '제미나이 로보틱스 2.5' 공개…공장 작업 성공률 96%",
+      "summary": "구글이 실제 자동차 공장에서 휴머노이드 로봇의 작업 성공률을 96%까지 높인 새로운 물리적 AI 모델을 공개했다.",
+      "source": "AI타임스",
+      "date": "2026-11-11",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217274",
+      "until": "2026-11-14T17:51:00+09:00"
     },
     {
-      "id": "92979d74eb",
+      "id": "488a070a99",
       "cat": "society",
-      "title": "SK하이닉스, 저전력 D램 안전·보안 국제인증…피지컬 AI 공략",
-      "summary": "SK하이닉스는 저전력 D램인 LPDDR5X 제품에 대해 산업용 기능안전 국제표준인 'IEC 61508'의 안전...",
+      "title": "KT, KAIST에 AI 메일 보안 서비스 제공",
+      "summary": "KT는 한국과학기술원에 ‘AI 메일보안’ 서비스를 제공해 학생·연구자·교직원 등 전 구성원을 대상으로 이메일 보안체계를 강화한다고 11일 밝혔다.",
+      "source": "AI타임스",
+      "date": "2026-11-11",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217252",
+      "until": "2026-11-14T13:29:00+09:00"
+    },
+    {
+      "id": "c79666b02c",
+      "cat": "economy",
+      "title": "제철소 고위험 작업에 AI 로봇 투입…포항서 기술 개발",
+      "summary": "경북도와 포항시는 산업통상부가 주관한 '전기로 고위험 작업 대체와 생산성 향상을 위한 인공지능 자율운영...",
       "source": "연합뉴스",
       "date": "2026-11-11",
-      "link": "https://www.yna.co.kr/view/AKR20261111067600003",
-      "until": "2026-11-14T10:43:51+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261111148000053",
+      "until": "2026-11-14T16:43:32+09:00"
     },
     {
-      "id": "33c331d927",
-      "cat": "economy",
-      "title": "CJ제일제당, 식음료 제조 AI 개발…공정·품질·안전까지 자동 제어",
-      "summary": "CJ제일제당이 식음료 제조 현장에 특화된 인공지능 자율제조 기술 개발에 나선다.",
-      "source": "ZDNet Korea",
-      "date": "2026-11-11",
-      "link": "https://zdnet.co.kr/view/?no=20261111094107",
-      "until": "2026-11-14T09:53:28+09:00"
-    },
-    {
-      "id": "d8398b084a",
+      "id": "f09720d88b",
       "cat": "science",
-      "title": "바이두, AI 연구 자동화하는 '어니 이볼브' 공개…추론 속도 6배 개선",
-      "summary": "중국 바이두가 AI 스스로 연구 방향을 정하고 실험을 반복해 AI 개발에 활용할 수 있는 자동 연구 시스템을 공개했다.",
-      "source": "AI타임스",
-      "date": "2026-11-10",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217240",
-      "until": "2026-11-13T16:15:00+09:00"
+      "title": "“소비쿠폰 효과, GPT로 검증”…오픈AI, 韓 정책 연구 공개",
+      "summary": "오픈AI가 생성형 인공지능으로 '민생회복 소비쿠폰' 정책의 가계 소비 효과를 예측·검증하는 연구를 통해 챗GPT의 정책 연구 활용 가능성을 제시했다.",
+      "source": "전자신문",
+      "date": "2026-11-11",
+      "link": "https://www.etnews.com/20261111000340",
+      "until": "2026-11-14T14:32:42+09:00"
     }
   ],
   "promoSound": true,
