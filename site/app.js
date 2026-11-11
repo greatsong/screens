@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '0.9.10';
+  const APP_VERSION = '0.9.11';
   const ROLE_LABEL = { a: 'A · 소식', b: 'B · 깊이 보기' };
   // 작품 카드 배지(선생님·1·2·3학년). 아이콘은 Codex CLI가 그린 site/icons/*.svg를 그대로 넣었다.
   const MAKER_BADGE = {
@@ -477,6 +477,9 @@
       maybeLoadVotes();
     }
     renderPlayer();
+    // 작품 체험 중에는 뒤에 가려진 카드를 넘기거나 다시 그리지 않는다. 작품(iframe)은 이 화면과 같은 스레드에서 돌아가므로
+    // 뒤에서 카드가 바뀔 때마다 작품이 멈춘다(느린 기기에서는 한 번에 1초 가까이. 게임에서는 그동안 누른 것이 늦게 처리됐다)
+    if (state.show.app) return;
     maybeLoadBus(t);
     if (k.s !== state.busSec) { state.busSec = k.s; busPaint(); busAlert(t); }
     if (!$('gallery').hidden && Date.now() - state.lastInteract > 60000) { $('gallery').hidden = true; logEvent('작품 목록 닫힘 (1분 동안 조작 없음)'); }
@@ -2050,6 +2053,7 @@
     frame.src = info.url;
     $('gallery').hidden = true;
     $('player').hidden = false;
+    document.body.classList.add('is-playing');   // 가려진 화면은 그리지 않는다(style.css)
     // 작품이 열리지 않아도 게시판 전체가 멈추지 않도록, 20초 안에 열리지 않으면 휴대폰 안내를 띄운다
     clearTimeout(state.loadTimer);
     state.loadTimer = setTimeout(() => { if (state.show === mine && !mine.loaded) playerMessage('작품을 불러오지 못했습니다.'); }, 20000);
@@ -2076,6 +2080,8 @@
     $('player').hidden = true;
     $('playerMsg').hidden = true;
     $('frame').src = 'about:blank';
+    document.body.classList.remove('is-playing');
+    state.slot = -1;   // 체험하는 동안 넘기지 않은 카드를 지금 시각의 칸으로 바로 맞춘다
     if (state.sched[state.idx] && state.sched[state.idx].promo) syncPromo(state.sched[state.idx]);   // 체험하는 동안 멈춘 홍보 영상을 이어서 튼다
     setTimeout(syncShowcase, 0); // 체험 중에 들어온 원격 시연이 있으면 이어서 연다
   }

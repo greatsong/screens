@@ -13,7 +13,7 @@ const nameSource = lastScript(read('../site/games/name.html'));
 const styleSource = read('../site/style.css');
 const API = 'https://api.invalid/exec';
 
-function page(source, { board = [], search = '', scoreReply = null, hiddenAtStart = [] } = {}) {
+function page(source, { board = [], search = '', scoreReply = null, hiddenAtStart = [], noFrames = false } = {}) {
   let now = Date.parse('2026-11-11T10:00:00+09:00');
   let nextTimer = 0;
   const timers = new Map();
@@ -56,7 +56,8 @@ function page(source, { board = [], search = '', scoreReply = null, hiddenAtStar
     location: { href: 'https://greatsong.github.io/screens/games/mole/', search },
     setTimeout: (fn, ms) => timer(fn, ms), clearTimeout: (id) => timers.delete(id),
     setInterval: (fn, ms) => timer(fn, ms, ms), clearInterval: (id) => timers.delete(id),
-    requestAnimationFrame: (fn) => timer(fn, 16), cancelAnimationFrame: (id) => timers.delete(id),
+    // noFrames: 그리기가 멈춘 화면(가려진 탭). 다음 그림을 기다리는 콜백이 불리지 않는다
+    requestAnimationFrame: (fn) => (noFrames ? 0 : timer(fn, 16)), cancelAnimationFrame: (id) => timers.delete(id),
     fetch: (url, opts) => {
       if (/content\.json/.test(url)) return reply({ vote: { api: API } });
       if (opts && opts.method === 'POST') { const body = JSON.parse(opts.body); posts.push(body); return reply(typeof scoreReply === 'function' ? scoreReply(body) : scoreReply); }
@@ -129,6 +130,70 @@ test('a bare click still works for a remote control or keyboard, and the click a
   env.$('start').fire('pointerdown');                 // 세는 중에 다시 눌러도 처음부터 다시 세지 않는다
   env.advance(3 * 800);
   assert.equal(env.holes().filter((h) => h.classList.contains('up')).length, 1);
+});
+
+// 스탠바이미처럼 큰 화면에서는 손이 구멍에 닿기까지와 누름이 게임에 도착하기까지 시간이 더 걸린다. 머무는 시간이 끝나 내려가기 시작한
+// 두더지도 아직 화면에 보이므로, 잠깐 동안은 누르면 잡혀야 한다(전에는 판이 빨라지는 후반에 보이는 두더지를 눌러도 반응이 없었다)
+const untilLeaving = (env, hole) => { for (let t = 0; t < 3000 && hole.classList.contains('up'); t += 10) env.advance(10); };
+const firstUp = (env) => { for (let t = 0; t < 3000; t += 10) { const h = env.holes().find((x) => x.classList.contains('up') && !x.classList.contains('hit')); if (h) return h; env.advance(10); } return null; };
+
+test('a mole that has started going down is still caught for a moment, and after that moment a press does nothing', () => {
+  const env = mole();
+  env.$('start').fire('pointerdown');
+  env.advance(3 * 800);
+  const first = firstUp(env);
+  untilLeaving(env, first);
+  assert.equal(first.classList.contains('gone'), true);        // 내려가는 중
+  env.advance(350);                                            // 다 내려갔어도 조금 더 받아 준다(화면과 터치가 늦는 기기)
+  first.fire('pointerdown');
+  assert.equal(env.$('score').textContent, 1);
+  assert.equal(first.classList.contains('hit'), true);
+  assert.equal(first.classList.contains('gone'), false);       // 잡힌 모습으로 돌아온다
+  first.fire('pointerdown');                                   // 같은 두더지를 두 번 세지 않는다
+  assert.equal(env.$('score').textContent, 1);
+
+  const second = firstUp(env);
+  untilLeaving(env, second);
+  env.advance(410);
+  second.fire('pointerdown');                                  // 너무 늦은 누름은 받지 않는다
+  assert.equal(env.$('score').textContent, 1);
+});
+
+test('letting a mole go breaks the streak only after the moment in which it could still be caught', () => {
+  const env = mole();
+  env.$('start').fire('pointerdown');
+  env.advance(3 * 800);
+  for (let caught = 0; caught < 3;) { const h = firstUp(env); h.fire('pointerdown'); caught++; env.advance(10); }
+  assert.equal(env.$('combo').classList.contains('on'), true);
+  assert.match(env.$('combo').textContent, /연속 3/);
+  const late = firstUp(env);
+  untilLeaving(env, late);
+  env.advance(300);
+  late.fire('pointerdown');                                    // 내려가는 중에 잡아도 연속이 이어진다
+  assert.match(env.$('combo').textContent, /연속 4/);
+  const missed = firstUp(env);
+  untilLeaving(env, missed);
+  assert.equal(env.$('combo').classList.contains('on'), true); // 아직 잡을 수 있는 동안에는 끊기지 않는다
+  env.advance(410);
+  assert.equal(env.$('combo').classList.contains('on'), false);
+});
+
+test('the time a mole stays is counted from when it is drawn, and it still leaves when the page is not being drawn', () => {
+  const env = mole();
+  env.$('start').fire('pointerdown');
+  env.advance(3 * 800);
+  const first = firstUp(env);
+  env.advance(1150 + 20);                                      // 올라온 순간부터 세면 이미 내려갔을 시간(첫 두더지는 1.15초 머문다)
+  assert.equal(first.classList.contains('up'), true);
+  env.advance(20);                                             // 화면에 그려진 뒤(두 프레임, 32ms)부터 1.15초
+  assert.equal(first.classList.contains('up'), false);
+
+  const covered = mole({ noFrames: true });
+  covered.$('start').fire('pointerdown');
+  covered.advance(3 * 800);
+  const hole = firstUp(covered);
+  covered.advance(250 + 1150 + 10);                            // 그림을 기다리다 0.25초가 지나면 그때부터 센다
+  assert.equal(hole.classList.contains('up'), false);
 });
 
 test('the hall of fame leaves out records without a nickname', async () => {

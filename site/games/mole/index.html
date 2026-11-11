@@ -66,7 +66,7 @@ button { font: inherit; cursor: pointer; }
 .mole svg { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
 .hole.up .mole { transform: translateY(0); }
 .hole.hit .mole { transform: translateY(38%) scaleY(0.82); transition: transform 0.12s ease-out; }
-.hole.gone .mole { transform: translateY(105%); transition: transform 0.22s ease-in; }
+.hole.gone .mole { transform: translateY(105%); transition: transform 0.3s ease-in; }
 /* 굴 앞쪽 절반(어두운 굴 + 흙 테두리)을 두더지 앞에 겹쳐 굴에서 올라오는 것처럼 보이게 한다. 중심은 .pit 과 같다(아래에서 21%) */
 .lip { position: absolute; left: 7%; right: 7%; bottom: 4%; height: 34%; border-radius: 50%;
   background: radial-gradient(ellipse at 50% 50%, #241509 0%, var(--pit) 62%, #4a2e18 70%, var(--dirt) 74%, var(--dirt-d) 100%);
@@ -372,7 +372,7 @@ button { font: inherit; cursor: pointer; }
     el.className = 'hole';
     el.innerHTML = '<div class="pit"></div><div class="well"><div class="mole"></div></div><div class="lip"></div>';
     $('grid').appendChild(el);
-    const h = { el: el, body: el.querySelector('.mole'), kind: '', timer: null, busy: false };
+    const h = { el: el, body: el.querySelector('.mole'), kind: '', timer: null, busy: false, leaving: false, turn: 0 };
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); whack(h); });
     holes.push(h);
   }
@@ -381,28 +381,50 @@ button { font: inherit; cursor: pointer; }
   const S = { playing: false, score: 0, combo: 0, start: 0, spawnTimer: null, frame: 0, api: '', board: null, code: '', claimAt: 0, seq: 0 };
   setMusic(bgm.on);
 
+  // 머무는 시간이 끝난 두더지는 0.3초에 걸쳐 내려간다. 내려가는 동안에도 눈에는 보이고, 큰 화면에서는 손이 닿기까지와
+  // 누름이 게임에 도착하기까지 시간이 더 걸린다. 그래서 내려가기 시작한 뒤에도 GRACE 동안은 누르면 잡힌다.
+  // 전에는 내려가기 시작하는 순간 판정에서 빠져, 아직 보이는 두더지를 눌러도 반응이 없었다(판이 빨라지는 후반에 특히)
+  const GRACE = 400;
+  // 다음 화면이 그려진 뒤에 부른다. 화면이 가려져 그리기가 멈춘 때에도 0.25초 뒤에는 부른다
+  function afterPaint(fn) {
+    let done = false;
+    const run = () => { if (done) return; done = true; fn(); };
+    requestAnimationFrame(() => requestAnimationFrame(run));
+    setTimeout(run, 250);
+  }
   function show(h, kind, stay) {
-    h.kind = kind; h.busy = true;
+    const turn = ++h.turn;
+    h.kind = kind; h.busy = true; h.leaving = false;
     h.body.innerHTML = kind === 'bomb' ? bombSVG() : moleSVG(kind);
     h.el.classList.remove('hit', 'gone');
     void h.el.offsetWidth;
     h.el.classList.add('up');
     if (S.playing) sfx.peek();
-    h.timer = setTimeout(() => hide(h, false), stay);
+    // 머무는 시간은 두더지가 화면에 그려진 뒤부터 센다. 기기가 느려 늦게 그려져도 누를 수 있는 시간은 줄지 않는다
+    afterPaint(() => { if (h.turn === turn && h.kind && !h.leaving) h.timer = setTimeout(() => leave(h), stay); });
+  }
+  // 머무는 시간이 끝남: 내려가기 시작하지만 GRACE 동안은 아직 잡을 수 있다
+  function leave(h) {
+    h.leaving = true;
+    h.el.classList.remove('up');
+    h.el.classList.add('gone');
+    h.timer = setTimeout(() => hide(h, false), GRACE);
   }
   function hide(h, wasHit) {
     clearTimeout(h.timer);
     if (!wasHit && h.kind && h.kind !== 'bomb' && S.playing) setCombo(0);   // 놓치면 연속이 끊긴다
+    const down = h.leaving;   // 이미 다 내려간 두더지면 구멍을 바로 비운다
     h.el.classList.remove('up');
     h.el.classList.add('gone');
-    h.kind = '';
-    setTimeout(() => { h.busy = false; h.el.classList.remove('hit', 'gone'); }, 260);
+    h.kind = ''; h.leaving = false;
+    setTimeout(() => { h.busy = false; h.el.classList.remove('hit', 'gone'); }, down ? 60 : 320);
   }
   function whack(h) {
-    if (!S.playing || !h.kind || !h.el.classList.contains('up')) return;
+    if (!S.playing || !h.kind || !(h.leaving || h.el.classList.contains('up'))) return;
     const kind = h.kind;
-    h.kind = '';
+    h.kind = ''; h.leaving = false;
     clearTimeout(h.timer);
+    h.el.classList.remove('gone');   // 내려가던 두더지도 잡힌 모습으로 돌아온다
     h.el.classList.add('hit');
     const ouch = h.body.querySelector('.ouch'), eyes = h.body.querySelector('.eyes');
     if (ouch) { ouch.style.display = ''; eyes.style.display = 'none'; }
@@ -477,7 +499,7 @@ button { font: inherit; cursor: pointer; }
   function finish() {
     S.playing = false;
     clearTimeout(S.spawnTimer); cancelAnimationFrame(S.frame); bgmStop();
-    holes.forEach((h) => { if (h.el.classList.contains('up')) hide(h, true); });
+    holes.forEach((h) => { if (h.kind || h.el.classList.contains('up')) hide(h, true); });
     $('bar').style.transform = 'scaleX(0)';
     sfx.end();
     setTimeout(showResult, 700);

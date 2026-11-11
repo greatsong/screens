@@ -466,6 +466,9 @@ body.is-stopped .player, body.is-stopped .gallery { display: none !important; }
    작품 안의 터치까지 전달되지 않는다(화면 위쪽을 한 손으로 잡고 게임을 하면 터치가 듣지 않았다). 막대와 안내 겹창에서는 브라우저 몸짓을 끈다.
    .player 전체에 걸면 작품(iframe) 안의 스크롤까지 막히므로 이 둘에만 건다 */
 .player-bar, .player-msg { touch-action: none; }
+/* 작품이 화면 전체를 덮는 동안에는 가려진 화면을 그리지 않는다. 작품(iframe)과 이 화면은 같은 스레드를 사용하므로,
+   뒤에서 움직이는 카드와 애니메이션이 작품을 느리게 한다. 카드 넘기기도 그동안 멈춘다(app.js tick) */
+body.is-playing .screen { display: none; }
 .player-title { flex: 1; min-width: 0; margin: 0 2vmin; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-left { color: var(--wait); margin-right: 1vmin; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pbtn {

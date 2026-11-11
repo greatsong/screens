@@ -257,6 +257,31 @@ test('both screens run a student project in place with a try button, and the scr
   }
 });
 
+// 작품(iframe)은 바깥 화면과 같은 스레드에서 돌아간다. 뒤에서 카드를 넘기면 그때마다 작품이 멈춘다(게임에서는 누른 것이 늦게 처리됐다)
+test('while a project is open the cards behind it stay still, and closing it shows the card for the current time', () => {
+  const env = screen({ role: 'b' });
+  const project = { id: 'student-project', title: 'Student project', maker: 'Student', run: 'https://example.invalid/student', embed: true , summary: '', images: {} };
+  env.applyContent(content({ items: [{ id: 'one', a: { title: 'First card' } }, { id: 'two', a: { title: 'Second card' } }], projects: [project], showcase: { on: 'b' } }), false);
+  env.tick();
+  env.context.review.startExperience(project.id);
+  assert.equal(env.document.body.classList.contains('is-playing'), true);
+  const slot = env.state.slot;
+  let painted = 0;
+  const card = env.element('card');
+  let html = card.innerHTML;
+  Object.defineProperty(card, 'innerHTML', { get: () => html, set: (v) => { html = v; painted++; } });
+  for (let i = 0; i < 150; i++) { env.advance(200); env.tick(); }   // 30초: 평소라면 카드가 두 번 넘어간다
+  assert.equal(env.state.slot, slot);
+  assert.equal(painted, 0);
+  assert.equal(env.state.show.app.project.id, project.id);
+  env.act('back');
+  assert.equal(env.document.body.classList.contains('is-playing'), false);
+  env.tick();
+  assert.notEqual(env.state.slot, slot);
+  assert.notEqual(env.state.slot, -1);
+  assert.equal(painted, 1);                                          // 닫으면 지금 시각의 카드를 전환 효과 없이 바로 그린다
+});
+
 test('an unpublished only-preview project can keep its local review experience', () => {
   const env = screen({ role: 'b' });
   const project = { id: 'review-project', title: 'Review project', run: 'https://example.invalid/review', embed: true };
