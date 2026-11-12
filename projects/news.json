@@ -1,45 +1,45 @@
 {
-  "updatedAt": "2026-11-12T12:14:11+09:00",
+  "updatedAt": "2026-11-12T19:40:09+09:00",
   "items": [
     {
-      "id": "2c12d0b0e5",
+      "id": "5b539d5bc5",
       "cat": "tech",
-      "title": "구글, 판단 전용 AI '제미나이 디시전 1' 출시...질문 1000개 동시 처리",
-      "summary": "구글이 텍스트를 생성하는 대신 주어진 조건에 따라 빠르게 판단하고 선택하는 전용 AI 모델 '제미나이 디시전 1'을 출시했다.",
+      "title": "알리바바, '큐원4' 첫 모델 공개…가중치·성능 평가 없이 프리뷰 출시",
+      "summary": "알리바바가 차세대 AI 모델 제품군 '큐원4'의 첫 모델인 '큐원4 맥스 프리뷰'를 공개했다.",
       "source": "AI타임스",
       "date": "2026-11-12",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217307",
-      "until": "2026-11-15T12:07:00+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217313",
+      "until": "2026-11-15T12:56:00+09:00"
     },
     {
-      "id": "488a070a99",
+      "id": "c5ab6d003e",
       "cat": "society",
-      "title": "KT, KAIST에 AI 메일 보안 서비스 제공",
-      "summary": "KT는 한국과학기술원에 ‘AI 메일보안’ 서비스를 제공해 학생·연구자·교직원 등 전 구성원을 대상으로 이메일 보안체계를 강화한다고 11일 밝혔다.",
-      "source": "AI타임스",
-      "date": "2026-11-11",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217252",
-      "until": "2026-11-14T13:29:00+09:00"
+      "title": "AI로 의약품 안전성 정보 확인…GC녹십자, 소프트웨어 개발",
+      "summary": "GC녹십자는 국내 최초로 생성형 인공지능 기반 약물감시 문헌 확인 소프트웨어를 개발했다고 12일...",
+      "source": "연합뉴스",
+      "date": "2026-11-12",
+      "link": "https://www.yna.co.kr/view/AKR20261112119400017",
+      "until": "2026-11-15T14:47:03+09:00"
     },
     {
-      "id": "6efb71af00",
+      "id": "40f86dc81a",
       "cat": "economy",
-      "title": "LG CNS, 글로벌 로봇 석학들과 피지컬AI 산업화 모색",
-      "summary": "LG CNS가 국내외 로봇 석학들과 함께 피지컬 인공지능의 산업 적용 방안과 미래 발전 방향을 논의했다.",
-      "source": "연합뉴스",
+      "title": "앤트로픽 '미소스', 미국 전력망 보안에 활용…듀크에너지 등 도입 시험",
+      "summary": "미국 주요 전력회사들이 앤트로픽의 고성능 모델 '미소스'를 활용해 전력 관련 소프트웨어의 보안 취약점을 찾기 시작했다.",
+      "source": "AI타임스",
       "date": "2026-11-12",
-      "link": "https://www.yna.co.kr/view/AKR20261112035400017",
-      "until": "2026-11-15T10:00:03+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217329",
+      "until": "2026-11-15T17:49:00+09:00"
     },
     {
-      "id": "110c48dda0",
+      "id": "a03e2a58a5",
       "cat": "science",
-      "title": "아모데이 \"AI가 10년 내 암·알츠하이머 치료할 것\"",
-      "summary": "기업공개를 앞둔 앤트로픽의 다리오 아모데이 최고경영자는 인공지능 도움으로 10년 안에...",
+      "title": "AI가 바꾸는 과학기술 연구…서울서 글로벌 R&D 전략 논의",
+      "summary": "한국과학기술연구원은 국가과학기술연구회, 한국과학기술단체총연합회와 공동으로 12일 서울 강남...",
       "source": "연합뉴스",
       "date": "2026-11-12",
-      "link": "https://www.yna.co.kr/view/AKR20261112058100009",
-      "until": "2026-11-15T10:20:27+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261112144300017",
+      "until": "2026-11-15T16:09:39+09:00"
     }
   ]
 }
