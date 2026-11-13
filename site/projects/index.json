@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-12T12:23:29+09:00",
+  "generatedAt": "2026-11-13T11:56:34+09:00",
   "registrySyncId": "20261030-151410-s643f",
   "controlRequestId": "20261030-100404-atest",
   "projects": [
@@ -17,13 +17,13 @@
       "short": "greatsong.github.io/screens/p/2",
       "shortUrl": "https://greatsong.github.io/screens/p/2/",
       "images": {
-        "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-12T122251"
+        "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-13T115558"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-11-12T12:22:51+09:00",
+      "checkedAt": "2026-11-13T11:55:58+09:00",
       "fingerprint": "1c44702b74bb3548",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -46,13 +46,13 @@
       "short": "greatsong.github.io/screens/p/6",
       "shortUrl": "https://greatsong.github.io/screens/p/6/",
       "images": {
-        "wide": "projects/mole/wide.jpg?v=2026-11-12T122256"
+        "wide": "projects/mole/wide.jpg?v=2026-11-13T115604"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-11-12T12:22:56+09:00",
+      "checkedAt": "2026-11-13T11:56:04+09:00",
       "fingerprint": "6bbab969424cff1c",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -75,14 +75,14 @@
       "short": "greatsong.github.io/screens/p/3",
       "shortUrl": "https://greatsong.github.io/screens/p/3/",
       "images": {
-        "wide": "projects/neural-explorer/wide.jpg?v=2026-11-12T122302",
-        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-11-12T122302"
+        "wide": "projects/neural-explorer/wide.jpg?v=2026-11-13T115609",
+        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-11-13T115609"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-11-12T12:23:02+09:00",
+      "checkedAt": "2026-11-13T11:56:09+09:00",
       "fingerprint": "dbe97b7d5e14a260",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -105,13 +105,13 @@
       "short": "greatsong.github.io/screens/p/4",
       "shortUrl": "https://greatsong.github.io/screens/p/4/",
       "images": {
-        "wide": "projects/activation-lab/wide.jpg?v=2026-11-12T122306"
+        "wide": "projects/activation-lab/wide.jpg?v=2026-11-13T115613"
       },
       "pinned": false,
       "source": "manual",
       "status": "ok",
       "problems": [],
-      "checkedAt": "2026-11-12T12:23:06+09:00",
+      "checkedAt": "2026-11-13T11:56:13+09:00",
       "fingerprint": "f779780f0659e550",
       "teacher": "approved",
       "makerConfirmed": true,
@@ -134,8 +134,8 @@
       "short": "greatsong.github.io/screens/p/5",
       "shortUrl": "https://greatsong.github.io/screens/p/5/",
       "images": {
-        "wide": "projects/f4b085fc/wide.jpg?v=2026-11-12T122314",
-        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-11-12T122314"
+        "wide": "projects/f4b085fc/wide.jpg?v=2026-11-13T115620",
+        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-11-13T115620"
       },
       "pinned": false,
       "source": "form",
@@ -143,7 +143,7 @@
       "problems": [
         "다른 사이트 안에서 실행할 수 없도록 막혀 있습니다 (frame-ancestors 'none'). B 화면에서는 QR로 안내합니다."
       ],
-      "checkedAt": "2026-11-12T12:23:14+09:00",
+      "checkedAt": "2026-11-13T11:56:20+09:00",
       "fingerprint": "9cabbec21f8e7612",
       "teacher": "approved",
       "makerConfirmed": true,
