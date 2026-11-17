@@ -1,11 +1,11 @@
 {
   "id": "neural-explorer",
   "target": "both",
-  "checkedAt": "2026-11-16T11:24:08+09:00",
+  "checkedAt": "2026-11-17T13:47:11+09:00",
   "url": "https://neural-explorer.vercel.app/",
   "finalUrl": "https://neural-explorer.vercel.app/",
   "http": 200,
-  "responseMs": 74,
+  "responseMs": 355,
   "fingerprint": "dbe97b7d5e14a260",
   "frame": {
     "allowed": true,
@@ -16,7 +16,7 @@
       "ok": true,
       "image": "wide.jpg",
       "title": "Artificial Neural Net Explorer — 코드 없이 만져보며 배우는 신경망",
-      "loadMs": 2395,
+      "loadMs": 2743,
       "errors": [],
       "stats": {
         "text": 1803,
@@ -27,7 +27,7 @@
       "ok": true,
       "image": "mobile.jpg",
       "title": "Artificial Neural Net Explorer — 코드 없이 만져보며 배우는 신경망",
-      "loadMs": 2392,
+      "loadMs": 2428,
       "errors": [],
       "stats": {
         "text": 1759,
