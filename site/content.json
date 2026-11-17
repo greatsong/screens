@@ -1,6 +1,6 @@
 {
-  "version": 87,
-  "publishedAt": "2026-11-17T13:41:37+09:00",
+  "version": 88,
+  "publishedAt": "2026-11-17T13:47:32+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -79,7 +79,7 @@
       "short": "greatsong.github.io/screens/p/2",
       "shortUrl": "https://greatsong.github.io/screens/p/2/",
       "images": {
-        "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-16T112358"
+        "wide": "projects/commit-galaxy/wide.jpg?v=2026-11-17T134655"
       },
       "pinned": false
     },
@@ -97,8 +97,8 @@
       "short": "greatsong.github.io/screens/p/3",
       "shortUrl": "https://greatsong.github.io/screens/p/3/",
       "images": {
-        "wide": "projects/neural-explorer/wide.jpg?v=2026-11-16T112408",
-        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-11-16T112408"
+        "wide": "projects/neural-explorer/wide.jpg?v=2026-11-17T134711",
+        "mobile": "projects/neural-explorer/mobile.jpg?v=2026-11-17T134711"
       },
       "pinned": false
     },
@@ -116,7 +116,7 @@
       "short": "greatsong.github.io/screens/p/4",
       "shortUrl": "https://greatsong.github.io/screens/p/4/",
       "images": {
-        "wide": "projects/activation-lab/wide.jpg?v=2026-11-16T112411"
+        "wide": "projects/activation-lab/wide.jpg?v=2026-11-17T134714"
       },
       "pinned": false
     },
@@ -134,8 +134,8 @@
       "short": "greatsong.github.io/screens/p/5",
       "shortUrl": "https://greatsong.github.io/screens/p/5/",
       "images": {
-        "wide": "projects/f4b085fc/wide.jpg?v=2026-11-16T112417",
-        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-11-16T112417"
+        "wide": "projects/f4b085fc/wide.jpg?v=2026-11-17T134721",
+        "mobile": "projects/f4b085fc/mobile.jpg?v=2026-11-17T134721"
       },
       "pinned": false
     },
@@ -153,7 +153,7 @@
       "short": "greatsong.github.io/screens/p/6",
       "shortUrl": "https://greatsong.github.io/screens/p/6/",
       "images": {
-        "wide": "projects/mole/wide.jpg?v=2026-11-16T112403"
+        "wide": "projects/mole/wide.jpg?v=2026-11-17T134705"
       },
       "pinned": false
     }
