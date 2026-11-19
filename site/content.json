@@ -1,6 +1,6 @@
 {
-  "version": 95,
-  "publishedAt": "2026-11-19T12:51:43+09:00",
+  "version": 96,
+  "publishedAt": "2026-11-19T20:10:01+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,44 +173,44 @@
   },
   "news": [
     {
-      "id": "17a74d9f15",
+      "id": "1415944245",
       "cat": "tech",
-      "title": "오픈AI, 세계 2위 성능 'GPT-6.2 아스트라' 출시...API 20% 인하",
-      "summary": "오픈AI가 차세대 플래그십 모델 'GPT-6.2 아스트라'와 'GPT-6.2 솔'을 출시했다.",
+      "title": "허깅페이스, 코딩 에이전트 맞춤 어댑터 공개…'큐원' 고난도 평가 39%→65%",
+      "summary": "허깅페이스가 알리바바의 ‘큐원3.8-27B’를 특정 코딩 에이전트에 맞춰 추가 학습한 LoRA 어댑터를 공개했다.",
       "source": "AI타임스",
-      "date": "2026-11-18",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217513",
-      "until": "2026-11-21T06:48:00+09:00"
+      "date": "2026-11-19",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217584",
+      "until": "2026-11-22T17:23:00+09:00"
     },
     {
-      "id": "79e32dc8bd",
+      "id": "6631e0ff50",
       "cat": "society",
-      "title": "여수 AI 재난안전 진단 2만7000명 참여…지난해 기초진단 이어 영상교육 운영",
-      "summary": "여수시가 지난해 모바일·QR코드를 활용한 재난안전 인식도 기초진단에 이어 올해 AI 기반 재난영상으로 시민 안전교육을 진행하고 있다.",
-      "source": "AI타임스",
-      "date": "2026-11-18",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217516",
-      "until": "2026-11-21T14:56:00+09:00"
-    },
-    {
-      "id": "6e56eae67c",
-      "cat": "economy",
-      "title": "APEC 기업인들 \"자유무역 수호·AI 협력확대\"…선전 제안문 발표",
-      "summary": "한종구 특파원 = 아시아태평양경제협력체 회원국 기업인들이 자유무역 체제 수호, 인공지능 협력 확대, 글로벌...",
+      "title": "세무사회 \"수습 실무교육서 AI 차단한 평가체계 도입\"",
+      "summary": "한국세무사회는 수습 세무사 실무교육 과정에서 AI 사용을 차단한 객관적 평가체계를 도입하는 등 교육...",
       "source": "연합뉴스",
       "date": "2026-11-19",
-      "link": "https://www.yna.co.kr/view/AKR20261119047400083",
-      "until": "2026-11-22T09:47:26+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261119074200002",
+      "until": "2026-11-22T11:25:03+09:00"
     },
     {
-      "id": "dd8393f944",
+      "id": "a82b5922ce",
+      "cat": "economy",
+      "title": "LG그룹 2027년 임원인사, AIDC·로봇·피지컬AI 인재 곳곳 발탁",
+      "summary": "LG전자가 AI 데이터센터 냉각 전담 사업부를 신설하고 로봇 인재를 임원으로 발탁하는 등 LG그룹 주요 계열사가 2027년도 임원인사에서 AI 관련 부문을 강…",
+      "source": "AI타임스",
+      "date": "2026-11-19",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217593",
+      "until": "2026-11-22T17:32:00+09:00"
+    },
+    {
+      "id": "82eea97e2e",
       "cat": "science",
-      "title": "‘AI 방지‘ 시험문제, GPT 평균 83점…통한 건 ’복잡성 더하기‘뿐",
-      "summary": "미국·영국 대학 교수 37명이 인공지능이 풀기 어렵도록 직접 설계한 시험 문항에서도 최신 AI가 평균 80점이 넘는 점수를 받은 것으로 전해졌다.",
+      "title": "워싱턴에 모인 한미중일 청년들…AI·기후 논의 ‘공동선언문’ 발표",
+      "summary": "문화체육관광부와 한국국제문화교류진흥원은 ‘2026 아·태 청년 교류단’ 후속 프로그램을 14~18일 워싱턴 D.C.에서 열었다고 19일 밝혔다.",
       "source": "동아일보",
       "date": "2026-11-19",
-      "link": "https://www.donga.com/news/It/article/all/20261119/135052800/2",
-      "until": "2026-11-22T12:13:32+09:00"
+      "link": "https://www.donga.com/news/Inter/article/all/20261119/135056265/2",
+      "until": "2026-11-22T18:46:05+09:00"
     }
   ],
   "promoSound": true,
