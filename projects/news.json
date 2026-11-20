@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-20T19:56:00+09:00",
+  "updatedAt": "2026-11-21T00:39:52+09:00",
   "items": [
     {
       "id": "1415944245",
@@ -22,14 +22,14 @@
       "until": "2026-11-23T17:00:02+09:00"
     },
     {
-      "id": "c3c8e2a7e4",
+      "id": "a82b5922ce",
       "cat": "economy",
-      "title": "정부, 비수도권 AI 데이터센터 50㎿까지 전력평가 면제한다",
-      "summary": "이재명 대통령이 지난해 6월 20일 울산전시컨벤션센터에서 열린 ‘대한민국 AI 고속도로, 울산 AI 데이터센터 출범식’에서 참석자들과 함께 기념 세리머니를 하…",
-      "source": "경향신문",
-      "date": "2026-11-20",
-      "link": "https://www.khan.co.kr/article/202611201501001/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
-      "until": "2026-11-23T15:01:00+09:00"
+      "title": "LG그룹 2027년 임원인사, AIDC·로봇·피지컬AI 인재 곳곳 발탁",
+      "summary": "LG전자가 AI 데이터센터 냉각 전담 사업부를 신설하고 로봇 인재를 임원으로 발탁하는 등 LG그룹 주요 계열사가 2027년도 임원인사에서 AI 관련 부문을 강…",
+      "source": "AI타임스",
+      "date": "2026-11-19",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217593",
+      "until": "2026-11-22T17:32:00+09:00"
     },
     {
       "id": "264032dabf",
