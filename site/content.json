@@ -1,6 +1,6 @@
 {
-  "version": 101,
-  "publishedAt": "2026-11-21T00:40:33+09:00",
+  "version": 102,
+  "publishedAt": "2026-11-21T14:08:53+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,14 +173,14 @@
   },
   "news": [
     {
-      "id": "1415944245",
+      "id": "ea3927e678",
       "cat": "tech",
-      "title": "허깅페이스, 코딩 에이전트 맞춤 어댑터 공개…'큐원' 고난도 평가 39%→65%",
-      "summary": "허깅페이스가 알리바바의 ‘큐원3.8-27B’를 특정 코딩 에이전트에 맞춰 추가 학습한 LoRA 어댑터를 공개했다.",
+      "title": "오픈AI, 코덱스로 챗GPT 성능 문제 자동 진단·수정안 작성",
+      "summary": "오픈AI가 '코덱스'를 활용해 챗GPT의 성능 저하 원인을 찾아내고 수정까지 지원하는 내부 자동화 시스템을 공개했다.",
       "source": "AI타임스",
-      "date": "2026-11-19",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217584",
-      "until": "2026-11-22T17:23:00+09:00"
+      "date": "2026-11-20",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217626",
+      "until": "2026-11-23T16:47:00+09:00"
     },
     {
       "id": "5f1aa200be",
@@ -193,24 +193,24 @@
       "until": "2026-11-23T17:00:02+09:00"
     },
     {
-      "id": "a82b5922ce",
+      "id": "73dcf1c124",
       "cat": "economy",
-      "title": "LG그룹 2027년 임원인사, AIDC·로봇·피지컬AI 인재 곳곳 발탁",
-      "summary": "LG전자가 AI 데이터센터 냉각 전담 사업부를 신설하고 로봇 인재를 임원으로 발탁하는 등 LG그룹 주요 계열사가 2027년도 임원인사에서 AI 관련 부문을 강…",
+      "title": "비수도권 AI 데이터센터, 50MW 이하 전력계통영향평가 면제 추진",
+      "summary": "정부가 비수도권 AI 데이터센터 가운데 계약전력 50메가와트 이하 시설에 대한 전력계통영향평가를 면제하는 방안을 추진한다.",
       "source": "AI타임스",
-      "date": "2026-11-19",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217593",
-      "until": "2026-11-22T17:32:00+09:00"
+      "date": "2026-11-21",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217616",
+      "until": "2026-11-24T09:15:00+09:00"
     },
     {
-      "id": "264032dabf",
+      "id": "622b571866",
       "cat": "science",
-      "title": "AI 로봇이 참외·딸기 수확…경북도 농업연구 153개 과제 수행",
-      "summary": "경북도농업기술원은 포도 수출과 인공지능 기반 수확 로봇 현장 실증 등 올해 153개 연구과제를 수행했다.",
+      "title": "머크, 아이소모픽과 AI 항암 신약 공동 연구",
+      "summary": "글로벌 제약사 머크가 알파벳 계열의 인공지능 신약 개발사인 아이소모픽 랩스와 공동으로 항암 신...",
       "source": "연합뉴스",
       "date": "2026-11-20",
-      "link": "https://www.yna.co.kr/view/AKR20261120078200053",
-      "until": "2026-11-23T11:28:55+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261120049600009",
+      "until": "2026-11-23T10:04:16+09:00"
     }
   ],
   "promoSound": true,
