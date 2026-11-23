@@ -4,3 +4,4 @@ logged_at,kind,base_at,note
 2026-11-15T08:58,forecast,2026-11-15T08:00,연결 실패 URLError
 2026-11-16T18:54,forecast,2026-11-16T18:00,연결 실패 URLError
 2026-11-22T05:36,forecast,2026-11-22T05:00,연결 실패 HTTPError 429
+2026-11-23T19:55,forecast,2026-11-23T19:00,연결 실패 URLError
