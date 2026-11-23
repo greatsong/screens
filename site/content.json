@@ -1,6 +1,6 @@
 {
-  "version": 107,
-  "publishedAt": "2026-11-23T20:50:37+09:00",
+  "version": 108,
+  "publishedAt": "2026-11-24T03:35:13+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -183,24 +183,24 @@
       "until": "2026-11-25T12:01:00+09:00"
     },
     {
-      "id": "0c935826a8",
+      "id": "41b073e3a4",
       "cat": "society",
-      "title": "‘수학 난제’로 성능 과시하며 “개발 제한”…AI 기업들의 두 얼굴",
-      "summary": "앤트로픽 ‘리만 가설 증명’ 밝혔지만 수학자들 해설 작업에만 수개월인간의 이해·감시 기술, AI 기술 속도 못 따라가…‘공동 상한제’ 제안인공지능이 167년…",
-      "source": "경향신문",
+      "title": "오픈AI “GPT가 건설 현장 통역사”…음성 AI로 다국어 소통 지원",
+      "summary": "오픈AI가 음성 인공지능 기술을 활용해 건설·조선 등 산업 현장에서 외국인 근로자의 안전교육과 실시간 소통을 지원하는 음성 AI 활용 전략을 제시했다.",
+      "source": "전자신문",
       "date": "2026-11-23",
-      "link": "https://www.khan.co.kr/article/202611232026005/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
-      "until": "2026-11-26T20:26:00+09:00"
+      "link": "https://www.etnews.com/20261123000395",
+      "until": "2026-11-26T15:05:52+09:00"
     },
     {
-      "id": "55ce9ef132",
+      "id": "00ccb122db",
       "cat": "economy",
-      "title": "AI 한번 학습에 드는 전기량은?…韓 시험결과, 국제 벤치마크 첫 등재",
-      "summary": "TTA가 AI 학습 전력 측정 결과를 MLPerf Training에 국내 처음 등재했다.",
-      "source": "동아일보",
-      "date": "2026-11-23",
-      "link": "https://www.donga.com/news/It/article/all/20261123/135075891/2",
-      "until": "2026-11-26T18:09:10+09:00"
+      "title": "오라클 \"오픈AI 데이터센터 계약 자금 확보 완료\"…추가 조달 우려 반박",
+      "summary": "오라클이 오픈AI와 체결한 AI 인프라 구축 계약에 필요한 자금 조달을 모두 마쳤다고 밝혔다.",
+      "source": "AI타임스",
+      "date": "2026-11-22",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217661",
+      "until": "2026-11-25T11:53:00+09:00"
     },
     {
       "id": "a6de8458b4",
@@ -217,7 +217,7 @@
   "schedule": [
     {
       "name": "기말고사",
-      "start": "2026-11-23",
+      "start": "2026-11-24",
       "end": "2026-11-27",
       "grades": "3학년",
       "holiday": false
