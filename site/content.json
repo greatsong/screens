@@ -1,6 +1,6 @@
 {
-  "version": 105,
-  "publishedAt": "2026-11-23T12:08:33+09:00",
+  "version": 106,
+  "publishedAt": "2026-11-23T18:11:52+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -172,16 +172,6 @@
     "school": "7010073"
   },
   "news": [
-    {
-      "id": "ea3927e678",
-      "cat": "tech",
-      "title": "오픈AI, 코덱스로 챗GPT 성능 문제 자동 진단·수정안 작성",
-      "summary": "오픈AI가 '코덱스'를 활용해 챗GPT의 성능 저하 원인을 찾아내고 수정까지 지원하는 내부 자동화 시스템을 공개했다.",
-      "source": "AI타임스",
-      "date": "2026-11-20",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217626",
-      "until": "2026-11-23T16:47:00+09:00"
-    },
     {
       "id": "956b5338b3",
       "cat": "society",
