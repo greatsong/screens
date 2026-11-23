@@ -1,6 +1,6 @@
 {
-  "version": 106,
-  "publishedAt": "2026-11-23T18:11:52+09:00",
+  "version": 107,
+  "publishedAt": "2026-11-23T20:50:37+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,34 +173,44 @@
   },
   "news": [
     {
-      "id": "956b5338b3",
-      "cat": "society",
-      "title": "충북교육청 \"AI공교육 선도할 것\"…학폭 탐지모델 구축 등 추진",
-      "summary": "충북도교육청은 '인공지능 공교육을 선도하는 충북교육'를 목표로 AI·디지털 기술을 활용해 학생의 배움과...",
-      "source": "연합뉴스",
-      "date": "2026-11-23",
-      "link": "https://www.yna.co.kr/view/AKR20261123078400064",
-      "until": "2026-11-26T11:21:46+09:00"
-    },
-    {
-      "id": "73dcf1c124",
-      "cat": "economy",
-      "title": "비수도권 AI 데이터센터, 50MW 이하 전력계통영향평가 면제 추진",
-      "summary": "정부가 비수도권 AI 데이터센터 가운데 계약전력 50메가와트 이하 시설에 대한 전력계통영향평가를 면제하는 방안을 추진한다.",
+      "id": "2e3376edde",
+      "cat": "tech",
+      "title": "오픈AI, 음성 모델 'GPT-라이브-1.1' 출시…대기 요금 60% 인하",
+      "summary": "오픈AI가 음성 에이전트 개발을 위한 실시간 음성 모델 'GPT-라이브-1.1'을 API로 출시했다.",
       "source": "AI타임스",
-      "date": "2026-11-21",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217616",
-      "until": "2026-11-24T09:15:00+09:00"
+      "date": "2026-11-22",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217655",
+      "until": "2026-11-25T12:01:00+09:00"
     },
     {
-      "id": "0ebca63eb3",
-      "cat": "science",
-      "title": "“이명치료, 왜 나만 잘 안낫지?”…AI가 밝힌 ‘이것’",
-      "summary": "외부 소리 자극이 없는데도 귓속이나 머릿속에서 ‘삐~’ 하는 소음이나 벌레 우는 소리가 들리는 이명은 원인이 복합적이어서 같은 치료를 받아도 환자마다 회복 속…",
+      "id": "0c935826a8",
+      "cat": "society",
+      "title": "‘수학 난제’로 성능 과시하며 “개발 제한”…AI 기업들의 두 얼굴",
+      "summary": "앤트로픽 ‘리만 가설 증명’ 밝혔지만 수학자들 해설 작업에만 수개월인간의 이해·감시 기술, AI 기술 속도 못 따라가…‘공동 상한제’ 제안인공지능이 167년…",
+      "source": "경향신문",
+      "date": "2026-11-23",
+      "link": "https://www.khan.co.kr/article/202611232026005/?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news",
+      "until": "2026-11-26T20:26:00+09:00"
+    },
+    {
+      "id": "55ce9ef132",
+      "cat": "economy",
+      "title": "AI 한번 학습에 드는 전기량은?…韓 시험결과, 국제 벤치마크 첫 등재",
+      "summary": "TTA가 AI 학습 전력 측정 결과를 MLPerf Training에 국내 처음 등재했다.",
       "source": "동아일보",
       "date": "2026-11-23",
-      "link": "https://www.donga.com/news/Society/article/all/20261123/135071993/1",
-      "until": "2026-11-26T10:34:12+09:00"
+      "link": "https://www.donga.com/news/It/article/all/20261123/135075891/2",
+      "until": "2026-11-26T18:09:10+09:00"
+    },
+    {
+      "id": "a6de8458b4",
+      "cat": "science",
+      "title": "약과 AI의 결합…치료 패러다임 바꾸는 디지털융합의약품",
+      "summary": "인공지능을 비롯한 첨단 과학기술이 급속도로 발전하면서 전통적 의약품에 디지털 기술을 결합하는 시도가 늘...",
+      "source": "연합뉴스",
+      "date": "2026-11-22",
+      "link": "https://www.yna.co.kr/view/AKR20261121040800017",
+      "until": "2026-11-25T07:13:00+09:00"
     }
   ],
   "promoSound": true,
