@@ -1,6 +1,6 @@
 {
-  "version": 112,
-  "publishedAt": "2026-11-25T03:03:03+09:00",
+  "version": 113,
+  "publishedAt": "2026-11-25T13:59:02+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,44 +173,44 @@
   },
   "news": [
     {
-      "id": "bb68dacbf4",
+      "id": "ed6279b000",
       "cat": "tech",
-      "title": "앤트로픽, 개발자 코드 배포 돕는 '클로드 쉽' 출시",
-      "summary": "인공지능 선도기업 앤트로픽이 개발자의 신속한 코드 배포를 돕는 '클로드 쉽'을 ...",
-      "source": "연합뉴스",
+      "title": "오픈AI, 챗GPT에 'GPT-6.2 솔' 탑재…지시 수행·이미지 이해 강화",
+      "summary": "오픈AI가 챗GPT에 일상적인 대화에 최적화한 'GPT-6.2 솔'을 탑재했다.",
+      "source": "AI타임스",
       "date": "2026-11-24",
-      "link": "https://www.yna.co.kr/view/AKR20261124130600009",
-      "until": "2026-11-27T15:04:39+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217725",
+      "until": "2026-11-27T12:13:00+09:00"
     },
     {
-      "id": "52bbeb50cc",
+      "id": "cd329b686e",
       "cat": "society",
-      "title": "김대중 교육감 \"AI시대 서·논술형 평가 전환 속도내야\"",
-      "summary": "전남광주통합특별시가 채점 기준 마련 등 서·논술형 평가 전환에 속도를 낸다.",
-      "source": "연합뉴스",
+      "title": "지방소멸 대응에 AI 꺼낸 강진군…직원 72% 활용에 인사평가까지 개편",
+      "summary": "전남광주 강진군이 지방소멸에 대응하기 위해 4년 전부터 AI를 행정과 지역산업에 접목해 공무원 인사평가 제도까지 개편한다.",
+      "source": "AI타임스",
       "date": "2026-11-24",
-      "link": "https://www.yna.co.kr/view/AKR20261124169500054",
-      "until": "2026-11-27T18:21:24+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217744",
+      "until": "2026-11-27T15:52:00+09:00"
     },
     {
-      "id": "0a6299a1f8",
+      "id": "748099155e",
       "cat": "economy",
-      "title": "전남광주시, 공무원시험 AI 부정행위 방지 장비 도입 검토",
-      "summary": "전남광주통합특별시가 인공지능과 첨단 전자기기를 활용한 공무원 채용시험 부정행위를 막기 위해 장비 도...",
-      "source": "연합뉴스",
+      "title": "앤트로픽, ‘클로드 십’ 출시…코드 검토부터 수정·승인까지 자동화",
+      "summary": "앤트로픽이 AI가 작성한 코드를 검토하고 수정하는 데 이어, 팀의 규칙에 따라 승인 여부까지 판단하는 개발 자동화 도구를 선보였다.",
+      "source": "AI타임스",
       "date": "2026-11-24",
-      "link": "https://www.yna.co.kr/view/AKR20261124162900054",
-      "until": "2026-11-27T17:30:46+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217729",
+      "until": "2026-11-27T18:28:00+09:00"
     },
     {
-      "id": "4bc6fab65f",
+      "id": "3d1b899eca",
       "cat": "science",
-      "title": "“의료 AI 국가 연구개발, 정확도 넘어 환자 치료 결과까지 평가해야”",
-      "summary": "국가 보건의료 연구개발 과제를 기획할 때부터 인공지능이 진료 과정에서 맡는 역할에 따라 환자에 대한 성과와 안전 지표를 정해야 한다는 의견이 제기됐다.",
-      "source": "전자신문",
+      "title": "전남 의과 공보의 3년 새 반토막…AI 진단·전문의 원격협진 추진",
+      "summary": "전남광주통합특별시가 서남권 의료기관에 AI 기반 진단 체계를 도입하고 상급종합병원 전문의와 연결하는 원격협진망 구축에 나선다.",
+      "source": "AI타임스",
       "date": "2026-11-24",
-      "link": "https://www.etnews.com/20261124000383",
-      "until": "2026-11-27T14:44:41+09:00"
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217736",
+      "until": "2026-11-27T15:27:00+09:00"
     }
   ],
   "promoSound": true,
