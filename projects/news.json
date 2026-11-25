@@ -1,25 +1,25 @@
 {
-  "updatedAt": "2026-11-25T13:58:05+09:00",
+  "updatedAt": "2026-11-25T21:08:52+09:00",
   "items": [
     {
-      "id": "ed6279b000",
+      "id": "dcb0015d58",
       "cat": "tech",
-      "title": "오픈AI, 챗GPT에 'GPT-6.2 솔' 탑재…지시 수행·이미지 이해 강화",
-      "summary": "오픈AI가 챗GPT에 일상적인 대화에 최적화한 'GPT-6.2 솔'을 탑재했다.",
+      "title": "오픈클로, 실생활 AI 에이전트 평가 '셸벤치' 공개…최고 모델도 성공률 62.5%",
+      "summary": "AI 에이전트가 일상 업무를 자율적으로 처리하는 데 여전히 상당한 한계가 있다는 평가 결과가 나왔다.",
       "source": "AI타임스",
-      "date": "2026-11-24",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217725",
-      "until": "2026-11-27T12:13:00+09:00"
+      "date": "2026-11-25",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217773",
+      "until": "2026-11-28T16:16:00+09:00"
     },
     {
-      "id": "cd329b686e",
+      "id": "6c63b959cf",
       "cat": "society",
-      "title": "지방소멸 대응에 AI 꺼낸 강진군…직원 72% 활용에 인사평가까지 개편",
-      "summary": "전남광주 강진군이 지방소멸에 대응하기 위해 4년 전부터 AI를 행정과 지역산업에 접목해 공무원 인사평가 제도까지 개편한다.",
+      "title": "오픈AI·시스코, AI로 리눅스 공격 막는 보안 기술 '시루도' 공개",
+      "summary": "오픈AI와 시스코가 AI 에이전트를 활용해 사이버 공격을 차단하는 리눅스 보안 기술을 공동 개발했다.",
       "source": "AI타임스",
-      "date": "2026-11-24",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217744",
-      "until": "2026-11-27T15:52:00+09:00"
+      "date": "2026-11-25",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217766",
+      "until": "2026-11-28T17:28:00+09:00"
     },
     {
       "id": "748099155e",
@@ -32,14 +32,14 @@
       "until": "2026-11-27T18:28:00+09:00"
     },
     {
-      "id": "3d1b899eca",
+      "id": "779282fb3f",
       "cat": "science",
-      "title": "전남 의과 공보의 3년 새 반토막…AI 진단·전문의 원격협진 추진",
-      "summary": "전남광주통합특별시가 서남권 의료기관에 AI 기반 진단 체계를 도입하고 상급종합병원 전문의와 연결하는 원격협진망 구축에 나선다.",
-      "source": "AI타임스",
-      "date": "2026-11-24",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217736",
-      "until": "2026-11-27T15:27:00+09:00"
+      "title": "AI·SW 인재 페스티벌 개최…60개 대학 교육·프로젝트 성과 공개",
+      "summary": "전국 60개 대학 인공지능·소프트웨어 인재의 우수 프로젝트 소개와 성과 교류의 장 '2026 AI·SW 인재 페스티벌' 막이 올랐다.",
+      "source": "전자신문",
+      "date": "2026-11-25",
+      "link": "https://www.etnews.com/20261125000418",
+      "until": "2026-11-28T15:30:00+09:00"
     }
   ]
 }
