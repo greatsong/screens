@@ -1,6 +1,6 @@
 {
-  "version": 123,
-  "publishedAt": "2026-11-27T20:47:02+09:00",
+  "version": 124,
+  "publishedAt": "2026-11-28T01:53:29+09:00",
   "appVersion": "0.9.11",
   "mode": "normal",
   "notice": "",
@@ -173,14 +173,14 @@
   },
   "news": [
     {
-      "id": "b19b43542c",
+      "id": "52bef56a03",
       "cat": "tech",
-      "title": "오픈AI, GPT-6.2 출시 당시계산 오류 수정",
-      "summary": "오픈AI가 GPT-6.2 출시 때 생긴 사용량 계산 오류를 바로잡으면서 챗GPT와 코덱스 이용자가 GPT-6.2 아스트라와 솔의 사용량 한도에 더 빨리 도달하…",
-      "source": "ZDNet Korea",
-      "date": "2026-11-27",
-      "link": "https://zdnet.co.kr/view/?no=20261127142417",
-      "until": "2026-11-30T14:24:17+09:00"
+      "title": "'AI 시대' 미래준비 최고 도시는 샌프란시스코…서울 8위로 상승",
+      "summary": "전 세계 112개 주요 도시 중 인공지능 시대의 미래 변화에 가장 앞선 도시로 미국 샌프란시스코가 ...",
+      "source": "연합뉴스",
+      "date": "2026-11-28",
+      "link": "https://www.yna.co.kr/view/AKR20261127169800371",
+      "until": "2026-12-01T00:26:17+09:00"
     },
     {
       "id": "ffeb54c9c5",
@@ -215,13 +215,6 @@
   ],
   "promoSound": true,
   "schedule": [
-    {
-      "name": "기말고사",
-      "start": "2026-11-27",
-      "end": "2026-11-27",
-      "grades": "3학년",
-      "holiday": false
-    },
     {
       "name": "기말고사",
       "start": "2026-12-11",
