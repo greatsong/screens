@@ -1,45 +1,45 @@
 {
-  "updatedAt": "2026-11-27T13:24:19+09:00",
+  "updatedAt": "2026-11-27T20:46:26+09:00",
   "items": [
     {
-      "id": "2f06cdbb9a",
+      "id": "b19b43542c",
       "cat": "tech",
-      "title": "오픈AI, 챗GPT·코덱스 사용량 통합…\"헤비 유저 한도 조기 소진 가능\"",
-      "summary": "오픈AI가 오는 12월부터 챗GPT와 코덱스의 사용량 한도를 하나로 통합한다.",
-      "source": "AI타임스",
-      "date": "2026-11-26",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217800",
-      "until": "2026-11-29T12:28:00+09:00"
-    },
-    {
-      "id": "16dbfadd9c",
-      "cat": "society",
-      "title": "AI로 보이스피싱범 목소리부터 합성음성까지 탐지…전남광주도 실증",
-      "summary": "AI를 활용한 보이스피싱 탐지 기술이 통화 내용 분석에서 범죄자의 목소리와 AI 합성음성까지 판별하는 방식으로 발전하고 있다.",
-      "source": "AI타임스",
+      "title": "오픈AI, GPT-6.2 출시 당시계산 오류 수정",
+      "summary": "오픈AI가 GPT-6.2 출시 때 생긴 사용량 계산 오류를 바로잡으면서 챗GPT와 코덱스 이용자가 GPT-6.2 아스트라와 솔의 사용량 한도에 더 빨리 도달하…",
+      "source": "ZDNet Korea",
       "date": "2026-11-27",
-      "link": "https://www.aitimes.com/news/articleView.html?idxno=217843",
-      "until": "2026-11-30T11:24:00+09:00"
+      "link": "https://zdnet.co.kr/view/?no=20261127142417",
+      "until": "2026-11-30T14:24:17+09:00"
     },
     {
-      "id": "5915d3e5da",
-      "cat": "economy",
-      "title": "동서발전, 정부박람회서 'AI 기반 에너지 산업기술 혁신' 선보여",
-      "summary": "한국동서발전은 25∼27일 경기 고양 킨텍스에서 열린 '2026 대한민국 정부혁신 박람회'에서 '인공지능 전환...",
+      "id": "ffeb54c9c5",
+      "cat": "society",
+      "title": "AI에 뚫렸나…유럽 1위 SW업체 SAP 보안사고",
+      "summary": "김계연 특파원 = 유럽 최대 소프트웨어업체 SAP에서 AI 에이전트에 침투당한 걸로 추정되는 사이버 보안 사고가 ...",
       "source": "연합뉴스",
       "date": "2026-11-27",
-      "link": "https://www.yna.co.kr/view/AKR20261127045900057",
-      "until": "2026-11-30T10:41:41+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261127153300082",
+      "until": "2026-11-30T18:00:05+09:00"
     },
     {
-      "id": "054252e538",
-      "cat": "science",
-      "title": "[강원 AI 활용지원] 모브주식회사 “고성 바닷가 카페서 푸드테크 기업으로, AI로 더 건강한 식품 제공”",
-      "summary": "강원창조경제혁신센터는 소상공인들의 인공지능 전환과 현장 맞춤형 기술 도입을 지원하는 ‘혁신 소상공인 AI 활용 지원사업’을 운영합니다.",
-      "source": "동아일보",
+      "id": "1e7069a2ba",
+      "cat": "economy",
+      "title": "대만, AI붐에 올해 성장전망 13.28%로 상향…48년 만에 최고",
+      "summary": "차병섭 특파원 = 대만 통계 당국이 글로벌 인공지능 붐 수혜 속에 올해 경제성장률 전망치를 48년 만에 최고 수준으로...",
+      "source": "연합뉴스",
       "date": "2026-11-27",
-      "link": "https://www.donga.com/news/It/article/all/20261127/135102475/1",
-      "until": "2026-11-30T12:18:13+09:00"
+      "link": "https://www.yna.co.kr/view/AKR20261127159000089",
+      "until": "2026-11-30T18:56:52+09:00"
+    },
+    {
+      "id": "3035467355",
+      "cat": "science",
+      "title": "오픈AI 노엄 브라운 \"AI 재귀적 자기개선, 인류 기술 진화와 같은 원리\"",
+      "summary": "노엄 브라운 오픈AI 연구 부사장이 AI의 재귀적 자기개선은 인류가 기존 기술을 활용해 새로운 기술을 개발해 온 과정과 본질적으로 다르지 않다고 밝혔다.",
+      "source": "AI타임스",
+      "date": "2026-11-26",
+      "link": "https://www.aitimes.com/news/articleView.html?idxno=217835",
+      "until": "2026-11-29T17:26:00+09:00"
     }
   ]
 }
